@@ -1,13 +1,19 @@
 import { ArrowRight, CheckCircle2, XCircle } from "lucide-react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import type { Question } from "@/data/questions";
 
 type QuestionCardProps = {
+  canChangeAnswer?: boolean;
   currentIndex: number;
+  footer?: ReactNode;
+  mode?: "practice" | "test";
+  nextLabel?: string;
   onNext: () => void;
   onSelect: (choice: string) => void;
   question: Question;
+  showFeedback?: boolean;
   selectedAnswer: string | null;
   totalQuestions: number;
 };
@@ -24,16 +30,27 @@ const difficultyStyles = {
 };
 
 export function QuestionCard({
+  canChangeAnswer = false,
   currentIndex,
+  footer,
+  mode = "practice",
+  nextLabel,
   onNext,
   onSelect,
   question,
+  showFeedback = mode === "practice",
   selectedAnswer,
   totalQuestions
 }: QuestionCardProps) {
   const hasAnswered = selectedAnswer !== null;
   const isCorrect = selectedAnswer === question.correctAnswer;
   const isLastQuestion = currentIndex === totalQuestions - 1;
+  const shouldLockChoices = hasAnswered && !canChangeAnswer;
+  const progressColor = mode === "test" ? "bg-violet-600" : "bg-teal-600";
+  const instruction =
+    mode === "test"
+      ? "Choose an answer, then continue. Results and explanations appear after the test."
+      : "Choose one answer. After you select it, the explanation will appear and the answer will be locked.";
 
   return (
     <Card className="mt-8 hover:translate-y-0">
@@ -45,7 +62,9 @@ export function QuestionCard({
             </p>
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-neutral-100 sm:w-72">
               <div
-                className="h-full rounded-full bg-teal-600 transition-all"
+                className={["h-full rounded-full transition-all", progressColor].join(
+                  " "
+                )}
                 style={{
                   width: `${((currentIndex + 1) / totalQuestions) * 100}%`
                 }}
@@ -78,10 +97,12 @@ export function QuestionCard({
               const isSelected = selectedAnswer === choice;
               const isAnswer = question.correctAnswer === choice;
               const optionState =
-                hasAnswered && isAnswer
+                showFeedback && hasAnswered && isAnswer
                   ? "border-teal-400 bg-teal-50 text-teal-950 ring-1 ring-teal-300"
-                  : hasAnswered && isSelected
+                  : showFeedback && hasAnswered && isSelected
                     ? "border-rose-300 bg-rose-50 text-rose-950 ring-1 ring-rose-200"
+                    : isSelected
+                      ? "border-violet-400 bg-violet-50 text-violet-950 ring-1 ring-violet-200"
                     : "border-neutral-200 bg-white text-neutral-800 hover:border-neutral-300 hover:bg-neutral-50";
 
               return (
@@ -90,7 +111,7 @@ export function QuestionCard({
                     "flex min-h-14 w-full items-start gap-3 rounded-md border px-4 py-3 text-left text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-default",
                     optionState
                   ].join(" ")}
-                  disabled={hasAnswered}
+                  disabled={shouldLockChoices}
                   key={choice}
                   onClick={() => onSelect(choice)}
                   type="button"
@@ -105,7 +126,7 @@ export function QuestionCard({
           </div>
         </div>
 
-        {hasAnswered ? (
+        {showFeedback && hasAnswered ? (
           <div
             className={[
               "rounded-lg border p-5",
@@ -126,18 +147,18 @@ export function QuestionCard({
           </div>
         ) : (
           <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-5 text-sm leading-6 text-neutral-600">
-            Choose one answer. After you select it, the explanation will appear
-            and the answer will be locked.
+            {instruction}
           </div>
         )}
 
-        <div className="flex justify-end">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+          {footer}
           <Button
             disabled={!hasAnswered}
             icon={<ArrowRight size={18} />}
             onClick={onNext}
           >
-            {isLastQuestion ? "Show Result" : "Next Question"}
+            {nextLabel ?? (isLastQuestion ? "Show Result" : "Next Question")}
           </Button>
         </div>
       </div>
