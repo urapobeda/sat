@@ -2,6 +2,7 @@ import { ArrowRight, CheckCircle2, XCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { QuestionMeta } from "@/components/QuestionMeta";
 import type { Question } from "@/data/questions";
 
 type QuestionCardProps = {
@@ -16,17 +17,6 @@ type QuestionCardProps = {
   showFeedback?: boolean;
   selectedAnswer: string | null;
   totalQuestions: number;
-};
-
-const sectionLabels = {
-  math: "Math",
-  "reading-writing": "Reading and Writing"
-};
-
-const difficultyStyles = {
-  easy: "border-teal-100 bg-teal-50 text-teal-700",
-  medium: "border-amber-100 bg-amber-50 text-amber-700",
-  hard: "border-rose-100 bg-rose-50 text-rose-700"
 };
 
 export function QuestionCard({
@@ -72,23 +62,11 @@ export function QuestionCard({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-xs font-semibold text-neutral-700">
-              {sectionLabels[question.section]}
-            </span>
-            <span
-              className={[
-                "rounded-md border px-2.5 py-1 text-xs font-semibold capitalize",
-                difficultyStyles[question.difficulty]
-              ].join(" ")}
-            >
-              {question.difficulty}
-            </span>
-          </div>
+          <QuestionMeta difficulty={question.difficulty} section={question.section} />
         </div>
 
         <div className="border-t border-neutral-200 pt-6">
-          <h2 className="text-2xl font-bold leading-9 text-neutral-950">
+          <h2 className="text-xl font-bold leading-8 text-neutral-950 sm:text-2xl sm:leading-9">
             {question.question}
           </h2>
 
@@ -108,7 +86,7 @@ export function QuestionCard({
               return (
                 <button
                   className={[
-                    "flex min-h-14 w-full items-start gap-3 rounded-md border px-4 py-3 text-left text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-default",
+                    "flex min-h-14 w-full items-start gap-3 rounded-md border px-4 py-3 text-left text-sm font-medium transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-default disabled:hover:translate-y-0",
                     optionState
                   ].join(" ")}
                   disabled={shouldLockChoices}
@@ -146,7 +124,7 @@ export function QuestionCard({
             <p className="mt-2 text-sm leading-6">{question.explanation}</p>
           </div>
         ) : (
-          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-5 text-sm leading-6 text-neutral-600">
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm leading-6 text-neutral-600 sm:p-5">
             {instruction}
           </div>
         )}

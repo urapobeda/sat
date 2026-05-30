@@ -70,7 +70,12 @@ export function PracticeSetup({
 
           <div className="flex flex-col gap-4 border-t border-neutral-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-neutral-950">
+              <p
+                className={[
+                  "text-sm font-semibold",
+                  hasQuestions ? "text-neutral-950" : "text-rose-700"
+                ].join(" ")}
+              >
                 {hasQuestions
                   ? `${matchingCount} question${matchingCount === 1 ? "" : "s"} ready`
                   : "No questions found for these filters"}
@@ -79,7 +84,11 @@ export function PracticeSetup({
                 Changing filters resets the current practice session.
               </p>
             </div>
-            <Button disabled={!hasQuestions} onClick={onStart}>
+            <Button
+              className="w-full sm:w-auto"
+              disabled={!hasQuestions}
+              onClick={onStart}
+            >
               Start Practice
             </Button>
           </div>
@@ -112,7 +121,7 @@ function FilterGroup<T extends string>({
           return (
             <button
               className={[
-                "min-h-11 rounded-md border px-4 py-2.5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950",
+                "min-h-11 rounded-md border px-4 py-2.5 text-sm font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950",
                 isActive
                   ? "border-neutral-950 bg-neutral-950 text-white"
                   : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50"

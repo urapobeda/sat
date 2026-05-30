@@ -1,6 +1,8 @@
 import { AlertTriangle, CheckCircle2, RotateCcw } from "lucide-react";
+import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { sectionLabels } from "@/components/QuestionMeta";
 import type { Question } from "@/data/questions";
 
 type TestResultsCardProps = {
@@ -8,11 +10,6 @@ type TestResultsCardProps = {
   onRestart: () => void;
   questions: Question[];
   timeUp: boolean;
-};
-
-const sectionLabels = {
-  math: "Math",
-  "reading-writing": "Reading and Writing"
 };
 
 export function TestResultsCard({
@@ -53,7 +50,7 @@ export function TestResultsCard({
               Score: {percentage}%
             </p>
           </div>
-          <Button icon={<RotateCcw size={18} />} onClick={onRestart}>
+          <Button className="w-full md:w-auto" icon={<RotateCcw size={18} />} onClick={onRestart}>
             Start Mini Test
           </Button>
         </div>
@@ -68,22 +65,13 @@ export function TestResultsCard({
             <Card className="hover:translate-y-0" key={question.id}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-md bg-neutral-950 px-2.5 py-1 text-xs font-bold text-white">
+                  <Badge tone="dark">
                     {index + 1}
-                  </span>
-                  <span className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-xs font-semibold text-neutral-700">
-                    {sectionLabels[question.section]}
-                  </span>
-                  <span
-                    className={[
-                      "rounded-md border px-2.5 py-1 text-xs font-semibold",
-                      isCorrect
-                        ? "border-teal-100 bg-teal-50 text-teal-700"
-                        : "border-rose-100 bg-rose-50 text-rose-700"
-                    ].join(" ")}
-                  >
+                  </Badge>
+                  <Badge>{sectionLabels[question.section]}</Badge>
+                  <Badge tone={isCorrect ? "teal" : "rose"}>
                     {isCorrect ? "Correct" : "Review"}
-                  </span>
+                  </Badge>
                 </div>
                 <span className="text-xs font-medium text-neutral-400">
                   {question.id}

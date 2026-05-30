@@ -13,7 +13,7 @@ export default function HomePage() {
             SAT Math, Reading and Writing
           </div>
           <div className="space-y-4">
-            <h1 className="max-w-3xl text-4xl font-bold tracking-normal text-neutral-950 sm:text-6xl">
+            <h1 className="max-w-3xl text-4xl font-bold tracking-normal text-neutral-950 sm:text-5xl lg:text-6xl">
               SAT Practice Hub
             </h1>
             <p className="max-w-2xl text-lg leading-8 text-neutral-600">
@@ -22,10 +22,15 @@ export default function HomePage() {
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button href="/practice" icon={<ArrowRight size={18} />}>
+            <Button className="w-full sm:w-auto" href="/practice" icon={<ArrowRight size={18} />}>
               Start Practice
             </Button>
-            <Button href="/tests" icon={<CheckCircle2 size={18} />} variant="secondary">
+            <Button
+              className="w-full sm:w-auto"
+              href="/tests"
+              icon={<CheckCircle2 size={18} />}
+              variant="secondary"
+            >
               View Tests
             </Button>
           </div>
@@ -60,7 +65,7 @@ export default function HomePage() {
       </section>
 
       <section className="mt-14">
-        <div className="mb-6 flex items-end justify-between gap-4">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-normal text-neutral-500">
               Practice tests

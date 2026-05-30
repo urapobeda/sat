@@ -4,6 +4,7 @@ import { Clock, Flag } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { EmptyState } from "@/components/EmptyState";
 import { QuestionCard } from "@/components/QuestionCard";
 import { TestResultsCard } from "@/components/TestResultsCard";
 import type { Question } from "@/data/questions";
@@ -55,6 +56,16 @@ export function MiniTest({ questions }: MiniTestProps) {
       finishTest(true);
     }
   });
+
+  if (testQuestions.length === 0) {
+    return (
+      <EmptyState
+        description="Add questions to the shared question bank before starting a mini test."
+        icon={<Clock size={26} />}
+        title="No test questions yet"
+      />
+    );
+  }
 
   function startTest() {
     setHasStarted(true);
@@ -131,7 +142,7 @@ export function MiniTest({ questions }: MiniTestProps) {
             </p>
           </div>
 
-          <div className="w-full max-w-sm rounded-lg border border-neutral-200 bg-neutral-50 p-5">
+          <div className="w-full max-w-sm rounded-lg border border-neutral-200 bg-neutral-50 p-4 sm:p-5">
             <div className="grid grid-cols-2 gap-3 text-sm">
               <Stat label="Questions" value={String(testQuestions.length)} />
               <Stat label="Time" value="15 min" />
@@ -172,6 +183,7 @@ export function MiniTest({ questions }: MiniTestProps) {
             {formatTime(remainingSeconds)}
           </div>
           <Button
+            className="w-full sm:w-auto"
             icon={<Flag size={18} />}
             onClick={() => finishTest(false)}
             variant="secondary"

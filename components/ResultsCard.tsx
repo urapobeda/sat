@@ -36,7 +36,7 @@ export function ResultsCard({
           same questions.
         </p>
         <div className="mt-8 flex justify-center">
-          <Button icon={<RotateCcw size={18} />} onClick={onRestart}>
+          <Button className="w-full sm:w-auto" icon={<RotateCcw size={18} />} onClick={onRestart}>
             Restart Practice
           </Button>
         </div>

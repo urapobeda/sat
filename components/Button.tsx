@@ -11,9 +11,9 @@ type ButtonProps = {
 
 const variants = {
   primary:
-    "bg-neutral-950 text-white shadow-soft hover:bg-neutral-800 focus-visible:outline-neutral-950",
+    "bg-neutral-950 text-white shadow-soft hover:bg-neutral-800 active:bg-neutral-900 focus-visible:outline-neutral-950",
   secondary:
-    "border border-neutral-200 bg-white text-neutral-900 hover:border-neutral-300 hover:bg-neutral-50 focus-visible:outline-neutral-500"
+    "border border-neutral-200 bg-white text-neutral-900 hover:border-neutral-300 hover:bg-neutral-50 active:bg-neutral-100 focus-visible:outline-neutral-500"
 };
 
 export function Button({
