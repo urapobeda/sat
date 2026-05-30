@@ -1,12 +1,13 @@
 "use client";
 
 import { Clock, Flag } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { QuestionCard } from "@/components/QuestionCard";
 import { TestResultsCard } from "@/components/TestResultsCard";
 import type { Question } from "@/data/questions";
+import { saveProgressRecord } from "@/lib/progress";
 
 type MiniTestProps = {
   questions: Question[];
@@ -26,6 +27,7 @@ export function MiniTest({ questions }: MiniTestProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [remainingSeconds, setRemainingSeconds] = useState(TEST_DURATION_SECONDS);
+  const hasSavedResult = useRef(false);
 
   const currentQuestion = testQuestions[currentIndex];
   const selectedAnswer = currentQuestion ? answers[currentQuestion.id] ?? null : null;
@@ -38,9 +40,6 @@ export function MiniTest({ questions }: MiniTestProps) {
     const timer = window.setInterval(() => {
       setRemainingSeconds((seconds) => {
         if (seconds <= 1) {
-          window.clearInterval(timer);
-          setTimeUp(true);
-          setIsFinished(true);
           return 0;
         }
 
@@ -51,6 +50,12 @@ export function MiniTest({ questions }: MiniTestProps) {
     return () => window.clearInterval(timer);
   }, [hasStarted, isFinished]);
 
+  useEffect(() => {
+    if (hasStarted && !isFinished && remainingSeconds === 0) {
+      finishTest(true);
+    }
+  });
+
   function startTest() {
     setHasStarted(true);
     setIsFinished(false);
@@ -58,6 +63,7 @@ export function MiniTest({ questions }: MiniTestProps) {
     setCurrentIndex(0);
     setAnswers({});
     setRemainingSeconds(TEST_DURATION_SECONDS);
+    hasSavedResult.current = false;
   }
 
   function handleSelect(choice: string) {
@@ -80,8 +86,32 @@ export function MiniTest({ questions }: MiniTestProps) {
     setCurrentIndex((index) => index + 1);
   }
 
-  function finishTest() {
+  function finishTest(expired = false) {
+    saveTestResult(expired);
+    setTimeUp(expired);
     setIsFinished(true);
+  }
+
+  function saveTestResult(expired: boolean) {
+    if (hasSavedResult.current || testQuestions.length === 0) {
+      return;
+    }
+
+    const score = testQuestions.filter(
+      (question) => answers[question.id] === question.correctAnswer
+    ).length;
+    const total = testQuestions.length;
+    const percentage = Math.round((score / total) * 100);
+    const timeSpent = TEST_DURATION_SECONDS - (expired ? 0 : remainingSeconds);
+
+    saveProgressRecord({
+      mode: "test",
+      percentage,
+      score,
+      timeSpent,
+      total
+    });
+    hasSavedResult.current = true;
   }
 
   if (!hasStarted) {
@@ -141,7 +171,11 @@ export function MiniTest({ questions }: MiniTestProps) {
           <div className="rounded-md border border-violet-100 bg-violet-50 px-4 py-2 text-sm font-bold text-violet-700">
             {formatTime(remainingSeconds)}
           </div>
-          <Button icon={<Flag size={18} />} onClick={finishTest} variant="secondary">
+          <Button
+            icon={<Flag size={18} />}
+            onClick={() => finishTest(false)}
+            variant="secondary"
+          >
             Finish Test
           </Button>
         </div>

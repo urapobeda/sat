@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   PracticeSetup,
   type DifficultyFilter,
@@ -9,6 +9,7 @@ import {
 import { QuestionCard } from "@/components/QuestionCard";
 import { ResultsCard } from "@/components/ResultsCard";
 import type { Question } from "@/data/questions";
+import { saveProgressRecord } from "@/lib/progress";
 
 type PracticeQuizProps = {
   questions: Question[];
@@ -23,6 +24,7 @@ export function PracticeQuiz({ questions }: PracticeQuizProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const hasSavedResult = useRef(false);
 
   const filteredQuestions = useMemo(
     () =>
@@ -47,6 +49,7 @@ export function PracticeQuiz({ questions }: PracticeQuizProps) {
     setSelectedAnswer(null);
     setCorrectCount(0);
     setIsFinished(false);
+    hasSavedResult.current = false;
   }
 
   function handleSectionChange(section: SectionFilter) {
@@ -69,6 +72,7 @@ export function PracticeQuiz({ questions }: PracticeQuizProps) {
     setSelectedAnswer(null);
     setCorrectCount(0);
     setIsFinished(false);
+    hasSavedResult.current = false;
   }
 
   function handleSelect(choice: string) {
@@ -89,6 +93,7 @@ export function PracticeQuiz({ questions }: PracticeQuizProps) {
     }
 
     if (currentIndex === totalQuestions - 1) {
+      savePracticeResult();
       setIsFinished(true);
       return;
     }
@@ -103,6 +108,25 @@ export function PracticeQuiz({ questions }: PracticeQuizProps) {
     setSelectedAnswer(null);
     setCorrectCount(0);
     setIsFinished(false);
+    hasSavedResult.current = false;
+  }
+
+  function savePracticeResult() {
+    if (hasSavedResult.current || totalQuestions === 0) {
+      return;
+    }
+
+    const percentage = Math.round((correctCount / totalQuestions) * 100);
+
+    saveProgressRecord({
+      difficulty: difficultyFilter,
+      mode: "practice",
+      percentage,
+      score: correctCount,
+      section: sectionFilter,
+      total: totalQuestions
+    });
+    hasSavedResult.current = true;
   }
 
   return (
