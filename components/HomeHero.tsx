@@ -8,33 +8,39 @@ const trustItems = [
   { label: "Track Your Progress", tone: "bg-emerald-500" }
 ];
 
+const quickStats = [
+  { value: "500+", label: "SAT-style questions" },
+  { value: "10+", label: "mini tests" },
+  { value: "Smart", label: "score tracking" }
+];
+
 export function HomeHero() {
   return (
-    <section className="relative overflow-hidden rounded-[1.25rem] border border-blue-100 bg-gradient-to-br from-white via-blue-50/70 to-white px-5 py-10 shadow-soft sm:px-8 lg:px-12 lg:py-14">
+    <section className="relative overflow-hidden rounded-[1.5rem] border border-blue-100 bg-gradient-to-br from-white via-blue-50/70 to-white px-5 py-8 shadow-soft sm:px-8 sm:py-9 lg:px-12 lg:py-10">
       <DecorativeStars />
 
-      <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+      <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
         <div className="relative z-10 max-w-2xl">
-          <h1 className="text-5xl font-black leading-tight tracking-normal text-slate-950 sm:text-6xl lg:text-7xl">
+          <h1 className="text-4xl font-black leading-tight tracking-normal text-slate-950 sm:text-5xl lg:text-6xl">
             Ace the <span className="text-blue-600">SAT.</span>
             <br />
             Reach Your Dream.
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600 sm:text-xl">
+          <p className="mt-4 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
             Practice smarter with SAT-style questions, realistic tests, and
             detailed progress tracking.
           </p>
 
-          <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Button
-              className="min-h-14 w-full rounded-xl px-7 text-base sm:w-auto"
+              className="min-h-[52px] w-full rounded-xl px-7 text-base sm:w-auto"
               href="/practice"
               icon={<ArrowRight size={20} />}
             >
               Start Practicing
             </Button>
             <Button
-              className="min-h-14 w-full rounded-xl px-7 text-base sm:w-auto"
+              className="min-h-[52px] w-full rounded-xl px-7 text-base sm:w-auto"
               href="/tests"
               icon={<Clock3 size={20} />}
               variant="secondary"
@@ -43,7 +49,21 @@ export function HomeHero() {
             </Button>
           </div>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {quickStats.map((stat) => (
+              <div
+                className="rounded-2xl border border-blue-100 bg-white/80 px-4 py-3 shadow-sm"
+                key={stat.label}
+              >
+                <p className="text-lg font-black text-slate-950">{stat.value}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
             {trustItems.map((item) => (
               <div
                 className="flex items-center gap-3 text-sm font-semibold text-slate-800"
@@ -60,7 +80,9 @@ export function HomeHero() {
           </div>
         </div>
 
-        <ProgressCard />
+        <div className="relative z-10">
+          <ProgressCard />
+        </div>
       </div>
     </section>
   );

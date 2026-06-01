@@ -9,7 +9,7 @@ export function Card({ children, className = "" }: CardProps) {
   return (
     <article
       className={[
-        "rounded-lg border border-neutral-200 bg-white/95 p-5 shadow-sm ring-1 ring-white/70 transition hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-soft sm:p-6",
+        "rounded-3xl border border-slate-200/80 bg-white/95 p-5 shadow-sm ring-1 ring-white/70 transition-all duration-300 hover:border-blue-100 hover:shadow-soft sm:p-6",
         className
       ].join(" ")}
     >
