@@ -29,6 +29,7 @@ type QuestionCountValue = "5" | "10";
 const referenceQuestion: Question = {
   id: "practice-reference-003",
   section: "math",
+  topic: "Algebra",
   difficulty: "medium",
   question: "If 2x - 3 = 7, what is the value of 4x + 1?",
   choices: ["9", "13", "17", "21"],

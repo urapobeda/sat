@@ -1,9 +1,9 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import type { Topic } from "@/components/question-bank/mockData";
+import { normalizeTopic, type TopicSummary } from "@/lib/questions";
 
 type TopicRowProps = {
-  topic: Topic;
+  topic: TopicSummary;
 };
 
 export function TopicRow({ topic }: TopicRowProps) {
@@ -51,7 +51,7 @@ export function TopicRow({ topic }: TopicRowProps) {
 
       <Link
         className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 md:justify-self-end"
-        href={`/question-bank/practice?topic=${encodeURIComponent(topic.title)}`}
+        href={`/question-bank/practice?section=${topic.section}&topic=${normalizeTopic(topic.title)}`}
       >
         Practice
         <ArrowRight size={16} />

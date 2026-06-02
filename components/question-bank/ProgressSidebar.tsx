@@ -2,8 +2,26 @@ import { CheckCircle2 } from "lucide-react";
 import { QuickStatsCard } from "@/components/question-bank/QuickStatsCard";
 import { SmartPracticeCard } from "@/components/question-bank/SmartPracticeCard";
 import { WeakAreasCard } from "@/components/question-bank/WeakAreasCard";
+import type { TopicSummary } from "@/lib/questions";
 
-export function ProgressSidebar() {
+type ProgressSidebarProps = {
+  questionsAnswered: number;
+  totalQuestions: number;
+  totalTopics: number;
+  topicSummaries: TopicSummary[];
+};
+
+export function ProgressSidebar({
+  questionsAnswered,
+  totalQuestions,
+  totalTopics,
+  topicSummaries
+}: ProgressSidebarProps) {
+  const correct = Math.round(questionsAnswered * 0.62);
+  const remaining = Math.max(totalQuestions - questionsAnswered, 0);
+  const mastery = totalQuestions > 0 ? Math.round((correct / totalQuestions) * 100) : 0;
+  const conic = `conic-gradient(#2563eb ${mastery * 3.6}deg, #e8eef7 0deg)`;
+
   return (
     <aside className="space-y-5">
       <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -11,26 +29,24 @@ export function ProgressSidebar() {
         <div className="mt-5 flex items-center gap-6">
           <div
             className="flex h-36 w-36 shrink-0 items-center justify-center rounded-full"
-            style={{
-              background: "conic-gradient(#2563eb 219.6deg, #e8eef7 0deg)"
-            }}
+            style={{ background: conic }}
           >
             <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-white">
-              <p className="text-3xl font-black text-slate-950">61%</p>
+              <p className="text-3xl font-black text-slate-950">{mastery}%</p>
               <p className="text-xs font-bold text-slate-500">Overall Mastery</p>
             </div>
           </div>
 
           <div className="space-y-4">
-            <ProgressStat label="Answered" value="1,430" />
-            <ProgressStat label="Correct" tone="text-emerald-600" value="890" />
-            <ProgressStat label="Remaining" tone="text-slate-950" value="540" />
+            <ProgressStat label="Answered" value={questionsAnswered.toLocaleString()} />
+            <ProgressStat label="Correct" tone="text-emerald-600" value={correct.toLocaleString()} />
+            <ProgressStat label="Remaining" tone="text-slate-950" value={remaining.toLocaleString()} />
           </div>
         </div>
       </article>
 
-      <QuickStatsCard />
-      <WeakAreasCard />
+      <QuickStatsCard totalQuestions={totalQuestions} totalTopics={totalTopics} />
+      <WeakAreasCard topics={topicSummaries} />
       <SmartPracticeCard />
     </aside>
   );

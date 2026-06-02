@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  BookOpen,
   Filter,
   FolderOpen,
+  Grid2X2,
   Layers3,
   ListChecks,
   Search,
@@ -15,11 +17,16 @@ import { Layout } from "@/components/Layout";
 import { FilterCard } from "@/components/question-bank/FilterCard";
 import { ProgressSidebar } from "@/components/question-bank/ProgressSidebar";
 import { SearchInput } from "@/components/question-bank/SearchInput";
-import { SectionSummaryCard, sectionSummaries } from "@/components/question-bank/SectionSummaryCard";
+import { SectionSummaryCard } from "@/components/question-bank/SectionSummaryCard";
 import { SectionTabs } from "@/components/question-bank/SectionTabs";
 import { TopicRow } from "@/components/question-bank/TopicRow";
-import type { SectionKey } from "@/components/question-bank/mockData";
-import { topics } from "@/components/question-bank/mockData";
+import { questions } from "@/data/questions";
+import {
+  getSectionCount,
+  getTopicSummaries,
+  getUniqueTopicCount,
+  type SectionFilter
+} from "@/lib/questions";
 
 const filterCards = [
   {
@@ -49,24 +56,54 @@ const filterCards = [
 ];
 
 export function QuestionBankPage() {
-  const [activeTab, setActiveTab] = useState<SectionKey>("all");
+  const [activeTab, setActiveTab] = useState<SectionFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const topicSummaries = useMemo(() => getTopicSummaries(questions), []);
+  const sectionTabs = useMemo(
+    () => [
+      {
+        icon: Grid2X2,
+        key: "all" as const,
+        label: "All Sections",
+        questions: `${getSectionCount(questions, "all").toLocaleString()} Questions`
+      },
+      {
+        icon: SquareRadical,
+        key: "math" as const,
+        label: "Math",
+        questions: `${getSectionCount(questions, "math").toLocaleString()} Questions`
+      },
+      {
+        icon: BookOpen,
+        key: "reading-writing" as const,
+        label: "Reading & Writing",
+        questions: `${getSectionCount(questions, "reading-writing").toLocaleString()} Questions`
+      }
+    ],
+    []
+  );
 
   const visibleTopics = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return topics.filter((topic) => {
+    return topicSummaries.filter((topic) => {
       const matchesTab = activeTab === "all" || topic.section === activeTab;
+      const relatedQuestions = questions.filter(
+        (question) => question.topic === topic.title
+      );
       const matchesSearch =
         query.length === 0 ||
         topic.title.toLowerCase().includes(query) ||
-        topic.description.toLowerCase().includes(query);
+        topic.description.toLowerCase().includes(query) ||
+        relatedQuestions.some((question) =>
+          question.question.toLowerCase().includes(query)
+        );
 
       return matchesTab && matchesSearch;
     });
-  }, [activeTab, searchQuery]);
+  }, [activeTab, searchQuery, topicSummaries]);
 
-  const visibleSummaries = sectionSummaries.filter(
+  const visibleSummaries = getSectionSummaries(topicSummaries).filter(
     (summary) => activeTab === "all" || summary.section === activeTab
   );
 
@@ -104,7 +141,11 @@ export function QuestionBankPage() {
 
       <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <SectionTabs activeTab={activeTab} onChange={setActiveTab} />
+          <SectionTabs
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            tabs={sectionTabs}
+          />
 
           <div className="space-y-4 p-4 sm:p-6">
             {visibleSummaries.map((summary) => (
@@ -148,9 +189,57 @@ export function QuestionBankPage() {
           </div>
         </div>
 
-        <ProgressSidebar />
+        <ProgressSidebar
+          questionsAnswered={Math.round(questions.length * 0.61)}
+          totalQuestions={questions.length}
+          totalTopics={getUniqueTopicCount(questions)}
+          topicSummaries={topicSummaries}
+        />
       </section>
     </Layout>
+  );
+}
+
+function getSectionSummaries(topicSummaries: ReturnType<typeof getTopicSummaries>) {
+  const summaries = [
+    {
+      title: "Math",
+      description: "Algebra, Advanced Math, Problem Solving and Data Analysis",
+      section: "math" as const,
+      icon: SquareRadical,
+      questions: `${getSectionCount(questions, "math").toLocaleString()} Questions`,
+      topics: `${getUniqueTopicCount(questions, "math")} Topics`,
+      mastery: getAverageMastery(topicSummaries, "math"),
+      tone: "from-blue-500 to-blue-700"
+    },
+    {
+      title: "Reading & Writing",
+      description: "Reading Comprehension, Grammar and Vocabulary",
+      section: "reading-writing" as const,
+      icon: BookOpen,
+      questions: `${getSectionCount(questions, "reading-writing").toLocaleString()} Questions`,
+      topics: `${getUniqueTopicCount(questions, "reading-writing")} Topics`,
+      mastery: getAverageMastery(topicSummaries, "reading-writing"),
+      tone: "from-violet-500 to-purple-700"
+    }
+  ];
+
+  return summaries;
+}
+
+function getAverageMastery(
+  topicSummaries: ReturnType<typeof getTopicSummaries>,
+  section: "math" | "reading-writing"
+) {
+  const sectionTopics = topicSummaries.filter((topic) => topic.section === section);
+
+  if (sectionTopics.length === 0) {
+    return 0;
+  }
+
+  return Math.round(
+    sectionTopics.reduce((sum, topic) => sum + topic.mastery, 0) /
+      sectionTopics.length
   );
 }
 

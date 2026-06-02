@@ -1,6 +1,21 @@
-import { weakAreas } from "@/components/question-bank/mockData";
+import type { TopicSummary } from "@/lib/questions";
 
-export function WeakAreasCard() {
+type WeakAreasCardProps = {
+  topics: TopicSummary[];
+};
+
+export function WeakAreasCard({ topics }: WeakAreasCardProps) {
+  const weakAreas = topics
+    .slice()
+    .sort((a, b) => a.mastery - b.mastery)
+    .slice(0, 3)
+    .map((topic) => ({
+      mastery: topic.mastery,
+      section: topic.section === "math" ? "Math" : "Reading & Writing",
+      title: topic.title,
+      tone: topic.mastery < 50 ? "bg-red-500" : "bg-orange-500"
+    }));
+
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 className="text-lg font-black text-slate-950">Weak Areas</h2>

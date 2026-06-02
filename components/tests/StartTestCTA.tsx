@@ -1,4 +1,5 @@
 import { ArrowRight, Target } from "lucide-react";
+import Link from "next/link";
 
 export function StartTestCTA() {
   return (
@@ -19,13 +20,13 @@ export function StartTestCTA() {
           </div>
         </div>
 
-        <button
+        <Link
           className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700 sm:w-auto"
-          type="button"
+          href="/tests/start"
         >
           Start New Test
           <ArrowRight size={18} />
-        </button>
+        </Link>
       </div>
     </section>
   );

@@ -1,13 +1,13 @@
-import { ArrowRight, BookOpen, SquareRadical, type LucideIcon } from "lucide-react";
+import { ArrowRight, type LucideIcon } from "lucide-react";
 import Link from "next/link";
-import type { SectionKey } from "@/components/question-bank/mockData";
+import type { SectionFilter } from "@/lib/questions";
 
 type SectionSummaryCardProps = {
   description: string;
   icon: LucideIcon;
   mastery: number;
   questions: string;
-  section: Exclude<SectionKey, "all">;
+  section: Exclude<SectionFilter, "all">;
   title: string;
   topics: string;
   tone: string;
@@ -44,7 +44,7 @@ export function SectionSummaryCard({
           <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold text-slate-600">
             <span>{questions}</span>
-            <span className="hidden text-slate-300 sm:inline">•</span>
+            <span className="hidden text-slate-300 sm:inline">.</span>
             <span>{topics}</span>
           </div>
         </div>
@@ -73,26 +73,3 @@ export function SectionSummaryCard({
     </article>
   );
 }
-
-export const sectionSummaries = [
-  {
-    title: "Math",
-    description: "Algebra, Advanced Math, Problem Solving and Data Analysis",
-    section: "math" as const,
-    icon: SquareRadical,
-    questions: "1,120 Questions",
-    topics: "10 Topics",
-    mastery: 68,
-    tone: "from-blue-500 to-blue-700"
-  },
-  {
-    title: "Reading & Writing",
-    description: "Reading Comprehension, Grammar and Vocabulary",
-    section: "reading-writing" as const,
-    icon: BookOpen,
-    questions: "1,220 Questions",
-    topics: "12 Topics",
-    mastery: 54,
-    tone: "from-violet-500 to-purple-700"
-  }
-];

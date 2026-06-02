@@ -1,4 +1,5 @@
 import { ArrowRight, FileText } from "lucide-react";
+import Link from "next/link";
 
 export type TestItem = {
   completedAt?: string;
@@ -33,9 +34,9 @@ export function TestRow({ test }: TestRowProps) {
           <h3 className="text-base font-black text-slate-950">{test.title}</h3>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm font-semibold text-slate-500">
             <span>{test.sections} sections</span>
-            <span className="hidden text-slate-300 sm:inline">•</span>
+            <span className="hidden text-slate-300 sm:inline">.</span>
             <span>{test.questions} questions</span>
-            <span className="hidden text-slate-300 sm:inline">•</span>
+            <span className="hidden text-slate-300 sm:inline">.</span>
             <span>{test.duration}</span>
           </div>
         </div>
@@ -72,18 +73,18 @@ export function TestRow({ test }: TestRowProps) {
           )}
         </div>
 
-        <button
+        <Link
           className={[
             "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition-all duration-300",
             isInProgress
               ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700"
               : "border border-slate-200 bg-white text-slate-900 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
           ].join(" ")}
-          type="button"
+          href={isInProgress ? "/tests/start" : "/progress"}
         >
           {isInProgress ? "Continue" : "Review"}
           {isInProgress ? <ArrowRight size={16} /> : null}
-        </button>
+        </Link>
       </div>
     </div>
   );

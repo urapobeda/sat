@@ -1,15 +1,21 @@
-import type { SectionKey } from "@/components/question-bank/mockData";
-import { sectionTabs } from "@/components/question-bank/mockData";
+import type { LucideIcon } from "lucide-react";
+import type { SectionFilter } from "@/lib/questions";
 
 type SectionTabsProps = {
-  activeTab: SectionKey;
-  onChange: (tab: SectionKey) => void;
+  activeTab: SectionFilter;
+  onChange: (tab: SectionFilter) => void;
+  tabs: Array<{
+    icon: LucideIcon;
+    key: SectionFilter;
+    label: string;
+    questions: string;
+  }>;
 };
 
-export function SectionTabs({ activeTab, onChange }: SectionTabsProps) {
+export function SectionTabs({ activeTab, onChange, tabs }: SectionTabsProps) {
   return (
     <div className="grid border-b border-slate-200 md:grid-cols-3">
-      {sectionTabs.map((tab) => {
+      {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.key;
 
