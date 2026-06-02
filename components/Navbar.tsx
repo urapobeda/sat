@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { href: "/", label: "Home" },
-  { href: "/practice", label: "Practice" },
+  { href: "/question-bank", label: "Question Bank" },
   { href: "/tests", label: "Tests" },
   { href: "/progress", label: "Progress" },
   { href: "/converter", label: "Converter" }
@@ -38,7 +38,7 @@ export function Navbar() {
             </button>
             <Link
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700"
-              href="/practice"
+              href="/question-bank"
             >
               <span>Get Started</span>
               <ArrowRight size={17} />

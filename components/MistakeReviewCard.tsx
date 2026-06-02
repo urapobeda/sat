@@ -23,7 +23,7 @@ export function MistakeReviewCard() {
         </div>
         <Button
           className="w-full rounded-xl sm:w-auto"
-          href="/practice"
+          href="/question-bank"
           icon={<ArrowRight size={18} />}
           variant="secondary"
         >

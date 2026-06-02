@@ -24,7 +24,7 @@ const featureCards = [
     icon: ClipboardList,
     tone: "from-blue-500 to-blue-700",
     cta: "Start practice",
-    href: "/practice"
+    href: "/question-bank"
   },
   {
     title: "Full-Length Tests",
@@ -48,7 +48,7 @@ const featureCards = [
     icon: Lightbulb,
     tone: "from-amber-400 to-orange-500",
     cta: "See recommendations",
-    href: "/practice"
+    href: "/question-bank"
   }
 ];
 
@@ -62,7 +62,7 @@ const sections = [
     panel: "border-blue-100 bg-blue-50/70",
     weakAreas: ["Linear equations", "Functions"],
     cta: "Practice Math",
-    href: "/practice"
+    href: "/question-bank"
   },
   {
     title: "Reading & Writing",
@@ -73,7 +73,7 @@ const sections = [
     panel: "border-violet-100 bg-violet-50/70",
     weakAreas: ["Transitions", "Inference"],
     cta: "Practice Reading",
-    href: "/practice"
+    href: "/question-bank"
   }
 ];
 
@@ -104,7 +104,7 @@ export default function HomePage() {
           </div>
           <Button
             className="w-full rounded-xl sm:w-auto"
-            href="/practice"
+            href="/question-bank"
             icon={<ArrowRight size={18} />}
             variant="secondary"
           >

@@ -34,7 +34,7 @@ export function HomeHero() {
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Button
               className="min-h-[52px] w-full rounded-xl px-7 text-base sm:w-auto"
-              href="/practice"
+              href="/question-bank"
               icon={<ArrowRight size={20} />}
             >
               Start Practicing

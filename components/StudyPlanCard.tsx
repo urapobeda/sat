@@ -17,7 +17,7 @@ export function StudyPlanCard() {
         </div>
         <Button
           className="min-h-10 rounded-xl px-4 text-sm"
-          href="/practice"
+          href="/question-bank"
           icon={<ArrowRight size={17} />}
         >
           Continue
