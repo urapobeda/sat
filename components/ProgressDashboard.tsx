@@ -3,6 +3,7 @@
 import {
   BarChart3,
   ClipboardList,
+  Loader2,
   Target,
   Trash2,
   Trophy
@@ -12,33 +13,121 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { ProgressBar } from "@/components/quiz/ProgressBar";
 import {
-  clearProgress,
-  getProgressHistory,
-  type ProgressRecord,
-  subscribeToProgressUpdates
-} from "@/lib/progress";
+  clearUserProgress,
+  getCurrentUser,
+  getUserProgress,
+  getWeakAreas,
+  type RecentAttempt
+} from "@/lib/supabase/queries";
+
+type ProgressStats = Awaited<ReturnType<typeof getUserProgress>>;
+type WeakArea = Awaited<ReturnType<typeof getWeakAreas>>[number];
 
 export function ProgressDashboard() {
-  const [records, setRecords] = useState<ProgressRecord[] | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [stats, setStats] = useState<ProgressStats | null>(null);
+  const [weakAreas, setWeakAreas] = useState<WeakArea[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isClearing, setIsClearing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [guestMessage, setGuestMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const refreshRecords = () => setRecords(getProgressHistory());
+    let isMounted = true;
 
-    window.queueMicrotask(refreshRecords);
-    return subscribeToProgressUpdates(refreshRecords);
+    async function loadProgress() {
+      setIsLoading(true);
+      setError(null);
+      setGuestMessage(null);
+
+      try {
+        const user = await getCurrentUser().catch(() => null);
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (!user) {
+          setUserId(null);
+          setStats(null);
+          setWeakAreas([]);
+          setGuestMessage(
+            "No progress yet. Start practicing to see your stats. Sign in to save progress with Supabase."
+          );
+          return;
+        }
+
+        setUserId(user.id);
+        const [progressStats, areas] = await Promise.all([
+          getUserProgress(user.id),
+          getWeakAreas(user.id)
+        ]);
+
+        if (isMounted) {
+          setStats(progressStats);
+          setWeakAreas(areas);
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load progress from Supabase."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadProgress();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const stats = useMemo(() => getStats(records ?? []), [records]);
+  const attempts = stats?.attempts ?? [];
+  const chartRecords = useMemo(() => attempts.slice(0, 6).reverse(), [attempts]);
 
-  function handleClearProgress() {
-    clearProgress();
-    setRecords([]);
+  async function handleClearProgress() {
+    if (!userId) {
+      return;
+    }
+
+    setIsClearing(true);
+
+    try {
+      await clearUserProgress(userId);
+      setStats({
+        attempts: [],
+        averageAccuracy: 0,
+        bestTestScore: 0,
+        questionsAnswered: 0,
+        totalSessions: 0
+      });
+      setWeakAreas([]);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to clear progress."
+      );
+    } finally {
+      setIsClearing(false);
+    }
   }
 
-  if (records === null) {
+  if (isLoading) {
     return (
       <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex items-center gap-3 text-sm font-black text-blue-600">
+          <Loader2 className="animate-spin" size={20} />
+          Loading progress from Supabase...
+        </div>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((item) => (
             <div className="h-28 animate-pulse rounded-2xl bg-slate-100" key={item} />
           ))}
@@ -47,10 +136,20 @@ export function ProgressDashboard() {
     );
   }
 
-  if (records.length === 0) {
+  if (error) {
     return (
       <EmptyState
-        description="No progress yet. Start practicing to see your stats."
+        description={error}
+        icon={<BarChart3 size={26} />}
+        title="Progress unavailable"
+      />
+    );
+  }
+
+  if (guestMessage || !stats || stats.totalSessions === 0) {
+    return (
+      <EmptyState
+        description={guestMessage ?? "No progress yet. Start practicing to see your stats."}
         icon={<BarChart3 size={26} />}
         title="No progress yet"
       />
@@ -95,25 +194,26 @@ export function ProgressDashboard() {
                   Progress over time
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  Accuracy trend from your latest sessions.
+                  Accuracy trend from your Supabase practice and test sessions.
                 </p>
               </div>
               <button
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-4 py-2.5 text-sm font-black text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-4 py-2.5 text-sm font-black text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                disabled={isClearing}
                 onClick={handleClearProgress}
                 type="button"
               >
-                <Trash2 size={17} />
+                {isClearing ? <Loader2 className="animate-spin" size={17} /> : <Trash2 size={17} />}
                 Clear Progress
               </button>
             </div>
-            <ProgressChart records={records} />
+            <ProgressChart records={chartRecords} />
           </article>
 
           <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <h2 className="text-xl font-black text-slate-950">Recent attempts</h2>
             <div className="mt-5 space-y-3">
-              {records.slice(0, 8).map((record) => (
+              {attempts.slice(0, 8).map((record) => (
                 <AttemptRow key={record.id} record={record} />
               ))}
             </div>
@@ -123,8 +223,8 @@ export function ProgressDashboard() {
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-xl font-black text-slate-950">Weak areas</h2>
           <div className="mt-5 space-y-4">
-            {stats.weakAreas.length > 0 ? (
-              stats.weakAreas.map((area) => (
+            {weakAreas.length > 0 ? (
+              weakAreas.map((area) => (
                 <div key={area.topic}>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-black text-slate-950">
@@ -143,7 +243,7 @@ export function ProgressDashboard() {
               ))
             ) : (
               <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-                Complete a practice or test session to see weak areas.
+                Complete a practice or test session with missed answers to see weak areas.
               </p>
             )}
           </div>
@@ -179,14 +279,14 @@ function StatCard({ icon, label, tone, value }: StatCardProps) {
 }
 
 type AttemptRowProps = {
-  record: ProgressRecord;
+  record: RecentAttempt;
 };
 
 function AttemptRow({ record }: AttemptRowProps) {
   const isPractice = record.mode === "practice";
   const subtitle = isPractice
     ? [record.section, record.topic].filter(Boolean).join(" / ") || "Practice"
-    : `Time spent: ${formatDuration(record.timeSpent)}`;
+    : `Time spent: ${formatDuration(record.timeSpent ?? 0)}`;
 
   return (
     <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-blue-200 hover:bg-slate-50 sm:grid-cols-[1fr_auto] sm:items-center">
@@ -223,15 +323,13 @@ function AttemptRow({ record }: AttemptRowProps) {
   );
 }
 
-function ProgressChart({ records }: { records: ProgressRecord[] }) {
-  const chartRecords = records.slice(0, 6).reverse();
-
-  if (chartRecords.length === 0) {
+function ProgressChart({ records }: { records: RecentAttempt[] }) {
+  if (records.length === 0) {
     return null;
   }
 
-  const points = chartRecords.map((record, index) => {
-    const x = 36 + index * (300 / Math.max(chartRecords.length - 1, 1));
+  const points = records.map((record, index) => {
+    const x = 36 + index * (300 / Math.max(records.length - 1, 1));
     const y = 150 - record.percentage * 1.2;
     return { label: record.mode, percentage: record.percentage, x, y };
   });
@@ -284,44 +382,6 @@ function ProgressChart({ records }: { records: ProgressRecord[] }) {
       </svg>
     </div>
   );
-}
-
-function getStats(records: ProgressRecord[]) {
-  const totalSessions = records.length;
-  const questionsAnswered = records.reduce((sum, record) => sum + record.total, 0);
-  const averageAccuracy =
-    totalSessions > 0
-      ? Math.round(
-          records.reduce((sum, record) => sum + record.percentage, 0) /
-            totalSessions
-        )
-      : 0;
-  const testScores = records
-    .filter((record) => record.mode === "test")
-    .map((record) =>
-      record.estimatedScore ?? Math.min(1600, 400 + Math.round(record.percentage * 12))
-    );
-  const bestTestScore = testScores.length > 0 ? Math.max(...testScores) : 0;
-  const weakTopicCounts = new Map<string, number>();
-
-  records.forEach((record) => {
-    record.weakTopics?.forEach((topic) => {
-      weakTopicCounts.set(topic, (weakTopicCounts.get(topic) ?? 0) + 1);
-    });
-  });
-
-  const weakAreas = Array.from(weakTopicCounts.entries())
-    .map(([topic, count]) => ({ count, topic }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
-  return {
-    averageAccuracy,
-    bestTestScore,
-    questionsAnswered,
-    totalSessions,
-    weakAreas
-  };
 }
 
 function formatDate(date: string) {

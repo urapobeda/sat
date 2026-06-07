@@ -3,6 +3,12 @@
 import { ArrowRight, GraduationCap, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import {
+  getSupabaseBrowserClient,
+  isSupabaseConfigured
+} from "@/lib/supabase/client";
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -14,6 +20,41 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      setIsAuthReady(true);
+      return;
+    }
+
+    const supabase = getSupabaseBrowserClient();
+
+    supabase.auth
+      .getUser()
+      .then(({ data }) => setUser(data.user))
+      .finally(() => setIsAuthReady(true));
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setIsAuthReady(true);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function handleSignOut() {
+    if (!isSupabaseConfigured()) {
+      return;
+    }
+
+    const supabase = getSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    setUser(null);
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-blue-100 bg-white/95 shadow-sm backdrop-blur">
@@ -29,13 +70,24 @@ export function Navbar() {
           </Link>
 
           <div className="hidden items-center gap-3 md:flex">
-            <button
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-4 text-sm font-bold text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
-              type="button"
-            >
-              <UserRound size={17} />
-              <span>Sign in</span>
-            </button>
+            {user ? (
+              <button
+                className="inline-flex min-h-11 max-w-48 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-4 text-sm font-bold text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+                onClick={handleSignOut}
+                type="button"
+              >
+                <UserRound size={17} />
+                <span className="truncate">Sign out</span>
+              </button>
+            ) : (
+              <Link
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-4 text-sm font-bold text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+                href="/auth"
+              >
+                <UserRound size={17} />
+                <span>{isAuthReady ? "Sign in" : "Loading"}</span>
+              </Link>
+            )}
             <Link
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700"
               href="/question-bank"

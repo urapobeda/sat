@@ -1,26 +1,47 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Flag, RotateCcw, Trophy } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Flag,
+  Loader2,
+  RotateCcw,
+  Search,
+  Trophy
+} from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import { EmptyState } from "@/components/EmptyState";
 import { Layout } from "@/components/Layout";
 import { ProgressBar } from "@/components/quiz/ProgressBar";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
 import { ReviewAnswers } from "@/components/quiz/ReviewAnswers";
 import { Timer } from "@/components/quiz/Timer";
-import { questions } from "@/data/questions";
-import { getWeakTopics } from "@/lib/questions";
-import { saveTestResult } from "@/lib/progress";
+import type { Question } from "@/data/questions";
+import {
+  completeTestSession,
+  createTestSession,
+  getCurrentUser,
+  getRandomQuestions,
+  saveTestAnswer
+} from "@/lib/supabase/queries";
 
 const TEST_DURATION_SECONDS = 15 * 60;
 
 export function TestStartPage() {
-  const testQuestions = useMemo(() => getMiniTestQuestions(), []);
+  const [testQuestions, setTestQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [testSessionId, setTestSessionId] = useState<string | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(TEST_DURATION_SECONDS);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSavingResult, setIsSavingResult] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [timeUp, setTimeUp] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [persistenceMessage, setPersistenceMessage] = useState<string | null>(null);
   const hasSaved = useRef(false);
 
   const currentQuestion = testQuestions[currentIndex];
@@ -32,17 +53,77 @@ export function TestStartPage() {
     testQuestions.length > 0 ? Math.round((score / testQuestions.length) * 100) : 0;
   const timeSpent = TEST_DURATION_SECONDS - remainingSeconds;
   const estimatedScore = Math.min(1600, 400 + Math.round(percentage * 12));
-  const weakTopics = getWeakTopics(testQuestions, answers);
 
   useEffect(() => {
-    if (isFinished) {
+    let isMounted = true;
+
+    async function loadMiniTest() {
+      setIsLoading(true);
+      setError(null);
+      setPersistenceMessage(null);
+
+      try {
+        const [loadedQuestions, user] = await Promise.all([
+          getRandomQuestions(10),
+          getCurrentUser().catch(() => null)
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setTestQuestions(loadedQuestions);
+        setCurrentUser(user);
+
+        if (!user) {
+          setPersistenceMessage("Guest mode: sign in to save this test result.");
+          return;
+        }
+
+        if (loadedQuestions.length > 0) {
+          const session = await createTestSession({
+            mode: "mini",
+            total: loadedQuestions.length,
+            user_id: user.id
+          });
+
+          if (isMounted) {
+            setTestSessionId(session.id);
+          }
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load mini test questions."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadMiniTest();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isFinished || isLoading || testQuestions.length === 0) {
       return;
     }
 
     const timer = window.setInterval(() => {
       setRemainingSeconds((seconds) => {
         if (seconds <= 1) {
-          window.setTimeout(() => finishTest(true), 0);
+          window.setTimeout(() => {
+            finishTest(true);
+          }, 0);
           return 0;
         }
 
@@ -77,30 +158,71 @@ export function TestStartPage() {
     setCurrentIndex((index) => Math.max(index - 1, 0));
   }
 
-  function finishTest(expired: boolean) {
-    if (!hasSaved.current) {
-      saveTestResult({
-        estimatedScore,
-        percentage,
-        score,
-        timeSpent: expired ? TEST_DURATION_SECONDS : timeSpent,
-        total: testQuestions.length,
-        weakTopics
-      });
-      hasSaved.current = true;
+  async function finishTest(expired: boolean) {
+    if (hasSaved.current) {
+      setTimeUp(expired);
+      setIsFinished(true);
+      return;
     }
 
-    setTimeUp(expired);
-    setIsFinished(true);
+    hasSaved.current = true;
+    setIsSavingResult(true);
+    const spentSeconds = expired ? TEST_DURATION_SECONDS : timeSpent;
+
+    try {
+      if (currentUser && testSessionId) {
+        await Promise.all(
+          testQuestions.map((question) =>
+            saveTestAnswer({
+              correct_answer: question.correctAnswer,
+              is_correct: answers[question.id] === question.correctAnswer,
+              question_id: question.id,
+              selected_answer: answers[question.id] ?? null,
+              test_session_id: testSessionId,
+              user_id: currentUser.id
+            })
+          )
+        );
+
+        await completeTestSession(testSessionId, {
+          estimated_sat_score: estimatedScore,
+          percentage,
+          score,
+          time_spent_seconds: spentSeconds,
+          total: testQuestions.length
+        });
+      }
+    } catch {
+      setPersistenceMessage("Results are shown here, but Supabase did not save them.");
+    } finally {
+      setIsSavingResult(false);
+      setTimeUp(expired);
+      setIsFinished(true);
+    }
   }
 
-  function restartTest() {
+  async function restartTest() {
     setAnswers({});
     setCurrentIndex(0);
     setRemainingSeconds(TEST_DURATION_SECONDS);
     setIsFinished(false);
     setTimeUp(false);
     hasSaved.current = false;
+
+    if (!currentUser) {
+      return;
+    }
+
+    try {
+      const session = await createTestSession({
+        mode: "mini",
+        total: testQuestions.length,
+        user_id: currentUser.id
+      });
+      setTestSessionId(session.id);
+    } catch {
+      setPersistenceMessage("Test restarted, but the new session was not saved.");
+    }
   }
 
   return (
@@ -122,12 +244,41 @@ export function TestStartPage() {
               Answer each question under timed conditions. Explanations unlock
               after you finish.
             </p>
+            {persistenceMessage ? (
+              <p className="mt-4 inline-flex rounded-2xl border border-blue-100 bg-white/80 px-4 py-2 text-sm font-bold text-slate-600">
+                {persistenceMessage}
+              </p>
+            ) : null}
           </div>
           <Timer seconds={remainingSeconds} />
         </div>
       </section>
 
-      {isFinished ? (
+      {isLoading ? (
+        <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3 text-sm font-black text-blue-600">
+            <Loader2 className="animate-spin" size={20} />
+            Loading mini test from Supabase...
+          </div>
+          <div className="mt-6 space-y-4">
+            {[0, 1, 2].map((item) => (
+              <div className="h-20 animate-pulse rounded-2xl bg-slate-100" key={item} />
+            ))}
+          </div>
+        </section>
+      ) : error ? (
+        <EmptyState
+          description={error}
+          icon={<Search size={26} />}
+          title="Mini test is unavailable"
+        />
+      ) : testQuestions.length === 0 ? (
+        <EmptyState
+          description="No questions are available in Supabase yet. Run the seed SQL file first."
+          icon={<Search size={26} />}
+          title="No test questions found"
+        />
+      ) : isFinished ? (
         <section className="mt-6 space-y-6">
           <article className="rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
@@ -192,15 +343,17 @@ export function TestStartPage() {
 
             <button
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-5 py-3 text-sm font-black text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50"
+              disabled={isSavingResult}
               onClick={() => finishTest(false)}
               type="button"
             >
-              <Flag size={17} />
+              {isSavingResult ? <Loader2 className="animate-spin" size={17} /> : <Flag size={17} />}
               Finish Test
             </button>
 
             <button
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 sm:justify-self-end"
+              disabled={isSavingResult}
               onClick={goNext}
               type="button"
             >
@@ -212,13 +365,4 @@ export function TestStartPage() {
       ) : null}
     </Layout>
   );
-}
-
-function getMiniTestQuestions() {
-  const math = questions.filter((question) => question.section === "math").slice(0, 5);
-  const readingWriting = questions
-    .filter((question) => question.section === "reading-writing")
-    .slice(0, 5);
-
-  return [...math, ...readingWriting];
 }

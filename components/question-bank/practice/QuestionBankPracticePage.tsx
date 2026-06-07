@@ -1,56 +1,138 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Search, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Search, RotateCcw } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { Layout } from "@/components/Layout";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
 import { ResultsCard } from "@/components/quiz/ResultsCard";
-import { questions } from "@/data/questions";
+import type { Question } from "@/data/questions";
 import {
-  filterQuestions,
   formatSection,
   getWeakTopics,
-  normalizeTopic,
   type DifficultyFilter,
   type SectionFilter
 } from "@/lib/questions";
-import { savePracticeResult } from "@/lib/progress";
+import {
+  completePracticeSession,
+  createPracticeSession,
+  getCurrentUser,
+  getQuestions,
+  savePracticeAnswer
+} from "@/lib/supabase/queries";
+import type { User } from "@supabase/supabase-js";
 
 export function QuestionBankPracticePage() {
   const searchParams = useSearchParams();
   const section = parseSection(searchParams.get("section"));
   const difficulty = parseDifficulty(searchParams.get("difficulty"));
-  const topicParam = searchParams.get("topic");
-  const topic = resolveTopic(topicParam);
-  const filteredQuestions = useMemo(
-    () =>
-      filterQuestions(questions, {
-        difficulty,
-        section,
-        topic
-      }),
-    [difficulty, section, topic]
-  );
+  const topic = searchParams.get("topic");
+  const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSavingResult, setIsSavingResult] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [persistenceMessage, setPersistenceMessage] = useState<string | null>(null);
   const hasSaved = useRef(false);
 
-  const currentQuestion = filteredQuestions[currentIndex];
+  const currentQuestion = practiceQuestions[currentIndex];
   const selectedAnswer = currentQuestion ? answers[currentQuestion.id] ?? null : null;
-  const score = filteredQuestions.filter(
+  const score = practiceQuestions.filter(
     (question) => answers[question.id] === question.correctAnswer
   ).length;
   const percentage =
-    filteredQuestions.length > 0
-      ? Math.round((score / filteredQuestions.length) * 100)
+    practiceQuestions.length > 0
+      ? Math.round((score / practiceQuestions.length) * 100)
       : 0;
-  const weakTopics = getWeakTopics(filteredQuestions, answers);
+  const weakTopics = getWeakTopics(practiceQuestions, answers);
+  const displayTopic = practiceQuestions[0]?.topic ?? topic;
 
-  function handleSelect(choice: string) {
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadPractice() {
+      setIsLoading(true);
+      setError(null);
+      setPersistenceMessage(null);
+      setPracticeQuestions([]);
+      setAnswers({});
+      setCurrentIndex(0);
+      setIsFinished(false);
+      setSessionId(null);
+      hasSaved.current = false;
+
+      try {
+        const [loadedQuestions, user] = await Promise.all([
+          getQuestions({ difficulty, section, topic }),
+          getCurrentUser().catch(() => null)
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setPracticeQuestions(loadedQuestions);
+        setCurrentUser(user);
+
+        if (!user) {
+          setPersistenceMessage("Guest mode: sign in to save this practice session.");
+          return;
+        }
+
+        if (loadedQuestions.length > 0) {
+          await createSession(user, loadedQuestions);
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load practice questions."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    async function createSession(user: User, loadedQuestions: Question[]) {
+      try {
+        const session = await createPracticeSession({
+          difficulty: difficulty === "all" ? null : difficulty,
+          section: section === "all" ? null : section,
+          topic: loadedQuestions[0]?.topic ?? topic,
+          total: loadedQuestions.length,
+          user_id: user.id
+        });
+
+        if (isMounted) {
+          setSessionId(session.id);
+        }
+      } catch {
+        if (isMounted) {
+          setPersistenceMessage(
+            "Practice is available, but this session could not be saved."
+          );
+        }
+      }
+    }
+
+    loadPractice();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [difficulty, section, topic]);
+
+  async function handleSelect(choice: string) {
     if (!currentQuestion || answers[currentQuestion.id]) {
       return;
     }
@@ -59,43 +141,85 @@ export function QuestionBankPracticePage() {
       ...currentAnswers,
       [currentQuestion.id]: choice
     }));
+
+    if (!currentUser || !sessionId) {
+      return;
+    }
+
+    try {
+      await savePracticeAnswer({
+        correct_answer: currentQuestion.correctAnswer,
+        is_correct: choice === currentQuestion.correctAnswer,
+        question_id: currentQuestion.id,
+        selected_answer: choice,
+        session_id: sessionId,
+        user_id: currentUser.id
+      });
+    } catch {
+      setPersistenceMessage("Answer selected, but Supabase did not save it.");
+    }
   }
 
-  function handleNext() {
-    if (currentIndex === filteredQuestions.length - 1) {
+  async function handleNext() {
+    if (currentIndex === practiceQuestions.length - 1) {
       finishPractice();
       return;
     }
 
-    setCurrentIndex((index) => Math.min(index + 1, filteredQuestions.length - 1));
+    setCurrentIndex((index) => Math.min(index + 1, practiceQuestions.length - 1));
   }
 
   function handlePrevious() {
     setCurrentIndex((index) => Math.max(index - 1, 0));
   }
 
-  function finishPractice() {
-    if (!hasSaved.current) {
-      savePracticeResult({
-        difficulty,
-        percentage,
-        score,
-        section,
-        topic: topic ?? undefined,
-        total: filteredQuestions.length,
-        weakTopics
-      });
-      hasSaved.current = true;
+  async function finishPractice() {
+    if (hasSaved.current) {
+      setIsFinished(true);
+      return;
     }
 
-    setIsFinished(true);
+    hasSaved.current = true;
+    setIsSavingResult(true);
+
+    try {
+      if (sessionId) {
+        await completePracticeSession(sessionId, {
+          percentage,
+          score,
+          total: practiceQuestions.length
+        });
+      }
+    } catch {
+      setPersistenceMessage("Results are shown here, but Supabase did not save them.");
+    } finally {
+      setIsSavingResult(false);
+      setIsFinished(true);
+    }
   }
 
-  function restartPractice() {
+  async function restartPractice() {
     setAnswers({});
     setCurrentIndex(0);
     setIsFinished(false);
     hasSaved.current = false;
+
+    if (!currentUser || practiceQuestions.length === 0) {
+      return;
+    }
+
+    try {
+      const session = await createPracticeSession({
+        difficulty: difficulty === "all" ? null : difficulty,
+        section: section === "all" ? null : section,
+        topic: practiceQuestions[0]?.topic ?? topic,
+        total: practiceQuestions.length,
+        user_id: currentUser.id
+      });
+      setSessionId(session.id);
+    } catch {
+      setPersistenceMessage("Practice restarted, but the new session was not saved.");
+    }
   }
 
   return (
@@ -113,11 +237,35 @@ export function QuestionBankPracticePage() {
         </h1>
         <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
           {formatSection(section)}
-          {topic ? ` / ${topic}` : ""} practice with instant explanations.
+          {displayTopic ? ` / ${displayTopic}` : ""} practice with instant
+          explanations.
         </p>
+        {persistenceMessage ? (
+          <p className="mt-4 inline-flex rounded-2xl border border-blue-100 bg-white/80 px-4 py-2 text-sm font-bold text-slate-600">
+            {persistenceMessage}
+          </p>
+        ) : null}
       </section>
 
-      {filteredQuestions.length === 0 ? (
+      {isLoading ? (
+        <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3 text-sm font-black text-blue-600">
+            <Loader2 className="animate-spin" size={20} />
+            Loading practice questions from Supabase...
+          </div>
+          <div className="mt-6 space-y-4">
+            {[0, 1, 2].map((item) => (
+              <div className="h-20 animate-pulse rounded-2xl bg-slate-100" key={item} />
+            ))}
+          </div>
+        </section>
+      ) : error ? (
+        <EmptyState
+          description={error}
+          icon={<Search size={26} />}
+          title="Practice is unavailable"
+        />
+      ) : practiceQuestions.length === 0 ? (
         <EmptyState
           description="No questions match these filters. Go back and choose another section or topic."
           icon={<Search size={26} />}
@@ -129,7 +277,7 @@ export function QuestionBankPracticePage() {
             onRestart={restartPractice}
             percentage={percentage}
             score={score}
-            total={filteredQuestions.length}
+            total={practiceQuestions.length}
             weakTopics={weakTopics}
           />
         </section>
@@ -141,7 +289,7 @@ export function QuestionBankPracticePage() {
             question={currentQuestion}
             selectedAnswer={selectedAnswer}
             showFeedback={selectedAnswer !== null}
-            totalQuestions={filteredQuestions.length}
+            totalQuestions={practiceQuestions.length}
           />
 
           <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
@@ -166,14 +314,15 @@ export function QuestionBankPracticePage() {
 
             <button
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none sm:justify-self-end"
-              disabled={!selectedAnswer}
+              disabled={!selectedAnswer || isSavingResult}
               onClick={handleNext}
               type="button"
             >
-              {currentIndex === filteredQuestions.length - 1
+              {isSavingResult ? <Loader2 className="animate-spin" size={18} /> : null}
+              {currentIndex === practiceQuestions.length - 1
                 ? "Show Results"
                 : "Next"}
-              <ArrowRight size={18} />
+              {!isSavingResult ? <ArrowRight size={18} /> : null}
             </button>
           </div>
         </section>
@@ -190,15 +339,4 @@ function parseDifficulty(value: string | null): DifficultyFilter {
   return value === "easy" || value === "medium" || value === "hard"
     ? value
     : "all";
-}
-
-function resolveTopic(value: string | null) {
-  if (!value) {
-    return null;
-  }
-
-  const normalized = normalizeTopic(value);
-  const match = questions.find((question) => normalizeTopic(question.topic) === normalized);
-
-  return match?.topic ?? value;
 }

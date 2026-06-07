@@ -1,16 +1,24 @@
 import { TrendingUp } from "lucide-react";
 
-const chartPoints = [
-  { label: "Test 1", score: 1150, x: 40, y: 124 },
-  { label: "Test 2", score: 1210, x: 116, y: 108 },
-  { label: "Test 3", score: 1470, x: 192, y: 48 },
-  { label: "Test 4", score: 1280, x: 268, y: 88 },
-  { label: "Test 5", score: 1280, x: 344, y: 88 }
-];
+const defaultScores = [1150, 1210, 1470, 1280, 1280];
 
-export function ScoreProgressChart() {
-  const solidPoints = chartPoints.slice(0, 4);
-  const predictedPoint = chartPoints[4];
+type ScoreProgressChartProps = {
+  scores?: number[];
+};
+
+export function ScoreProgressChart({ scores }: ScoreProgressChartProps) {
+  const scoreValues = (scores?.length ? scores : defaultScores).slice(-5);
+  const chartPoints = scoreValues.map((score, index) => {
+    const x = 40 + index * (304 / Math.max(scoreValues.length - 1, 1));
+    const y = 168 - ((score - 800) / 800) * 144;
+
+    return {
+      label: `Test ${index + 1}`,
+      score,
+      x,
+      y: Math.max(24, Math.min(168, y))
+    };
+  });
 
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -49,31 +57,23 @@ export function ScoreProgressChart() {
             );
           })}
 
-          <polyline
-            fill="none"
-            points={solidPoints.map((point) => `${point.x},${point.y}`).join(" ")}
-            stroke="#2563eb"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="5"
-          />
-          <line
-            stroke="#2563eb"
-            strokeDasharray="6 7"
-            strokeLinecap="round"
-            strokeWidth="4"
-            x1={solidPoints[3].x}
-            x2={predictedPoint.x}
-            y1={solidPoints[3].y}
-            y2={predictedPoint.y}
-          />
+          {chartPoints.length > 1 ? (
+            <polyline
+              fill="none"
+              points={chartPoints.map((point) => `${point.x},${point.y}`).join(" ")}
+              stroke="#2563eb"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="5"
+            />
+          ) : null}
 
           {chartPoints.map((point, index) => (
             <g key={point.label}>
               <circle
                 cx={point.x}
                 cy={point.y}
-                fill={index === 4 ? "white" : "#2563eb"}
+                fill={index === chartPoints.length - 1 ? "white" : "#2563eb"}
                 r="6"
                 stroke="#2563eb"
                 strokeWidth="4"

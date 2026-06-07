@@ -1,3 +1,5 @@
+"use client";
+
 import {
   CheckCheck,
   Clock,
@@ -7,6 +9,7 @@ import {
   TrendingUp,
   Trophy
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { ScoreProgressChart } from "@/components/tests/ScoreProgressChart";
 import { StartTestCTA } from "@/components/tests/StartTestCTA";
@@ -14,8 +17,10 @@ import { StatCard } from "@/components/tests/StatCard";
 import { TestInformationCard } from "@/components/tests/TestInformationCard";
 import { TestListCard } from "@/components/tests/TestListCard";
 import type { TestItem } from "@/components/tests/TestRow";
+import { getCurrentUser, getTestHistory } from "@/lib/supabase/queries";
+import type { TestSession } from "@/types/database";
 
-const stats = [
+const fallbackStats = [
   {
     title: "Tests Taken",
     value: "5",
@@ -46,7 +51,38 @@ const stats = [
   }
 ];
 
-const tests: TestItem[] = [
+const emptyStats = [
+  {
+    title: "Tests Taken",
+    value: "0",
+    description: "Total tests completed",
+    icon: FileText,
+    tone: "bg-blue-50 text-blue-600"
+  },
+  {
+    title: "Average Score",
+    value: "-",
+    description: "Across all tests",
+    icon: TrendingUp,
+    tone: "bg-emerald-50 text-emerald-600"
+  },
+  {
+    title: "Best Score",
+    value: "-",
+    description: "Complete a test first",
+    icon: Trophy,
+    tone: "bg-violet-50 text-violet-600"
+  },
+  {
+    title: "Total Time",
+    value: "0m",
+    description: "Time spent testing",
+    icon: Clock,
+    tone: "bg-orange-50 text-orange-600"
+  }
+];
+
+const fallbackTests: TestItem[] = [
   {
     title: "Full-Length Test 5",
     sections: 4,
@@ -89,6 +125,88 @@ const tests: TestItem[] = [
 ];
 
 export function TestsPage() {
+  const [history, setHistory] = useState<TestSession[]>([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadTestHistory() {
+      setIsLoading(true);
+      setNotice(null);
+
+      try {
+        const user = await getCurrentUser().catch(() => null);
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (!user) {
+          setIsAuthenticated(false);
+          setNotice("Guest mode: sign in to save mini test sessions in Supabase.");
+          setHistory([]);
+          return;
+        }
+
+        setIsAuthenticated(true);
+        const testHistory = await getTestHistory(user.id);
+
+        if (isMounted) {
+          setHistory(testHistory);
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setNotice(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load Supabase test history."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadTestHistory();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const completedHistory = history.filter((record) => record.completed_at);
+  const dashboardStats = useMemo(
+    () =>
+      completedHistory.length > 0
+        ? getStatsFromHistory(completedHistory)
+        : isAuthenticated
+          ? emptyStats
+        : fallbackStats,
+    [completedHistory, isAuthenticated]
+  );
+  const tests = useMemo(
+    () =>
+      completedHistory.length > 0
+        ? completedHistory.map((record, index) => mapTestSession(record, index))
+        : isAuthenticated
+          ? []
+        : fallbackTests,
+    [completedHistory, isAuthenticated]
+  );
+  const scoreHistory = completedHistory
+    .slice()
+    .reverse()
+    .map(
+      (record) =>
+        record.estimated_sat_score ??
+        Math.min(1600, 400 + Math.round(Number(record.percentage) * 12))
+    );
+
   return (
     <Layout>
       <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-white p-6 shadow-soft sm:p-8">
@@ -112,17 +230,23 @@ export function TestsPage() {
       </section>
 
       <section className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
+        {dashboardStats.map((stat) => (
           <StatCard key={stat.title} {...stat} />
         ))}
       </section>
 
+      {notice ? (
+        <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/70 px-5 py-4 text-sm font-bold text-slate-700">
+          {notice}
+        </div>
+      ) : null}
+
       <section className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <TestListCard tests={tests} />
+        <TestListCard tests={isLoading ? [] : tests} />
 
         <div className="space-y-6">
           <TestInformationCard />
-          <ScoreProgressChart />
+          <ScoreProgressChart scores={scoreHistory} />
         </div>
       </section>
 
@@ -131,6 +255,94 @@ export function TestsPage() {
       </section>
     </Layout>
   );
+}
+
+function getStatsFromHistory(history: TestSession[]) {
+  const scores = history.map(
+    (record) =>
+      record.estimated_sat_score ??
+      Math.min(1600, 400 + Math.round(Number(record.percentage) * 12))
+  );
+  const totalSeconds = history.reduce(
+    (sum, record) => sum + (record.time_spent_seconds ?? 0),
+    0
+  );
+  const averageScore = Math.round(
+    scores.reduce((sum, score) => sum + score, 0) / Math.max(scores.length, 1)
+  );
+  const bestScore = Math.max(...scores);
+
+  return [
+    {
+      title: "Tests Taken",
+      value: String(history.length),
+      description: "Total tests completed",
+      icon: FileText,
+      tone: "bg-blue-50 text-blue-600"
+    },
+    {
+      title: "Average Score",
+      value: `${averageScore} / 1600`,
+      description: "Across all tests",
+      icon: TrendingUp,
+      tone: "bg-emerald-50 text-emerald-600"
+    },
+    {
+      title: "Best Score",
+      value: `${bestScore} / 1600`,
+      description: "Saved in Supabase",
+      icon: Trophy,
+      tone: "bg-violet-50 text-violet-600"
+    },
+    {
+      title: "Total Time",
+      value: formatLongDuration(totalSeconds),
+      description: "Time spent testing",
+      icon: Clock,
+      tone: "bg-orange-50 text-orange-600"
+    }
+  ];
+}
+
+function mapTestSession(record: TestSession, index: number): TestItem {
+  const score =
+    record.estimated_sat_score ??
+    Math.min(1600, 400 + Math.round(Number(record.percentage) * 12));
+
+  return {
+    completedAt: formatRelativeDate(record.completed_at ?? record.started_at),
+    duration: formatLongDuration(record.time_spent_seconds ?? 0),
+    questions: record.total,
+    score,
+    sections: 2,
+    title: `SAT Mini Test ${index + 1}`
+  };
+}
+
+function formatLongDuration(seconds: number) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (hours === 0) {
+    return `${minutes}m`;
+  }
+
+  return `${hours}h ${minutes}m`;
+}
+
+function formatRelativeDate(date: string) {
+  const diffMs = Date.now() - new Date(date).getTime();
+  const days = Math.max(0, Math.round(diffMs / 86_400_000));
+
+  if (days === 0) {
+    return "today";
+  }
+
+  if (days === 1) {
+    return "1 day ago";
+  }
+
+  return `${days} days ago`;
 }
 
 function HeaderIllustration() {

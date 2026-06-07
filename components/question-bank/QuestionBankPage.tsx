@@ -12,7 +12,7 @@ import {
   Sparkles,
   SquareRadical
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { FilterCard } from "@/components/question-bank/FilterCard";
 import { ProgressSidebar } from "@/components/question-bank/ProgressSidebar";
@@ -20,13 +20,14 @@ import { SearchInput } from "@/components/question-bank/SearchInput";
 import { SectionSummaryCard } from "@/components/question-bank/SectionSummaryCard";
 import { SectionTabs } from "@/components/question-bank/SectionTabs";
 import { TopicRow } from "@/components/question-bank/TopicRow";
-import { questions } from "@/data/questions";
+import type { Question } from "@/data/questions";
 import {
   getSectionCount,
   getTopicSummaries,
   getUniqueTopicCount,
   type SectionFilter
 } from "@/lib/questions";
+import { getQuestions } from "@/lib/supabase/queries";
 
 const filterCards = [
   {
@@ -58,37 +59,78 @@ const filterCards = [
 export function QuestionBankPage() {
   const [activeTab, setActiveTab] = useState<SectionFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const topicSummaries = useMemo(() => getTopicSummaries(questions), []);
+  const [questionBankQuestions, setQuestionBankQuestions] = useState<Question[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const topicSummaries = useMemo(
+    () => getTopicSummaries(questionBankQuestions),
+    [questionBankQuestions]
+  );
   const sectionTabs = useMemo(
     () => [
       {
         icon: Grid2X2,
         key: "all" as const,
         label: "All Sections",
-        questions: `${getSectionCount(questions, "all").toLocaleString()} Questions`
+        questions: `${getSectionCount(questionBankQuestions, "all").toLocaleString()} Questions`
       },
       {
         icon: SquareRadical,
         key: "math" as const,
         label: "Math",
-        questions: `${getSectionCount(questions, "math").toLocaleString()} Questions`
+        questions: `${getSectionCount(questionBankQuestions, "math").toLocaleString()} Questions`
       },
       {
         icon: BookOpen,
         key: "reading-writing" as const,
         label: "Reading & Writing",
-        questions: `${getSectionCount(questions, "reading-writing").toLocaleString()} Questions`
+        questions: `${getSectionCount(questionBankQuestions, "reading-writing").toLocaleString()} Questions`
       }
     ],
-    []
+    [questionBankQuestions]
   );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadQuestions() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const data = await getQuestions();
+
+        if (isMounted) {
+          setQuestionBankQuestions(data);
+        }
+      } catch (requestError) {
+        if (isMounted) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load questions from Supabase."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadQuestions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const visibleTopics = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
     return topicSummaries.filter((topic) => {
       const matchesTab = activeTab === "all" || topic.section === activeTab;
-      const relatedQuestions = questions.filter(
+      const relatedQuestions = questionBankQuestions.filter(
         (question) => question.topic === topic.title
       );
       const matchesSearch =
@@ -101,11 +143,12 @@ export function QuestionBankPage() {
 
       return matchesTab && matchesSearch;
     });
-  }, [activeTab, searchQuery, topicSummaries]);
+  }, [activeTab, questionBankQuestions, searchQuery, topicSummaries]);
 
-  const visibleSummaries = getSectionSummaries(topicSummaries).filter(
-    (summary) => activeTab === "all" || summary.section === activeTab
-  );
+  const visibleSummaries = getSectionSummaries(
+    topicSummaries,
+    questionBankQuestions
+  ).filter((summary) => activeTab === "all" || summary.section === activeTab);
 
   return (
     <Layout>
@@ -148,9 +191,23 @@ export function QuestionBankPage() {
           />
 
           <div className="space-y-4 p-4 sm:p-6">
-            {visibleSummaries.map((summary) => (
-              <SectionSummaryCard key={summary.title} {...summary} />
-            ))}
+            {isLoading ? (
+              <LoadingRows />
+            ) : error ? (
+              <StatusCard
+                description="Add your Supabase URL and anon key to .env.local, then run the schema and seed SQL files."
+                title="Question Bank needs Supabase"
+              />
+            ) : questionBankQuestions.length === 0 ? (
+              <StatusCard
+                description="Run supabase/seed.sql in your Supabase SQL editor to add the SAT question set."
+                title="No questions found"
+              />
+            ) : (
+              visibleSummaries.map((summary) => (
+                <SectionSummaryCard key={summary.title} {...summary} />
+              ))
+            )}
 
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -169,7 +226,17 @@ export function QuestionBankPage() {
               </div>
 
               <div className="mt-1">
-                {visibleTopics.length > 0 ? (
+                {isLoading ? (
+                  <LoadingRows compact />
+                ) : error ? (
+                  <div className="rounded-2xl bg-rose-50 p-8 text-center">
+                    <p className="font-black text-rose-700">{error}</p>
+                    <p className="mt-2 text-sm text-rose-600">
+                      Supabase questions are readable for guests after the public
+                      anon key is configured.
+                    </p>
+                  </div>
+                ) : visibleTopics.length > 0 ? (
                   visibleTopics.map((topic) => (
                     <TopicRow key={topic.title} topic={topic} />
                   ))
@@ -190,9 +257,9 @@ export function QuestionBankPage() {
         </div>
 
         <ProgressSidebar
-          questionsAnswered={Math.round(questions.length * 0.61)}
-          totalQuestions={questions.length}
-          totalTopics={getUniqueTopicCount(questions)}
+          questionsAnswered={Math.round(questionBankQuestions.length * 0.61)}
+          totalQuestions={questionBankQuestions.length}
+          totalTopics={getUniqueTopicCount(questionBankQuestions)}
           topicSummaries={topicSummaries}
         />
       </section>
@@ -200,7 +267,10 @@ export function QuestionBankPage() {
   );
 }
 
-function getSectionSummaries(topicSummaries: ReturnType<typeof getTopicSummaries>) {
+function getSectionSummaries(
+  topicSummaries: ReturnType<typeof getTopicSummaries>,
+  questions: Question[]
+) {
   const summaries = [
     {
       title: "Math",
@@ -225,6 +295,37 @@ function getSectionSummaries(topicSummaries: ReturnType<typeof getTopicSummaries
   ];
 
   return summaries;
+}
+
+function LoadingRows({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="space-y-4">
+      {[0, 1].map((item) => (
+        <div
+          className={[
+            "animate-pulse rounded-2xl border border-slate-100 bg-slate-50",
+            compact ? "h-20" : "h-32"
+          ].join(" ")}
+          key={item}
+        />
+      ))}
+    </div>
+  );
+}
+
+function StatusCard({
+  description,
+  title
+}: {
+  description: string;
+  title: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
+      <p className="font-black text-slate-950">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+    </div>
+  );
 }
 
 function getAverageMastery(
