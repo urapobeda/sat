@@ -20,12 +20,12 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const supabaseConfigured = isSupabaseConfigured();
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(!supabaseConfigured);
 
   useEffect(() => {
-    if (!isSupabaseConfigured()) {
-      setIsAuthReady(true);
+    if (!supabaseConfigured) {
       return;
     }
 
@@ -44,10 +44,10 @@ export function Navbar() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [supabaseConfigured]);
 
   async function handleSignOut() {
-    if (!isSupabaseConfigured()) {
+    if (!supabaseConfigured) {
       return;
     }
 

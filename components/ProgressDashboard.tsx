@@ -89,7 +89,7 @@ export function ProgressDashboard() {
     };
   }, []);
 
-  const attempts = stats?.attempts ?? [];
+  const attempts = useMemo(() => stats?.attempts ?? [], [stats]);
   const chartRecords = useMemo(() => attempts.slice(0, 6).reverse(), [attempts]);
 
   async function handleClearProgress() {
