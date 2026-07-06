@@ -20,7 +20,6 @@ import { SearchInput } from "@/components/question-bank/SearchInput";
 import { SectionSummaryCard } from "@/components/question-bank/SectionSummaryCard";
 import { SectionTabs } from "@/components/question-bank/SectionTabs";
 import { TopicRow } from "@/components/question-bank/TopicRow";
-import type { Question } from "@/data/questions";
 import {
   getSectionCount,
   getTopicSummaries,
@@ -28,6 +27,7 @@ import {
   type SectionFilter
 } from "@/lib/questions";
 import { getQuestions } from "@/lib/supabase/queries";
+import type { DifficultyFilter, Question } from "@/types/sat";
 
 const filterCards = [
   {
@@ -99,11 +99,13 @@ export function QuestionBankPage() {
 
       try {
         const data = await getQuestions();
+        console.info(`[Supabase] Loaded ${data.length} questions for Question Bank.`);
 
         if (isMounted) {
           setQuestionBankQuestions(data);
         }
       } catch (requestError) {
+        console.error("[Supabase] Question Bank load failed:", requestError);
         if (isMounted) {
           setError(
             requestError instanceof Error
@@ -194,10 +196,7 @@ export function QuestionBankPage() {
             {isLoading ? (
               <LoadingRows />
             ) : error ? (
-              <StatusCard
-                description="Add your Supabase URL and anon key to .env.local, then run the schema and seed SQL files."
-                title="Question Bank needs Supabase"
-              />
+              <SupabaseErrorCard error={error} />
             ) : questionBankQuestions.length === 0 ? (
               <StatusCard
                 description="Run supabase/seed.sql in your Supabase SQL editor to add the SAT question set."
@@ -264,6 +263,21 @@ export function QuestionBankPage() {
         />
       </section>
     </Layout>
+  );
+}
+
+function SupabaseErrorCard({ error }: { error: string }) {
+  return (
+    <div className="rounded-2xl border border-rose-100 bg-rose-50 p-5">
+      <p className="font-black text-rose-800">Supabase could not load questions</p>
+      <p className="mt-2 rounded-xl bg-white/80 px-3 py-2 text-sm font-bold text-rose-700">
+        {error}
+      </p>
+      <p className="mt-3 text-sm leading-6 text-rose-700">
+        Check `.env.local`, confirm the anon key is public, and make sure the
+        `questions` RLS policy allows `SELECT` for `anon` and `authenticated`.
+      </p>
+    </div>
   );
 }
 

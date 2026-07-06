@@ -55,6 +55,10 @@ http://127.0.0.1:3000
 5. In Authentication settings, enable Email/Password sign-in.
 6. Use only the public anon key in `.env.local`. Do not put a service role key in the frontend.
 
+If the schema was already created before the grants were added, run
+`supabase/fix-permissions.sql` once. This fixes errors like
+`permission denied for table questions` for the public question bank.
+
 ## Database Tables
 
 - `profiles`

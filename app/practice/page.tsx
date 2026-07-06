@@ -1,6 +1,5 @@
-import { PracticePage } from "@/components/practice/PracticePage";
-import { questions } from "@/data/questions";
+import { redirect } from "next/navigation";
 
 export default function PracticeRoute() {
-  return <PracticePage questions={questions} />;
+  redirect("/question-bank");
 }

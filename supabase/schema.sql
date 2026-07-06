@@ -115,6 +115,14 @@ alter table public.practice_answers enable row level security;
 alter table public.test_sessions enable row level security;
 alter table public.test_answers enable row level security;
 
+grant usage on schema public to anon, authenticated;
+grant select on public.questions to anon, authenticated;
+grant select, insert, update, delete on public.profiles to authenticated;
+grant select, insert, update, delete on public.practice_sessions to authenticated;
+grant select, insert, update, delete on public.practice_answers to authenticated;
+grant select, insert, update, delete on public.test_sessions to authenticated;
+grant select, insert, update, delete on public.test_answers to authenticated;
+
 drop policy if exists "Users can read their profile" on public.profiles;
 create policy "Users can read their profile"
 on public.profiles for select

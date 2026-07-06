@@ -18,7 +18,6 @@ import { ProgressBar } from "@/components/quiz/ProgressBar";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
 import { ReviewAnswers } from "@/components/quiz/ReviewAnswers";
 import { Timer } from "@/components/quiz/Timer";
-import type { Question } from "@/data/questions";
 import {
   completeTestSession,
   createTestSession,
@@ -26,6 +25,7 @@ import {
   getRandomQuestions,
   saveTestAnswer
 } from "@/lib/supabase/queries";
+import type { Question } from "@/types/sat";
 
 const TEST_DURATION_SECONDS = 15 * 60;
 

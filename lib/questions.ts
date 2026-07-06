@@ -1,7 +1,4 @@
-import type { Question } from "@/data/questions";
-
-export type SectionFilter = "all" | Question["section"];
-export type DifficultyFilter = "all" | Question["difficulty"];
+import type { DifficultyFilter, Question, SectionFilter } from "@/types/sat";
 
 export type TopicSummary = {
   description: string;

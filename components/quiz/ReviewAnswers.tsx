@@ -1,4 +1,4 @@
-import type { Question } from "@/data/questions";
+import type { Question } from "@/types/sat";
 
 type ReviewAnswersProps = {
   answers: Record<string, string>;

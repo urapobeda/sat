@@ -3,7 +3,7 @@ import { AnswerOption } from "@/components/quiz/AnswerOption";
 import { ProgressBar } from "@/components/quiz/ProgressBar";
 import { Timer } from "@/components/quiz/Timer";
 import { TopicBadge } from "@/components/quiz/TopicBadge";
-import type { Question } from "@/data/questions";
+import type { Question } from "@/types/sat";
 
 type QuestionCardProps = {
   currentIndex: number;

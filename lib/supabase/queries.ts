@@ -1,6 +1,6 @@
 import type { User } from "@supabase/supabase-js";
-import type { Question as AppQuestion } from "@/data/questions";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { normalizeTopic } from "@/lib/questions";
 import type {
   Choice,
   PracticeAnswer,
@@ -10,12 +10,12 @@ import type {
   TestAnswer,
   TestSession
 } from "@/types/database";
-import { normalizeTopic } from "@/lib/questions";
+import type { DifficultyFilter, Question as AppQuestion, SectionFilter } from "@/types/sat";
 
 type QuestionFilters = {
-  difficulty?: AppQuestion["difficulty"] | "all";
+  difficulty?: DifficultyFilter;
   limit?: number;
-  section?: AppQuestion["section"] | "all";
+  section?: SectionFilter;
   topic?: string | null;
 };
 
@@ -36,6 +36,14 @@ export type RecentAttempt = {
   timeSpent?: number | null;
   topic?: string | null;
   total: number;
+};
+
+export type TopicPerformance = {
+  accuracy: number;
+  attempts: number;
+  correct: number;
+  missed: number;
+  topic: string;
 };
 
 export async function getCurrentUser() {
@@ -66,6 +74,21 @@ export async function ensureProfile(user: User) {
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export async function getProfile(userId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
 }
 
 export async function getQuestions(filters: QuestionFilters = {}) {
@@ -392,49 +415,99 @@ export async function getUserProgress(userId: string) {
 }
 
 export async function getWeakAreas(userId: string) {
+  const performance = await getTopicPerformance(userId);
+
+  return performance
+    .filter((topic) => topic.missed > 0)
+    .sort((a, b) => b.missed - a.missed || a.accuracy - b.accuracy)
+    .slice(0, 5)
+    .map((topic) => ({
+      count: topic.missed,
+      topic: topic.topic
+    }));
+}
+
+export async function getStrongAreas(userId: string) {
+  const performance = await getTopicPerformance(userId);
+
+  return performance
+    .filter((topic) => topic.correct > 0)
+    .sort((a, b) => b.accuracy - a.accuracy || b.correct - a.correct)
+    .slice(0, 5);
+}
+
+export async function getTopicPerformance(userId: string): Promise<TopicPerformance[]> {
   const supabase = getSupabaseBrowserClient();
   const { data: practiceAnswers, error: practiceError } = await supabase
     .from("practice_answers")
-    .select("question_id")
+    .select("question_id,is_correct")
     .eq("user_id", userId)
-    .eq("is_correct", false);
+    .not("is_correct", "is", null);
   const { data: testAnswers, error: testError } = await supabase
     .from("test_answers")
-    .select("question_id")
+    .select("question_id,is_correct")
     .eq("user_id", userId)
-    .eq("is_correct", false);
+    .not("is_correct", "is", null);
 
   if (practiceError || testError) {
     throw new Error(practiceError?.message ?? testError?.message ?? "Progress error");
   }
 
-  const missedQuestionIds = [
+  const answers = [
     ...(practiceAnswers ?? []),
     ...(testAnswers ?? [])
-  ].map((answer) => answer.question_id);
+  ];
+  const questionIds = Array.from(new Set(answers.map((answer) => answer.question_id)));
 
-  if (missedQuestionIds.length === 0) {
+  if (questionIds.length === 0) {
     return [];
   }
 
-  const { data: missedQuestions, error } = await supabase
+  const { data: answeredQuestions, error } = await supabase
     .from("questions")
-    .select("topic")
-    .in("id", missedQuestionIds);
+    .select("id,topic")
+    .in("id", questionIds);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  const counts = new Map<string, number>();
-  missedQuestions?.forEach((question) => {
-    counts.set(question.topic, (counts.get(question.topic) ?? 0) + 1);
+  const topicByQuestionId = new Map(
+    (answeredQuestions ?? []).map((question) => [question.id, question.topic])
+  );
+  const counts = new Map<string, { correct: number; missed: number }>();
+
+  answers.forEach((answer) => {
+    const topic = topicByQuestionId.get(answer.question_id);
+
+    if (!topic) {
+      return;
+    }
+
+    const current = counts.get(topic) ?? { correct: 0, missed: 0 };
+
+    if (answer.is_correct) {
+      current.correct += 1;
+    } else {
+      current.missed += 1;
+    }
+
+    counts.set(topic, current);
   });
 
   return Array.from(counts.entries())
-    .map(([topic, count]) => ({ count, topic }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
+    .map(([topic, count]) => {
+      const attempts = count.correct + count.missed;
+
+      return {
+        accuracy: attempts > 0 ? Math.round((count.correct / attempts) * 100) : 0,
+        attempts,
+        correct: count.correct,
+        missed: count.missed,
+        topic
+      };
+    })
+    .sort((a, b) => b.attempts - a.attempts);
 }
 
 export async function clearUserProgress(userId: string) {

@@ -8,7 +8,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { Layout } from "@/components/Layout";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
 import { ResultsCard } from "@/components/quiz/ResultsCard";
-import type { Question } from "@/data/questions";
 import {
   formatSection,
   getWeakTopics,
@@ -23,6 +22,7 @@ import {
   savePracticeAnswer
 } from "@/lib/supabase/queries";
 import type { User } from "@supabase/supabase-js";
+import type { Question } from "@/types/sat";
 
 export function QuestionBankPracticePage() {
   const searchParams = useSearchParams();
@@ -72,6 +72,10 @@ export function QuestionBankPracticePage() {
           getQuestions({ difficulty, section, topic }),
           getCurrentUser().catch(() => null)
         ]);
+        console.info(
+          `[Supabase] Loaded ${loadedQuestions.length} practice questions.`,
+          { difficulty, section, topic }
+        );
 
         if (!isMounted) {
           return;
@@ -89,6 +93,7 @@ export function QuestionBankPracticePage() {
           await createSession(user, loadedQuestions);
         }
       } catch (requestError) {
+        console.error("[Supabase] Practice question load failed:", requestError);
         if (isMounted) {
           setError(
             requestError instanceof Error
