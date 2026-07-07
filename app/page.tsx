@@ -16,6 +16,7 @@ import { Layout } from "@/components/Layout";
 import { MistakeReviewCard } from "@/components/MistakeReviewCard";
 import { SectionCard } from "@/components/SectionCard";
 import { StudyPlanCard } from "@/components/StudyPlanCard";
+import { UserDashboard } from "@/components/UserDashboard";
 
 const featureCards = [
   {
@@ -57,10 +58,10 @@ const sections = [
     title: "Math",
     description: "Algebra, Advanced Math, Problem Solving and Data Analysis",
     icon: SquareRadical,
-    questions: "120+ Questions",
+    questions: "Questions load from Supabase",
     tone: "from-blue-500 to-blue-700",
     panel: "border-blue-100 bg-blue-50/70",
-    weakAreas: ["Linear equations", "Functions"],
+    topics: ["Algebra", "Advanced Math", "Data Analysis"],
     cta: "Practice Math",
     href: "/question-bank"
   },
@@ -68,10 +69,10 @@ const sections = [
     title: "Reading & Writing",
     description: "Grammar, Vocabulary, and Reading Comprehension",
     icon: BookOpen,
-    questions: "150+ Questions",
+    questions: "Questions load from Supabase",
     tone: "from-violet-500 to-purple-700",
     panel: "border-violet-100 bg-violet-50/70",
-    weakAreas: ["Transitions", "Inference"],
+    topics: ["Grammar", "Transitions", "Reading"],
     cta: "Practice Reading",
     href: "/question-bank"
   }
@@ -81,6 +82,8 @@ export default function HomePage() {
   return (
     <Layout>
       <HomeHero />
+
+      <UserDashboard />
 
       <section className="mt-5">
         <StudyPlanCard />

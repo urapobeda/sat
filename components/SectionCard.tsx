@@ -11,7 +11,7 @@ type SectionCardProps = {
   questions: string;
   title: string;
   tone: string;
-  weakAreas: string[];
+  topics: string[];
 };
 
 export function SectionCard({
@@ -23,7 +23,7 @@ export function SectionCard({
   questions,
   title,
   tone,
-  weakAreas
+  topics
 }: SectionCardProps) {
   return (
     <Card className={`group h-full hover:-translate-y-1 hover:shadow-lg ${panel}`}>
@@ -41,10 +41,10 @@ export function SectionCard({
           <p className="mt-4 text-sm font-bold text-slate-800">{questions}</p>
           <div className="mt-4">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-              Weak areas
+              Core topics
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {weakAreas.map((area) => (
+              {topics.map((area) => (
                 <span
                   className="rounded-full border border-white/80 bg-white/80 px-3 py-1 text-xs font-bold text-slate-700 shadow-sm"
                   key={area}
