@@ -104,13 +104,11 @@ export function QuestionBankPage() {
 
       try {
         const data = await getQuestions();
-        console.info(`[Supabase] Loaded ${data.length} questions for Question Bank.`);
 
         if (isMounted) {
           setQuestionBankQuestions(data);
         }
       } catch (requestError) {
-        console.error("[Supabase] Question Bank load failed:", requestError);
         if (isMounted) {
           setError(
             requestError instanceof Error

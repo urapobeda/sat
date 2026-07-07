@@ -1,7 +1,66 @@
-import { BarChart3, Flame, Target, TrendingUp } from "lucide-react";
+"use client";
+
+import { BarChart3, Flame, Loader2, Target, TrendingUp } from "lucide-react";
 import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getCurrentUser, getUserProgress } from "@/lib/supabase/queries";
+
+type ProgressStats = Awaited<ReturnType<typeof getUserProgress>>;
 
 export function ProgressCard() {
+  const [stats, setStats] = useState<ProgressStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProgress() {
+      setIsLoading(true);
+      const user = await getCurrentUser().catch(() => null);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (!user) {
+        setStats(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const progress = await getUserProgress(user.id).catch(() => null);
+
+      if (isMounted) {
+        setStats(progress);
+        setIsLoading(false);
+      }
+    }
+
+    loadProgress();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const trendPoints = useMemo(() => {
+    const attempts = stats?.attempts.slice(0, 6).reverse() ?? [];
+
+    if (attempts.length === 0) {
+      return [];
+    }
+
+    return attempts.map((attempt, index) => {
+      const x = 20 + index * (286 / Math.max(attempts.length - 1, 1));
+      const y = 104 - attempt.percentage;
+      return { x, y: Math.max(16, Math.min(104, y)) };
+    });
+  }, [stats]);
+  const bestScore = stats?.bestTestScore ?? 0;
+  const averageAccuracy = stats?.averageAccuracy ?? 0;
+  const questionsAnswered = stats?.questionsAnswered ?? 0;
+  const sessions = stats?.totalSessions ?? 0;
+
   return (
     <div className="relative mx-auto w-full max-w-xl lg:max-w-none">
       <div className="absolute -left-3 top-14 hidden h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-600/25 sm:flex">
@@ -16,22 +75,24 @@ export function ProgressCard() {
         <div className="flex items-start justify-between gap-4">
           <p className="text-lg font-black text-slate-950">Your Progress</p>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
-            This Week
+            Live Data
           </span>
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-[0.78fr_1.22fr]">
           <div className="rounded-2xl bg-slate-50/90 p-4">
-            <p className="text-sm font-semibold text-slate-600">Score</p>
+            <p className="text-sm font-semibold text-slate-600">Best Score</p>
             <div className="mt-1 flex items-end gap-2">
-              <span className="text-4xl font-black text-slate-950">750</span>
+              <span className="text-4xl font-black text-slate-950">
+                {isLoading ? <Loader2 className="animate-spin" size={28} /> : bestScore || "-"}
+              </span>
               <span className="pb-1.5 text-sm font-bold text-slate-500">
                 / 1600
               </span>
             </div>
             <p className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-emerald-600">
               <TrendingUp size={16} />
-              +120 vs last week
+              {sessions ? `${sessions} saved sessions` : "Sign in to save progress"}
             </p>
           </div>
 
@@ -48,49 +109,53 @@ export function ProgressCard() {
                   <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
                 </linearGradient>
               </defs>
-              <path
-                d="M20 92 C50 82 60 72 88 68 C118 64 122 42 150 42 C178 42 178 76 206 70 C234 64 236 34 264 35 C292 36 292 18 306 16 L306 108 L20 108 Z"
-                fill="url(#scoreFill)"
-              />
-              <path
-                d="M20 92 C50 82 60 72 88 68 C118 64 122 42 150 42 C178 42 178 76 206 70 C234 64 236 34 264 35 C292 36 292 18 306 16"
-                fill="none"
-                stroke="#2563eb"
-                strokeLinecap="round"
-                strokeWidth="5"
-              />
-              {[20, 88, 150, 206, 264, 306].map((x, index) => {
-                const y = [92, 68, 42, 70, 35, 16][index];
-
-                return (
-                  <circle
-                    cx={x}
-                    cy={y}
-                    fill="#2563eb"
-                    key={x}
-                    r="5"
-                    stroke="white"
-                    strokeWidth="3"
-                  />
-                );
-              })}
+              {trendPoints.length > 1 ? (
+                <polyline
+                  fill="none"
+                  points={trendPoints.map((point) => `${point.x},${point.y}`).join(" ")}
+                  stroke="#2563eb"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="5"
+                />
+              ) : (
+                <text fill="#64748b" fontSize="16" fontWeight="800" x="48" y="64">
+                  Complete sessions to see a trend
+                </text>
+              )}
+              {trendPoints.map((point) => (
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  fill="#2563eb"
+                  key={`${point.x}-${point.y}`}
+                  r="5"
+                  stroke="white"
+                  strokeWidth="3"
+                />
+              ))}
             </svg>
           </div>
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <MiniScore label="Math" max="800" score="780" tone="bg-blue-600" />
-          <MiniScore
-            label="Reading & Writing"
-            max="800"
-            score="720"
+          <MiniMetric
+            label="Average Accuracy"
+            tone="bg-blue-600"
+            value={`${averageAccuracy}%`}
+            width={`${averageAccuracy}%`}
+          />
+          <MiniMetric
+            label="Questions Answered"
             tone="bg-violet-600"
+            value={String(questionsAnswered)}
+            width={`${Math.min(questionsAnswered * 4, 100)}%`}
           />
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <MetricTile icon={<Target size={18} />} label="Accuracy" value="84%" />
-          <MetricTile icon={<Flame size={18} />} label="Streak" value="7 days" />
+          <MetricTile icon={<Target size={18} />} label="Accuracy" value={`${averageAccuracy}%`} />
+          <MetricTile icon={<Flame size={18} />} label="Sessions" value={String(sessions)} />
         </div>
       </div>
 
@@ -108,25 +173,22 @@ export function ProgressCard() {
   );
 }
 
-type MiniScoreProps = {
+type MiniMetricProps = {
   label: string;
-  max: string;
-  score: string;
   tone: string;
+  value: string;
+  width: string;
 };
 
-function MiniScore({ label, max, score, tone }: MiniScoreProps) {
-  const progress = `${Math.round((Number(score) / Number(max)) * 100)}%`;
-
+function MiniMetric({ label, tone, value, width }: MiniMetricProps) {
   return (
     <div>
       <p className="text-sm font-semibold text-slate-600">{label}</p>
       <p className="mt-1 text-2xl font-black text-slate-950">
-        {score}
-        <span className="text-sm font-bold text-slate-500"> / {max}</span>
+        {value}
       </p>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-        <div className={`h-full rounded-full ${tone}`} style={{ width: progress }} />
+        <div className={`h-full rounded-full ${tone}`} style={{ width }} />
       </div>
     </div>
   );

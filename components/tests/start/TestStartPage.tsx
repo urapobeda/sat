@@ -73,8 +73,6 @@ export function TestStartPage() {
           getCurrentUser().catch(() => null)
         ]);
 
-        console.info(`[Supabase] Loaded ${loadedQuestions.length} full test questions.`);
-
         if (!isMounted) {
           return;
         }
@@ -99,7 +97,6 @@ export function TestStartPage() {
           }
         }
       } catch (requestError) {
-        console.error("[Supabase] Full test load failed:", requestError);
         if (isMounted) {
           setError(
             requestError instanceof Error
@@ -206,8 +203,7 @@ export function TestStartPage() {
           total: testQuestions.length
         });
       }
-    } catch (saveError) {
-      console.error("[Supabase] Test result save failed:", saveError);
+    } catch {
       setPersistenceMessage("Results are shown here, but Supabase did not save them.");
     } finally {
       setIsSavingResult(false);

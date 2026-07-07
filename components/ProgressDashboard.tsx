@@ -15,6 +15,7 @@ import { ProgressBar } from "@/components/quiz/ProgressBar";
 import {
   clearUserProgress,
   getCurrentUser,
+  getStrongAreas,
   getUserProgress,
   getWeakAreas,
   type RecentAttempt
@@ -22,75 +23,99 @@ import {
 
 type ProgressStats = Awaited<ReturnType<typeof getUserProgress>>;
 type WeakArea = Awaited<ReturnType<typeof getWeakAreas>>[number];
+type StrongArea = Awaited<ReturnType<typeof getStrongAreas>>[number];
 
 export function ProgressDashboard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [stats, setStats] = useState<ProgressStats | null>(null);
   const [weakAreas, setWeakAreas] = useState<WeakArea[]>([]);
+  const [strongAreas, setStrongAreas] = useState<StrongArea[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isClearing, setIsClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guestMessage, setGuestMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  useEffect(() => {
+  async function loadProgress() {
     let isMounted = true;
+    setIsLoading(true);
+    setError(null);
+    setGuestMessage(null);
+    setSuccessMessage(null);
 
-    async function loadProgress() {
-      setIsLoading(true);
-      setError(null);
-      setGuestMessage(null);
+    try {
+      const user = await getCurrentUser().catch(() => null);
 
-      try {
-        const user = await getCurrentUser().catch(() => null);
+      if (!isMounted) {
+        return;
+      }
 
-        if (!isMounted) {
-          return;
-        }
+      if (!user) {
+        setUserId(null);
+        setStats(null);
+        setWeakAreas([]);
+        setStrongAreas([]);
+        setGuestMessage(
+          "No progress yet. Start practicing to see your stats. Sign in to save progress with Supabase."
+        );
+        return;
+      }
 
-        if (!user) {
-          setUserId(null);
-          setStats(null);
-          setWeakAreas([]);
-          setGuestMessage(
-            "No progress yet. Start practicing to see your stats. Sign in to save progress with Supabase."
-          );
-          return;
-        }
+      setUserId(user.id);
+      const [progressStats, weak, strong] = await Promise.all([
+        getUserProgress(user.id),
+        getWeakAreas(user.id),
+        getStrongAreas(user.id)
+      ]);
 
-        setUserId(user.id);
-        const [progressStats, areas] = await Promise.all([
-          getUserProgress(user.id),
-          getWeakAreas(user.id)
-        ]);
-
-        if (isMounted) {
-          setStats(progressStats);
-          setWeakAreas(areas);
-        }
-      } catch (requestError) {
-        if (isMounted) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load progress from Supabase."
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+      if (isMounted) {
+        setStats(progressStats);
+        setWeakAreas(weak);
+        setStrongAreas(strong);
+      }
+    } catch (requestError) {
+      if (isMounted) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Unable to load progress from Supabase."
+        );
+      }
+    } finally {
+      if (isMounted) {
+        setIsLoading(false);
       }
     }
 
-    loadProgress();
-
     return () => {
       isMounted = false;
+    };
+  }
+
+  useEffect(() => {
+    let cleanup: void | (() => void);
+
+    async function run() {
+      cleanup = await loadProgress();
+    }
+
+    run();
+
+    return () => {
+      cleanup?.();
     };
   }, []);
 
   const attempts = useMemo(() => stats?.attempts ?? [], [stats]);
   const chartRecords = useMemo(() => attempts.slice(0, 6).reverse(), [attempts]);
+  const practiceAttempts = useMemo(
+    () => attempts.filter((attempt) => attempt.mode === "practice"),
+    [attempts]
+  );
+  const testAttempts = useMemo(
+    () => attempts.filter((attempt) => attempt.mode === "test"),
+    [attempts]
+  );
 
   async function handleClearProgress() {
     if (!userId) {
@@ -109,6 +134,8 @@ export function ProgressDashboard() {
         totalSessions: 0
       });
       setWeakAreas([]);
+      setStrongAreas([]);
+      setSuccessMessage("Progress cleared successfully.");
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -138,11 +165,24 @@ export function ProgressDashboard() {
 
   if (error) {
     return (
-      <EmptyState
-        description={error}
-        icon={<BarChart3 size={26} />}
-        title="Progress unavailable"
-      />
+      <section className="mt-8 rounded-3xl border border-rose-100 bg-rose-50 p-6 text-center shadow-sm">
+        <BarChart3 className="mx-auto text-rose-600" size={30} />
+        <h2 className="mt-3 text-xl font-black text-rose-900">
+          Progress unavailable
+        </h2>
+        <p className="mx-auto mt-2 max-w-xl text-sm font-bold leading-6 text-rose-700">
+          {error}
+        </p>
+        <button
+          className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-rose-600 px-5 text-sm font-black text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
+          onClick={() => {
+            void loadProgress();
+          }}
+          type="button"
+        >
+          Retry
+        </button>
+      </section>
     );
   }
 
@@ -158,6 +198,12 @@ export function ProgressDashboard() {
 
   return (
     <section className="mt-8 space-y-6">
+      {successMessage ? (
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-sm font-black text-emerald-700">
+          {successMessage}
+        </div>
+      ) : null}
+
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={<ClipboardList size={24} />}
@@ -218,36 +264,35 @@ export function ProgressDashboard() {
               ))}
             </div>
           </article>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <AttemptList records={practiceAttempts} title="Practice Sessions" />
+            <AttemptList records={testAttempts} title="Test History" />
+          </div>
         </div>
 
-        <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-xl font-black text-slate-950">Weak areas</h2>
-          <div className="mt-5 space-y-4">
-            {weakAreas.length > 0 ? (
-              weakAreas.map((area) => (
-                <div key={area.topic}>
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-black text-slate-950">
-                      {area.topic}
-                    </p>
-                    <span className="text-xs font-black text-slate-500">
-                      {area.count} misses
-                    </span>
-                  </div>
-                  <ProgressBar
-                    className="mt-2"
-                    tone={area.count > 1 ? "bg-orange-500" : "bg-yellow-500"}
-                    value={Math.min(area.count * 30, 100)}
-                  />
-                </div>
-              ))
-            ) : (
-              <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-                Complete a practice or test session with missed answers to see weak areas.
-              </p>
-            )}
-          </div>
-        </article>
+        <div className="space-y-6">
+          <TopicPanel
+            emptyText="Complete a practice or test session with missed answers to see weak topics."
+            items={weakAreas.map((area) => ({
+              label: `${area.count} misses`,
+              topic: area.topic,
+              value: Math.min(area.count * 30, 100)
+            }))}
+            title="Weak topics"
+            tone="bg-orange-500"
+          />
+          <TopicPanel
+            emptyText="Correct answers will appear here as strong topics."
+            items={strongAreas.map((area) => ({
+              label: `${area.accuracy}% accuracy`,
+              topic: area.topic,
+              value: area.accuracy
+            }))}
+            title="Strong topics"
+            tone="bg-emerald-500"
+          />
+        </div>
       </div>
     </section>
   );
@@ -320,6 +365,83 @@ function AttemptRow({ record }: AttemptRowProps) {
         ) : null}
       </div>
     </div>
+  );
+}
+
+function AttemptList({
+  records,
+  title
+}: {
+  records: RecentAttempt[];
+  title: string;
+}) {
+  return (
+    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 className="text-lg font-black text-slate-950">{title}</h2>
+      <div className="mt-4 space-y-3">
+        {records.length > 0 ? (
+          records.slice(0, 5).map((record) => (
+            <div
+              className="rounded-2xl bg-slate-50 px-4 py-3"
+              key={`${title}-${record.id}`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-black text-slate-950">
+                  {record.score} / {record.total}
+                </p>
+                <span className="text-sm font-black text-blue-600">
+                  {record.percentage}%
+                </span>
+              </div>
+              <p className="mt-1 text-xs font-bold text-slate-500">
+                {formatDate(record.date)}
+              </p>
+            </div>
+          ))
+        ) : (
+          <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+            No saved records yet.
+          </p>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function TopicPanel({
+  emptyText,
+  items,
+  title,
+  tone
+}: {
+  emptyText: string;
+  items: Array<{ label: string; topic: string; value: number }>;
+  title: string;
+  tone: string;
+}) {
+  return (
+    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 className="text-xl font-black text-slate-950">{title}</h2>
+      <div className="mt-5 space-y-4">
+        {items.length > 0 ? (
+          items.map((item) => (
+            <div key={`${title}-${item.topic}`}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-black text-slate-950">{item.topic}</p>
+                <span className="text-xs font-black text-slate-500">
+                  {item.label}
+                </span>
+              </div>
+              <ProgressBar className="mt-2" tone={tone} value={item.value} />
+            </div>
+          ))
+        ) : (
+          <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+            {emptyText}
+          </p>
+        )}
+      </div>
+    </article>
   );
 }
 

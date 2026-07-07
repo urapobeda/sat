@@ -75,10 +75,6 @@ export function QuestionBankPracticePage() {
           getQuestions({ difficulty, section, topic }),
           getCurrentUser().catch(() => null)
         ]);
-        console.info(
-          `[Supabase] Loaded ${loadedQuestions.length} practice questions.`,
-          { difficulty, section, topic }
-        );
 
         if (!isMounted) {
           return;
@@ -96,7 +92,6 @@ export function QuestionBankPracticePage() {
           await createSession(user, loadedQuestions);
         }
       } catch (requestError) {
-        console.error("[Supabase] Practice question load failed:", requestError);
         if (isMounted) {
           setError(
             requestError instanceof Error
