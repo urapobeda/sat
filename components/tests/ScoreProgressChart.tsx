@@ -1,13 +1,11 @@
 import { TrendingUp } from "lucide-react";
 
-const defaultScores = [1150, 1210, 1470, 1280, 1280];
-
 type ScoreProgressChartProps = {
   scores?: number[];
 };
 
 export function ScoreProgressChart({ scores }: ScoreProgressChartProps) {
-  const scoreValues = (scores?.length ? scores : defaultScores).slice(-5);
+  const scoreValues = (scores ?? []).slice(-5);
   const chartPoints = scoreValues.map((score, index) => {
     const x = 40 + index * (304 / Math.max(scoreValues.length - 1, 1));
     const y = 168 - ((score - 800) / 800) * 144;
@@ -24,7 +22,15 @@ export function ScoreProgressChart({ scores }: ScoreProgressChartProps) {
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <h2 className="text-xl font-black text-slate-950">Score Progress</h2>
 
-      <div className="mt-5 overflow-hidden rounded-2xl bg-gradient-to-b from-white to-blue-50/40 p-3">
+      {scoreValues.length === 0 ? (
+        <div className="mt-5 rounded-2xl bg-slate-50 p-6 text-center">
+          <p className="font-black text-slate-950">No score history yet</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Complete a full SAT test to see your real score trend.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-5 overflow-hidden rounded-2xl bg-gradient-to-b from-white to-blue-50/40 p-3">
         <svg
           aria-label="SAT score progress across tests"
           className="h-64 w-full"
@@ -101,7 +107,8 @@ export function ScoreProgressChart({ scores }: ScoreProgressChartProps) {
             </g>
           ))}
         </svg>
-      </div>
+        </div>
+      )}
 
       <div className="mt-4 flex items-center gap-3 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-bold text-slate-700">
         <TrendingUp className="text-blue-600" size={20} />

@@ -71,14 +71,22 @@ export function Navbar() {
 
           <div className="hidden items-center gap-3 md:flex">
             {user ? (
-              <button
-                className="inline-flex min-h-11 max-w-48 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-4 text-sm font-bold text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
-                onClick={handleSignOut}
-                type="button"
-              >
-                <UserRound size={17} />
-                <span className="truncate">Sign out</span>
-              </button>
+              <>
+                <Link
+                  className="inline-flex min-h-11 max-w-48 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-4 text-sm font-bold text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+                  href="/progress"
+                >
+                  <UserRound size={17} />
+                  <span className="truncate">Profile</span>
+                </Link>
+                <button
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-rose-100 bg-white px-4 text-sm font-bold text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50"
+                  onClick={handleSignOut}
+                  type="button"
+                >
+                  Logout
+                </button>
+              </>
             ) : (
               <Link
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-4 text-sm font-bold text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"

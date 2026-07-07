@@ -20,37 +20,6 @@ import type { TestItem } from "@/components/tests/TestRow";
 import { getCurrentUser, getTestHistory } from "@/lib/supabase/queries";
 import type { TestSession } from "@/types/database";
 
-const fallbackStats = [
-  {
-    title: "Tests Taken",
-    value: "5",
-    description: "Total tests completed",
-    icon: FileText,
-    tone: "bg-blue-50 text-blue-600"
-  },
-  {
-    title: "Average Score",
-    value: "1280 / 1600",
-    description: "Across all tests",
-    icon: TrendingUp,
-    tone: "bg-emerald-50 text-emerald-600"
-  },
-  {
-    title: "Best Score",
-    value: "1470 / 1600",
-    description: "Achieved on Test 3",
-    icon: Trophy,
-    tone: "bg-violet-50 text-violet-600"
-  },
-  {
-    title: "Total Time",
-    value: "12h 45m",
-    description: "Time spent testing",
-    icon: Clock,
-    tone: "bg-orange-50 text-orange-600"
-  }
-];
-
 const emptyStats = [
   {
     title: "Tests Taken",
@@ -82,51 +51,8 @@ const emptyStats = [
   }
 ];
 
-const fallbackTests: TestItem[] = [
-  {
-    title: "Full-Length Test 5",
-    sections: 4,
-    questions: 154,
-    duration: "3h 14m",
-    status: "In Progress"
-  },
-  {
-    title: "Full-Length Test 4",
-    sections: 4,
-    questions: 154,
-    duration: "3h 20m",
-    score: 1280,
-    completedAt: "2 days ago"
-  },
-  {
-    title: "Full-Length Test 3",
-    sections: 4,
-    questions: 154,
-    duration: "3h 18m",
-    score: 1470,
-    completedAt: "1 week ago"
-  },
-  {
-    title: "Full-Length Test 2",
-    sections: 4,
-    questions: 154,
-    duration: "3h 22m",
-    score: 1210,
-    completedAt: "2 weeks ago"
-  },
-  {
-    title: "Full-Length Test 1",
-    sections: 4,
-    questions: 154,
-    duration: "3h 15m",
-    score: 1150,
-    completedAt: "3 weeks ago"
-  }
-];
-
 export function TestsPage() {
   const [history, setHistory] = useState<TestSession[]>([]);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -145,13 +71,11 @@ export function TestsPage() {
         }
 
         if (!user) {
-          setIsAuthenticated(false);
-          setNotice("Guest mode: sign in to save mini test sessions in Supabase.");
+          setNotice("Guest mode: sign in to save full test sessions in Supabase.");
           setHistory([]);
           return;
         }
 
-        setIsAuthenticated(true);
         const testHistory = await getTestHistory(user.id);
 
         if (isMounted) {
@@ -184,19 +108,15 @@ export function TestsPage() {
     () =>
       completedHistory.length > 0
         ? getStatsFromHistory(completedHistory)
-        : isAuthenticated
-          ? emptyStats
-        : fallbackStats,
-    [completedHistory, isAuthenticated]
+        : emptyStats,
+    [completedHistory]
   );
   const tests = useMemo(
     () =>
       completedHistory.length > 0
         ? completedHistory.map((record, index) => mapTestSession(record, index))
-        : isAuthenticated
-          ? []
-        : fallbackTests,
-    [completedHistory, isAuthenticated]
+        : [],
+    [completedHistory]
   );
   const scoreHistory = completedHistory
     .slice()

@@ -2,11 +2,11 @@
 
 import {
   BookOpen,
-  Filter,
   FolderOpen,
   Grid2X2,
   Layers3,
   ListChecks,
+  type LucideIcon,
   Search,
   SlidersHorizontal,
   Sparkles,
@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
-import { FilterCard } from "@/components/question-bank/FilterCard";
 import { ProgressSidebar } from "@/components/question-bank/ProgressSidebar";
 import { SearchInput } from "@/components/question-bank/SearchInput";
 import { SectionSummaryCard } from "@/components/question-bank/SectionSummaryCard";
@@ -24,47 +23,53 @@ import {
   getSectionCount,
   getTopicSummaries,
   getUniqueTopicCount,
+  normalizeTopic,
   type SectionFilter
 } from "@/lib/questions";
 import { getQuestions } from "@/lib/supabase/queries";
 import type { DifficultyFilter, Question } from "@/types/sat";
 
-const filterCards = [
-  {
-    label: "Section",
-    value: "All Sections",
-    icon: SquareRadical,
-    accent: "bg-blue-50 text-blue-600"
-  },
-  {
-    label: "Question Type",
-    value: "All Types",
-    icon: ListChecks,
-    accent: "bg-blue-50 text-blue-600"
-  },
-  {
-    label: "Difficulty",
-    value: "All Levels",
-    icon: Layers3,
-    accent: "bg-emerald-50 text-emerald-600"
-  },
-  {
-    label: "Status",
-    value: "All Status",
-    icon: Filter,
-    accent: "bg-violet-50 text-violet-600"
-  }
-];
-
 export function QuestionBankPage() {
-  const [activeTab, setActiveTab] = useState<SectionFilter>("all");
+  const [sectionFilter, setSectionFilter] = useState<SectionFilter>("all");
+  const [topicFilter, setTopicFilter] = useState("all");
+  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [questionBankQuestions, setQuestionBankQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const topicOptions = useMemo(() => {
+    const topics = questionBankQuestions
+      .filter(
+        (question) => sectionFilter === "all" || question.section === sectionFilter
+      )
+      .map((question) => question.topic);
+
+    return Array.from(new Set(topics)).sort((a, b) => a.localeCompare(b));
+  }, [questionBankQuestions, sectionFilter]);
+  const filteredQuestions = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const normalizedTopic =
+      topicFilter === "all" ? "all" : normalizeTopic(topicFilter);
+
+    return questionBankQuestions.filter((question) => {
+      const matchesSection =
+        sectionFilter === "all" || question.section === sectionFilter;
+      const matchesDifficulty =
+        difficultyFilter === "all" || question.difficulty === difficultyFilter;
+      const matchesTopic =
+        normalizedTopic === "all" || normalizeTopic(question.topic) === normalizedTopic;
+      const matchesSearch =
+        query.length === 0 ||
+        question.question.toLowerCase().includes(query) ||
+        question.topic.toLowerCase().includes(query) ||
+        question.explanation.toLowerCase().includes(query);
+
+      return matchesSection && matchesDifficulty && matchesTopic && matchesSearch;
+    });
+  }, [difficultyFilter, questionBankQuestions, searchQuery, sectionFilter, topicFilter]);
   const topicSummaries = useMemo(
-    () => getTopicSummaries(questionBankQuestions),
-    [questionBankQuestions]
+    () => getTopicSummaries(filteredQuestions),
+    [filteredQuestions]
   );
   const sectionTabs = useMemo(
     () => [
@@ -127,30 +132,17 @@ export function QuestionBankPage() {
     };
   }, []);
 
-  const visibleTopics = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    return topicSummaries.filter((topic) => {
-      const matchesTab = activeTab === "all" || topic.section === activeTab;
-      const relatedQuestions = questionBankQuestions.filter(
-        (question) => question.topic === topic.title
-      );
-      const matchesSearch =
-        query.length === 0 ||
-        topic.title.toLowerCase().includes(query) ||
-        topic.description.toLowerCase().includes(query) ||
-        relatedQuestions.some((question) =>
-          question.question.toLowerCase().includes(query)
-        );
-
-      return matchesTab && matchesSearch;
-    });
-  }, [activeTab, questionBankQuestions, searchQuery, topicSummaries]);
+  const visibleTopics = topicSummaries;
 
   const visibleSummaries = getSectionSummaries(
     topicSummaries,
-    questionBankQuestions
-  ).filter((summary) => activeTab === "all" || summary.section === activeTab);
+    filteredQuestions
+  ).filter((summary) => sectionFilter === "all" || summary.section === sectionFilter);
+
+  function updateSectionFilter(value: SectionFilter) {
+    setSectionFilter(value);
+    setTopicFilter("all");
+  }
 
   return (
     <Layout>
@@ -169,17 +161,58 @@ export function QuestionBankPage() {
           </div>
         </div>
 
-        <div className="relative z-10 mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
-          {filterCards.map((filterCard) => (
-            <FilterCard key={filterCard.label} {...filterCard} />
-          ))}
+        <div className="relative z-10 mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
+          <FilterSelect
+            accent="bg-blue-50 text-blue-600"
+            icon={SquareRadical}
+            label="Section"
+            onChange={(value) => updateSectionFilter(value as SectionFilter)}
+            options={[
+              { label: "All Sections", value: "all" },
+              { label: "Math", value: "math" },
+              { label: "Reading & Writing", value: "reading-writing" }
+            ]}
+            value={sectionFilter}
+          />
+
+          <FilterSelect
+            accent="bg-violet-50 text-violet-600"
+            icon={ListChecks}
+            label="Topic"
+            onChange={setTopicFilter}
+            options={[
+              { label: "All Topics", value: "all" },
+              ...topicOptions.map((topic) => ({ label: topic, value: topic }))
+            ]}
+            value={topicFilter}
+          />
+
+          <FilterSelect
+            accent="bg-emerald-50 text-emerald-600"
+            icon={Layers3}
+            label="Difficulty"
+            onChange={(value) => setDifficultyFilter(value as DifficultyFilter)}
+            options={[
+              { label: "All Levels", value: "all" },
+              { label: "Easy", value: "easy" },
+              { label: "Medium", value: "medium" },
+              { label: "Hard", value: "hard" }
+            ]}
+            value={difficultyFilter}
+          />
 
           <button
             className="inline-flex min-h-16 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-blue-600 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:shadow-lg"
+            onClick={() => {
+              updateSectionFilter("all");
+              setTopicFilter("all");
+              setDifficultyFilter("all");
+              setSearchQuery("");
+            }}
             type="button"
           >
             <SlidersHorizontal size={19} />
-            Filters
+            Reset
           </button>
         </div>
       </section>
@@ -187,8 +220,8 @@ export function QuestionBankPage() {
       <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <SectionTabs
-            activeTab={activeTab}
-            onChange={setActiveTab}
+            activeTab={sectionFilter}
+            onChange={updateSectionFilter}
             tabs={sectionTabs}
           />
 
@@ -201,6 +234,11 @@ export function QuestionBankPage() {
               <StatusCard
                 description="Run supabase/seed.sql in your Supabase SQL editor to add the SAT question set."
                 title="No questions found"
+              />
+            ) : filteredQuestions.length === 0 ? (
+              <StatusCard
+                description="Try a different section, topic, difficulty, or search query."
+                title="No questions match these filters"
               />
             ) : (
               visibleSummaries.map((summary) => (
@@ -256,9 +294,9 @@ export function QuestionBankPage() {
         </div>
 
         <ProgressSidebar
-          questionsAnswered={Math.round(questionBankQuestions.length * 0.61)}
+          questionsAnswered={filteredQuestions.length}
           totalQuestions={questionBankQuestions.length}
-          totalTopics={getUniqueTopicCount(questionBankQuestions)}
+          totalTopics={getUniqueTopicCount(filteredQuestions)}
           topicSummaries={topicSummaries}
         />
       </section>
@@ -278,6 +316,44 @@ function SupabaseErrorCard({ error }: { error: string }) {
         `questions` RLS policy allows `SELECT` for `anon` and `authenticated`.
       </p>
     </div>
+  );
+}
+
+function FilterSelect({
+  accent,
+  icon: Icon,
+  label,
+  onChange,
+  options,
+  value
+}: {
+  accent: string;
+  icon: LucideIcon;
+  label: string;
+  onChange: (value: string) => void;
+  options: Array<{ label: string; value: string }>;
+  value: string;
+}) {
+  return (
+    <label className="grid min-h-16 grid-cols-[auto_1fr] items-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg">
+      <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${accent}`}>
+        <Icon size={21} />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-xs font-black text-slate-500">{label}</span>
+        <select
+          className="mt-1 w-full truncate bg-transparent text-sm font-black text-slate-950 outline-none"
+          onChange={(event) => onChange(event.target.value)}
+          value={value}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </span>
+    </label>
   );
 }
 

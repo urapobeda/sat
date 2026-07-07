@@ -5,9 +5,11 @@ import { ProgressBar } from "@/components/quiz/ProgressBar";
 type ResultsCardProps = {
   backHref?: string;
   backLabel?: string;
+  correctLabel?: string;
   onRestart: () => void;
   percentage: number;
   score: number;
+  timeLabel?: string;
   title?: string;
   total: number;
   weakTopics?: string[];
@@ -16,9 +18,11 @@ type ResultsCardProps = {
 export function ResultsCard({
   backHref = "/question-bank",
   backLabel = "Back to Question Bank",
+  correctLabel,
   onRestart,
   percentage,
   score,
+  timeLabel,
   title = "Session Complete",
   total,
   weakTopics = []
@@ -34,6 +38,35 @@ export function ResultsCard({
       </p>
       <p className="mt-2 text-4xl font-black text-blue-600">{percentage}%</p>
       <ProgressBar className="mx-auto mt-5 max-w-md" value={percentage} />
+
+      {timeLabel || correctLabel ? (
+        <div className="mx-auto mt-6 grid max-w-xl gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl bg-blue-50 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.1em] text-blue-600">
+              Accuracy
+            </p>
+            <p className="mt-1 text-2xl font-black text-slate-950">
+              {percentage}%
+            </p>
+          </div>
+          <div className="rounded-2xl bg-emerald-50 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.1em] text-emerald-600">
+              Correct / Wrong
+            </p>
+            <p className="mt-1 text-2xl font-black text-slate-950">
+              {correctLabel ?? `${score} / ${total - score}`}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-violet-50 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.1em] text-violet-600">
+              Time
+            </p>
+            <p className="mt-1 text-2xl font-black text-slate-950">
+              {timeLabel ?? "-"}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mx-auto mt-6 max-w-xl rounded-2xl bg-slate-50 p-5 text-left">
         <p className="text-sm font-black text-slate-950">Weak topics</p>

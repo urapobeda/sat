@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Layout } from "@/components/Layout";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
 import { ResultsCard } from "@/components/quiz/ResultsCard";
+import { Timer, formatTime } from "@/components/quiz/Timer";
 import {
   formatSection,
   getWeakTopics,
@@ -37,6 +38,7 @@ export function QuestionBankPracticePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingResult, setIsSavingResult] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState<string | null>(null);
   const hasSaved = useRef(false);
@@ -64,6 +66,7 @@ export function QuestionBankPracticePage() {
       setAnswers({});
       setCurrentIndex(0);
       setIsFinished(false);
+      setElapsedSeconds(0);
       setSessionId(null);
       hasSaved.current = false;
 
@@ -137,6 +140,18 @@ export function QuestionBankPracticePage() {
     };
   }, [difficulty, section, topic]);
 
+  useEffect(() => {
+    if (isLoading || isFinished || practiceQuestions.length === 0) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setElapsedSeconds((seconds) => seconds + 1);
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [isFinished, isLoading, practiceQuestions.length]);
+
   async function handleSelect(choice: string) {
     if (!currentQuestion || answers[currentQuestion.id]) {
       return;
@@ -207,6 +222,7 @@ export function QuestionBankPracticePage() {
     setAnswers({});
     setCurrentIndex(0);
     setIsFinished(false);
+    setElapsedSeconds(0);
     hasSaved.current = false;
 
     if (!currentUser || practiceQuestions.length === 0) {
@@ -245,11 +261,14 @@ export function QuestionBankPracticePage() {
           {displayTopic ? ` / ${displayTopic}` : ""} practice with instant
           explanations.
         </p>
-        {persistenceMessage ? (
-          <p className="mt-4 inline-flex rounded-2xl border border-blue-100 bg-white/80 px-4 py-2 text-sm font-bold text-slate-600">
-            {persistenceMessage}
-          </p>
-        ) : null}
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Timer seconds={elapsedSeconds} />
+          {persistenceMessage ? (
+            <p className="inline-flex rounded-2xl border border-blue-100 bg-white/80 px-4 py-2 text-sm font-bold text-slate-600">
+              {persistenceMessage}
+            </p>
+          ) : null}
+        </div>
       </section>
 
       {isLoading ? (
@@ -279,9 +298,11 @@ export function QuestionBankPracticePage() {
       ) : isFinished ? (
         <section className="mt-6">
           <ResultsCard
+            correctLabel={`${score} / ${practiceQuestions.length - score}`}
             onRestart={restartPractice}
             percentage={percentage}
             score={score}
+            timeLabel={formatTime(elapsedSeconds)}
             total={practiceQuestions.length}
             weakTopics={weakTopics}
           />
