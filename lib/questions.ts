@@ -1,5 +1,7 @@
 import type { DifficultyFilter, Question, SectionFilter } from "@/types/sat";
 
+export type { DifficultyFilter, SectionFilter };
+
 export type TopicSummary = {
   description: string;
   mastery: number;

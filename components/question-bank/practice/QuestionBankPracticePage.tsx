@@ -11,9 +11,7 @@ import { ResultsCard } from "@/components/quiz/ResultsCard";
 import { Timer, formatTime } from "@/components/quiz/Timer";
 import {
   formatSection,
-  getWeakTopics,
-  type DifficultyFilter,
-  type SectionFilter
+  getWeakTopics
 } from "@/lib/questions";
 import {
   completePracticeSession,
@@ -23,7 +21,7 @@ import {
   savePracticeAnswer
 } from "@/lib/supabase/queries";
 import type { User } from "@supabase/supabase-js";
-import type { Question } from "@/types/sat";
+import type { DifficultyFilter, Question, SectionFilter } from "@/types/sat";
 
 export function QuestionBankPracticePage() {
   const searchParams = useSearchParams();
