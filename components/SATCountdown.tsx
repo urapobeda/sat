@@ -1,0 +1,109 @@
+"use client";
+
+import { CalendarDays, Clock3 } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  formatSATDate,
+  formatSATTime,
+  getCountdownTime,
+  getNextSATDate,
+  getSATCountdownBadge
+} from "@/lib/satDates";
+
+export function SATCountdown() {
+  const [nextSATDate, setNextSATDate] = useState<Date | null>(() =>
+    getNextSATDate()
+  );
+  const [countdown, setCountdown] = useState(() =>
+    getCountdownTime(getNextSATDate())
+  );
+
+  useEffect(() => {
+    function updateCountdown() {
+      const nextDate = getNextSATDate();
+      setNextSATDate(nextDate);
+      setCountdown(getCountdownTime(nextDate));
+    }
+
+    updateCountdown();
+    const interval = window.setInterval(updateCountdown, 1000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  if (!nextSATDate) {
+    return (
+      <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-600">
+          Next Digital SAT
+        </p>
+        <h2 className="mt-2 text-2xl font-black text-slate-950">
+          Schedule coming soon
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Add future SAT dates in `lib/satDates.ts` and this countdown will
+          continue automatically.
+        </p>
+      </article>
+    );
+  }
+
+  const badge = getSATCountdownBadge(countdown.days);
+
+  return (
+    <article className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/70 to-violet-50/60 p-5 shadow-sm sm:p-6">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-violet-500 to-emerald-400" />
+
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <span
+            className={[
+              "inline-flex rounded-full px-3 py-1 text-xs font-black",
+              badge === "Final Week"
+                ? "bg-rose-50 text-rose-700"
+                : badge === "Less than 30 Days"
+                  ? "bg-amber-50 text-amber-700"
+                  : "bg-blue-50 text-blue-700"
+            ].join(" ")}
+          >
+            {badge}
+          </span>
+          <p className="mt-4 text-sm font-black uppercase tracking-[0.12em] text-blue-600">
+            Next Digital SAT
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-slate-950">
+            {formatSATDate(nextSATDate)}
+          </h2>
+          <p className="mt-2 inline-flex items-center gap-2 text-sm font-bold text-slate-600">
+            <Clock3 size={17} />
+            {formatSATTime(nextSATDate)}
+          </p>
+        </div>
+
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
+          <CalendarDays size={28} />
+        </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <TimeBlock label="Days" value={countdown.days} />
+        <TimeBlock label="Hours" value={countdown.hours} />
+        <TimeBlock label="Minutes" value={countdown.minutes} />
+        <TimeBlock label="Seconds" value={countdown.seconds} />
+      </div>
+    </article>
+  );
+}
+
+function TimeBlock({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl border border-white/70 bg-white/80 p-4 text-center shadow-sm">
+      <p className="text-3xl font-black tabular-nums text-slate-950">
+        {String(value).padStart(2, "0")}
+      </p>
+      <p className="mt-1 text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+        {label}
+      </p>
+    </div>
+  );
+}

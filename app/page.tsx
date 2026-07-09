@@ -14,6 +14,7 @@ import { FeatureCard } from "@/components/FeatureCard";
 import { HomeHero } from "@/components/HomeHero";
 import { Layout } from "@/components/Layout";
 import { MistakeReviewCard } from "@/components/MistakeReviewCard";
+import { SATCountdown } from "@/components/SATCountdown";
 import { SectionCard } from "@/components/SectionCard";
 import { StudyPlanCard } from "@/components/StudyPlanCard";
 import { UserDashboard } from "@/components/UserDashboard";
@@ -85,8 +86,9 @@ export default function HomePage() {
 
       <UserDashboard />
 
-      <section className="mt-5">
+      <section className="mt-5 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
         <StudyPlanCard />
+        <SATCountdown />
       </section>
 
       <section className="mt-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
