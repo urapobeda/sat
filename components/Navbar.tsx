@@ -12,6 +12,7 @@ import {
 
 const navItems = [
   { href: "/", label: "Home" },
+  { href: "/study-plan", label: "Study Plan" },
   { href: "/question-bank", label: "Question Bank" },
   { href: "/tests", label: "Tests" },
   { href: "/progress", label: "Progress" },

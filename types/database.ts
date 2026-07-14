@@ -70,6 +70,17 @@ export type TestAnswer = {
   user_id: string;
 };
 
+export type StudyPlan = {
+  created_at: string;
+  daily_goal: number;
+  exam_date: string;
+  id: string;
+  target_score: number;
+  updated_at: string;
+  user_id: string;
+  weekly_goal: number;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -91,6 +102,12 @@ export type Database = {
         Relationships: [];
         Row: Profile;
         Update: Partial<Profile>;
+      };
+      study_plans: {
+        Insert: Partial<StudyPlan> & Pick<StudyPlan, "user_id">;
+        Relationships: [];
+        Row: StudyPlan;
+        Update: Partial<StudyPlan>;
       };
       questions: {
         Insert: Partial<Question> &

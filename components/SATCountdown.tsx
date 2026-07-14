@@ -10,7 +10,11 @@ import {
   getSATCountdownBadge
 } from "@/lib/satDates";
 
-export function SATCountdown() {
+type SATCountdownProps = {
+  compact?: boolean;
+};
+
+export function SATCountdown({ compact = false }: SATCountdownProps) {
   const [nextSATDate, setNextSATDate] = useState<Date | null>(() =>
     getNextSATDate()
   );
@@ -33,7 +37,12 @@ export function SATCountdown() {
 
   if (!nextSATDate) {
     return (
-      <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <article
+        className={[
+          "rounded-3xl border border-slate-200 bg-white shadow-sm",
+          compact ? "p-4" : "p-5"
+        ].join(" ")}
+      >
         <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-600">
           Next Digital SAT
         </p>
@@ -51,7 +60,12 @@ export function SATCountdown() {
   const badge = getSATCountdownBadge(countdown.days);
 
   return (
-    <article className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/70 to-violet-50/60 p-5 shadow-sm sm:p-6">
+    <article
+      className={[
+        "relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/70 to-violet-50/60 shadow-sm",
+        compact ? "p-4" : "p-5 sm:p-6"
+      ].join(" ")}
+    >
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-violet-500 to-emerald-400" />
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -71,7 +85,12 @@ export function SATCountdown() {
           <p className="mt-4 text-sm font-black uppercase tracking-[0.12em] text-blue-600">
             Next Digital SAT
           </p>
-          <h2 className="mt-2 text-2xl font-black text-slate-950">
+          <h2
+            className={[
+              "mt-2 font-black text-slate-950",
+              compact ? "text-xl" : "text-2xl"
+            ].join(" ")}
+          >
             {formatSATDate(nextSATDate)}
           </h2>
           <p className="mt-2 inline-flex items-center gap-2 text-sm font-bold text-slate-600">
@@ -85,7 +104,12 @@ export function SATCountdown() {
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div
+        className={[
+          "grid grid-cols-2 gap-3 sm:grid-cols-4",
+          compact ? "mt-4" : "mt-6"
+        ].join(" ")}
+      >
         <TimeBlock label="Days" value={countdown.days} />
         <TimeBlock label="Hours" value={countdown.hours} />
         <TimeBlock label="Minutes" value={countdown.minutes} />

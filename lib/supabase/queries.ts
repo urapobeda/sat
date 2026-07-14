@@ -7,10 +7,12 @@ import type {
   PracticeSession,
   Profile,
   Question,
+  StudyPlan,
   TestAnswer,
   TestSession
 } from "@/types/database";
 import type { DifficultyFilter, Question as AppQuestion, SectionFilter } from "@/types/sat";
+import { formatSATDateForDatabase, getNextSATDate } from "@/lib/satDates";
 
 type QuestionFilters = {
   difficulty?: DifficultyFilter;
@@ -83,6 +85,68 @@ export async function getProfile(userId: string) {
     .select("*")
     .eq("id", userId)
     .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}
+
+export async function getOrCreateStudyPlan(userId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data: existingPlan, error: selectError } = await supabase
+    .from("study_plans")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (selectError) {
+    throw new Error(selectError.message);
+  }
+
+  if (existingPlan) {
+    return existingPlan;
+  }
+
+  const nextSATDate = getNextSATDate();
+  const defaultPlan: Pick<
+    StudyPlan,
+    "daily_goal" | "exam_date" | "target_score" | "user_id" | "weekly_goal"
+  > = {
+    daily_goal: 25,
+    exam_date: formatSATDateForDatabase(nextSATDate ?? new Date()),
+    target_score: 1500,
+    user_id: userId,
+    weekly_goal: 120
+  };
+  const { data: createdPlan, error: insertError } = await supabase
+    .from("study_plans")
+    .insert(defaultPlan)
+    .select("*")
+    .single();
+
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
+
+  return createdPlan;
+}
+
+export async function updateStudyPlan(
+  planId: string,
+  updates: Partial<Pick<StudyPlan, "daily_goal" | "exam_date" | "target_score" | "weekly_goal">>
+) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("study_plans")
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", planId)
+    .select("*")
+    .single();
 
   if (error) {
     throw new Error(error.message);
