@@ -15,6 +15,7 @@ import {
   Trophy
 } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { Layout } from "@/components/Layout";
@@ -90,7 +91,11 @@ export function StudyPlanPage() {
   }
 
   useEffect(() => {
-    void loadStudyPlan();
+    const timeout = window.setTimeout(() => {
+      void loadStudyPlan();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, []);
 
   const currentEstimatedScore = useMemo(() => {
@@ -127,20 +132,27 @@ export function StudyPlanPage() {
         .reduce((sum, attempt) => sum + attempt.total, 0),
     [attempts]
   );
+  const target = studyPlan?.target_score ?? TARGET_SCORE_FALLBACK;
   const recommendedTopics = useMemo(() => {
     const weakTopics = weakAreas.map((area) => area.topic);
+    const scoreGap = currentEstimatedScore ? target - currentEstimatedScore : target - 1200;
+    const adaptiveTopics =
+      scoreGap > 150
+        ? ["Algebra", "Grammar & Conventions", "Transitions"]
+        : target >= 1450
+          ? ["Advanced Math", "Text Structure", "Vocabulary in Context"]
+          : ["Algebra", "Transitions", "Vocabulary in Context"];
 
     if (weakTopics.length >= 3) {
       return weakTopics.slice(0, 3);
     }
 
-    return [...weakTopics, "Algebra", "Transitions", "Vocabulary in Context"]
+    return [...weakTopics, ...adaptiveTopics]
       .filter((topic, index, topics) => topics.indexOf(topic) === index)
       .slice(0, 3);
-  }, [weakAreas]);
+  }, [currentEstimatedScore, target, weakAreas]);
   const weeklyGoal = studyPlan?.weekly_goal ?? 120;
   const dailyGoal = studyPlan?.daily_goal ?? 25;
-  const target = studyPlan?.target_score ?? TARGET_SCORE_FALLBACK;
   const scoreProgress = currentEstimatedScore
     ? Math.min((currentEstimatedScore / target) * 100, 100)
     : 0;
@@ -425,7 +437,7 @@ function TaskRow({ completed, label }: { completed: boolean; label: string }) {
           completed ? "bg-emerald-500 text-white" : "bg-white text-slate-400 ring-1 ring-slate-200"
         ].join(" ")}
       >
-        {completed ? "✓" : "□"}
+        {completed ? <CheckCircle2 size={16} /> : null}
       </span>
       <span className="font-bold text-slate-700">{label}</span>
     </div>
@@ -553,7 +565,7 @@ function UpcomingTask({
   title
 }: {
   href: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
 }) {
   return (
