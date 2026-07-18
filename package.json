@@ -12,8 +12,10 @@
     "@supabase/supabase-js": "^2.107.0",
     "lucide-react": "latest",
     "next": "latest",
+    "openai": "^6.48.0",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "latest",
