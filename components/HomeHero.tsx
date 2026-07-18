@@ -45,7 +45,7 @@ export function HomeHero() {
               icon={<Clock3 size={20} />}
               variant="secondary"
             >
-              Take a Mini Test
+              Take a Practice Test
             </Button>
           </div>
 

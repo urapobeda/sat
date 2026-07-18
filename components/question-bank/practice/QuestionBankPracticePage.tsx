@@ -1,9 +1,17 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Loader2, Search, RotateCcw } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Loader2,
+  RotateCcw,
+  Search,
+  Sparkles
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
 import { EmptyState } from "@/components/EmptyState";
 import { Layout } from "@/components/Layout";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
@@ -39,6 +47,8 @@ export function QuestionBankPracticePage() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState<string | null>(null);
+  const [isTutorOpen, setIsTutorOpen] = useState(false);
+  const [reviewQuestion, setReviewQuestion] = useState<Question | null>(null);
   const hasSaved = useRef(false);
 
   const currentQuestion = practiceQuestions[currentIndex];
@@ -66,6 +76,8 @@ export function QuestionBankPracticePage() {
       setIsFinished(false);
       setElapsedSeconds(0);
       setSessionId(null);
+      setIsTutorOpen(false);
+      setReviewQuestion(null);
       hasSaved.current = false;
 
       try {
@@ -216,7 +228,9 @@ export function QuestionBankPracticePage() {
     setCurrentIndex(0);
     setIsFinished(false);
     setElapsedSeconds(0);
-    hasSaved.current = false;
+      hasSaved.current = false;
+      setIsTutorOpen(false);
+      setReviewQuestion(null);
 
     if (!currentUser || practiceQuestions.length === 0) {
       return;
@@ -289,61 +303,130 @@ export function QuestionBankPracticePage() {
           title="No questions found"
         />
       ) : isFinished ? (
-        <section className="mt-6">
-          <ResultsCard
-            correctLabel={`${score} / ${practiceQuestions.length - score}`}
-            onRestart={restartPractice}
-            percentage={percentage}
-            score={score}
-            timeLabel={formatTime(elapsedSeconds)}
-            total={practiceQuestions.length}
-            weakTopics={weakTopics}
-          />
+        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
+          <div className="space-y-5">
+            <ResultsCard
+              correctLabel={`${score} / ${practiceQuestions.length - score}`}
+              onRestart={restartPractice}
+              percentage={percentage}
+              score={score}
+              timeLabel={formatTime(elapsedSeconds)}
+              total={practiceQuestions.length}
+              weakTopics={weakTopics}
+            />
+            <article className="rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-violet-50/60 p-5 shadow-sm sm:p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-600">
+                    AI Review
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black text-slate-950">
+                    Review this session with AI
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Ask the tutor to explain a missed question or reinforce the
+                    concept behind a correct one.
+                  </p>
+                </div>
+                <button
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
+                  onClick={() => {
+                    const missedQuestion =
+                      practiceQuestions.find(
+                        (question) => answers[question.id] !== question.correctAnswer
+                      ) ?? practiceQuestions[0];
+                    setReviewQuestion(missedQuestion);
+                  }}
+                  type="button"
+                >
+                  <Sparkles size={18} />
+                  Review with AI
+                </button>
+              </div>
+            </article>
+          </div>
+          {reviewQuestion ? (
+            <AITutorPanel
+              hasSubmittedOverride
+              isOpen={Boolean(reviewQuestion)}
+              key={reviewQuestion.id}
+              onClose={() => setReviewQuestion(null)}
+              question={reviewQuestion}
+              selectedAnswer={answers[reviewQuestion.id] ?? null}
+            />
+          ) : null}
         </section>
       ) : currentQuestion ? (
-        <section className="mt-6 space-y-5">
-          <QuestionCard
-            currentIndex={currentIndex}
-            onSelect={handleSelect}
-            question={currentQuestion}
-            selectedAnswer={selectedAnswer}
-            showFeedback={selectedAnswer !== null}
-            totalQuestions={practiceQuestions.length}
-          />
+        <section
+          className={[
+            "mt-6 grid gap-6",
+            isTutorOpen ? "lg:grid-cols-[minmax(0,1fr)_420px]" : ""
+          ].join(" ")}
+        >
+          <div className="space-y-5">
+            <div className="flex justify-end">
+              <button
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:shadow-xl"
+                onClick={() => setIsTutorOpen(true)}
+                type="button"
+              >
+                <Sparkles size={18} />
+                Ask AI Tutor
+              </button>
+            </div>
 
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-            <button
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-5 py-3 text-sm font-black text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-400"
-              disabled={currentIndex === 0}
-              onClick={handlePrevious}
-              type="button"
-            >
-              <ArrowLeft size={18} />
-              Previous
-            </button>
+            <QuestionCard
+              currentIndex={currentIndex}
+              onSelect={handleSelect}
+              question={currentQuestion}
+              selectedAnswer={selectedAnswer}
+              showFeedback={selectedAnswer !== null}
+              totalQuestions={practiceQuestions.length}
+            />
 
-            <button
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-              onClick={restartPractice}
-              type="button"
-            >
-              <RotateCcw size={17} />
-              Restart
-            </button>
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+              <button
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-5 py-3 text-sm font-black text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                disabled={currentIndex === 0}
+                onClick={handlePrevious}
+                type="button"
+              >
+                <ArrowLeft size={18} />
+                Previous
+              </button>
 
-            <button
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none sm:justify-self-end"
-              disabled={!selectedAnswer || isSavingResult}
-              onClick={handleNext}
-              type="button"
-            >
-              {isSavingResult ? <Loader2 className="animate-spin" size={18} /> : null}
-              {currentIndex === practiceQuestions.length - 1
-                ? "Show Results"
-                : "Next"}
-              {!isSavingResult ? <ArrowRight size={18} /> : null}
-            </button>
+              <button
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                onClick={restartPractice}
+                type="button"
+              >
+                <RotateCcw size={17} />
+                Restart
+              </button>
+
+              <button
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none sm:justify-self-end"
+                disabled={!selectedAnswer || isSavingResult}
+                onClick={handleNext}
+                type="button"
+              >
+                {isSavingResult ? <Loader2 className="animate-spin" size={18} /> : null}
+                {currentIndex === practiceQuestions.length - 1
+                  ? "Show Results"
+                  : "Next"}
+                {!isSavingResult ? <ArrowRight size={18} /> : null}
+              </button>
+            </div>
           </div>
+          {isTutorOpen ? (
+            <AITutorPanel
+              isOpen={isTutorOpen}
+              key={currentQuestion.id}
+              onClose={() => setIsTutorOpen(false)}
+              question={currentQuestion}
+              selectedAnswer={selectedAnswer}
+            />
+          ) : null}
         </section>
       ) : null}
     </Layout>

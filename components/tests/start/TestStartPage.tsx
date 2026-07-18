@@ -8,11 +8,13 @@ import {
   Loader2,
   Search,
   Send,
+  Sparkles,
   Trophy
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
 import { EmptyState } from "@/components/EmptyState";
 import { Layout } from "@/components/Layout";
 import { ProgressBar } from "@/components/quiz/ProgressBar";
@@ -45,6 +47,7 @@ export function TestStartPage() {
   const [timeUp, setTimeUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState<string | null>(null);
+  const [reviewQuestion, setReviewQuestion] = useState<Question | null>(null);
   const hasSaved = useRef(false);
 
   const currentQuestion = testQuestions[currentIndex];
@@ -66,6 +69,7 @@ export function TestStartPage() {
       setIsLoading(true);
       setError(null);
       setPersistenceMessage(null);
+      setReviewQuestion(null);
 
       try {
         const [loadedQuestions, user] = await Promise.all([
@@ -267,8 +271,14 @@ export function TestStartPage() {
           title="No test questions found"
         />
       ) : isFinished ? (
-        <section className="mt-6 space-y-6">
-          <article className="rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
+        <section
+          className={[
+            "mt-6 grid gap-6",
+            reviewQuestion ? "lg:grid-cols-[minmax(0,1fr)_420px]" : ""
+          ].join(" ")}
+        >
+          <div className="space-y-6">
+            <article className="rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
               <Trophy size={34} />
             </div>
@@ -298,6 +308,20 @@ export function TestStartPage() {
                 Start New Test
                 <ArrowRight size={18} />
               </Link>
+              <button
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:shadow-xl"
+                onClick={() => {
+                  const missedQuestion =
+                    testQuestions.find(
+                      (question) => answers[question.id] !== question.correctAnswer
+                    ) ?? testQuestions[0];
+                  setReviewQuestion(missedQuestion);
+                }}
+                type="button"
+              >
+                <Sparkles size={18} />
+                Review with AI
+              </button>
               <Link
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                 href="/progress"
@@ -305,9 +329,20 @@ export function TestStartPage() {
                 View Progress
               </Link>
             </div>
-          </article>
+            </article>
 
-          <ReviewAnswers answers={answers} questions={testQuestions} />
+            <ReviewAnswers answers={answers} questions={testQuestions} />
+          </div>
+          {reviewQuestion ? (
+            <AITutorPanel
+              hasSubmittedOverride
+              isOpen={Boolean(reviewQuestion)}
+              key={reviewQuestion.id}
+              onClose={() => setReviewQuestion(null)}
+              question={reviewQuestion}
+              selectedAnswer={answers[reviewQuestion.id] ?? null}
+            />
+          ) : null}
         </section>
       ) : currentQuestion ? (
         <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">

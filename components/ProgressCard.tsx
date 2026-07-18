@@ -7,6 +7,14 @@ import { getCurrentUser, getUserProgress } from "@/lib/supabase/queries";
 
 type ProgressStats = Awaited<ReturnType<typeof getUserProgress>>;
 
+const FALLBACK_PREVIEW = {
+  averageAccuracy: 84,
+  bestScore: 1370,
+  questionsAnswered: 890,
+  sessions: 12,
+  trend: [72, 76, 81, 79, 86, 89]
+};
+
 export function ProgressCard() {
   const [stats, setStats] = useState<ProgressStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,7 +51,30 @@ export function ProgressCard() {
     };
   }, []);
 
+  const hasLiveStats =
+    Boolean(stats) &&
+    ((stats?.bestTestScore ?? 0) > 0 ||
+      (stats?.averageAccuracy ?? 0) > 0 ||
+      (stats?.questionsAnswered ?? 0) > 0 ||
+      (stats?.totalSessions ?? 0) > 0);
+  const bestScore = hasLiveStats ? stats?.bestTestScore ?? 0 : FALLBACK_PREVIEW.bestScore;
+  const averageAccuracy = hasLiveStats
+    ? stats?.averageAccuracy ?? 0
+    : FALLBACK_PREVIEW.averageAccuracy;
+  const questionsAnswered = hasLiveStats
+    ? stats?.questionsAnswered ?? 0
+    : FALLBACK_PREVIEW.questionsAnswered;
+  const sessions = hasLiveStats ? stats?.totalSessions ?? 0 : FALLBACK_PREVIEW.sessions;
   const trendPoints = useMemo(() => {
+    if (!hasLiveStats) {
+      return FALLBACK_PREVIEW.trend.map((value, index) => {
+        const x =
+          20 + index * (286 / Math.max(FALLBACK_PREVIEW.trend.length - 1, 1));
+        const y = 104 - value;
+        return { x, y: Math.max(16, Math.min(104, y)) };
+      });
+    }
+
     const attempts = stats?.attempts.slice(0, 6).reverse() ?? [];
 
     if (attempts.length === 0) {
@@ -55,11 +86,7 @@ export function ProgressCard() {
       const y = 104 - attempt.percentage;
       return { x, y: Math.max(16, Math.min(104, y)) };
     });
-  }, [stats]);
-  const bestScore = stats?.bestTestScore ?? 0;
-  const averageAccuracy = stats?.averageAccuracy ?? 0;
-  const questionsAnswered = stats?.questionsAnswered ?? 0;
-  const sessions = stats?.totalSessions ?? 0;
+  }, [hasLiveStats, stats]);
 
   return (
     <div className="relative mx-auto w-full max-w-xl lg:max-w-none">
@@ -75,7 +102,7 @@ export function ProgressCard() {
         <div className="flex items-start justify-between gap-4">
           <p className="text-lg font-black text-slate-950">Your Progress</p>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
-            Live Data
+            {hasLiveStats ? "Live Data" : "Preview"}
           </span>
         </div>
 
@@ -92,11 +119,21 @@ export function ProgressCard() {
             </div>
             <p className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-emerald-600">
               <TrendingUp size={16} />
-              {sessions ? `${sessions} saved sessions` : "Sign in to save progress"}
+              {hasLiveStats
+                ? `${sessions} saved sessions`
+                : "Sign in to save progress"}
             </p>
           </div>
 
-          <div className="h-28 rounded-2xl bg-gradient-to-b from-blue-50 to-white p-3">
+          <div className="relative h-28 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 via-white to-violet-50 p-3">
+            <div className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rounded-full bg-blue-300/30 blur-3xl" />
+            <div className="pointer-events-none absolute -left-2 bottom-0 h-20 w-20 rounded-full bg-violet-300/30 blur-3xl" />
+            <div className="pointer-events-none absolute right-3 top-5 h-16 w-32 rotate-[-6deg] rounded-2xl border border-white/70 bg-white/70 shadow-lg backdrop-blur-md" />
+            <div className="pointer-events-none absolute right-8 top-8 h-9 w-20 rounded-xl bg-gradient-to-r from-blue-500 to-violet-500 opacity-70 blur-[1px]" />
+            <div className="pointer-events-none absolute right-9 top-14 h-8 w-14 rounded-b-3xl bg-blue-600/80 blur-[1px]" />
+            <div className="pointer-events-none absolute left-6 top-7 text-xs font-black uppercase tracking-[0.14em] text-slate-500 blur-[1px]">
+              Complete sessions to see a trend
+            </div>
             <svg
               aria-label="Weekly SAT score trend"
               className="h-full w-full"
@@ -118,11 +155,7 @@ export function ProgressCard() {
                   strokeLinejoin="round"
                   strokeWidth="5"
                 />
-              ) : (
-                <text fill="#64748b" fontSize="16" fontWeight="800" x="48" y="64">
-                  Complete sessions to see a trend
-                </text>
-              )}
+              ) : null}
               {trendPoints.map((point) => (
                 <circle
                   cx={point.x}
@@ -154,7 +187,7 @@ export function ProgressCard() {
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <MetricTile icon={<Target size={18} />} label="Accuracy" value={`${averageAccuracy}%`} />
+            <MetricTile icon={<Target size={18} />} label="Accuracy" value={`${averageAccuracy}%`} />
           <MetricTile icon={<Flame size={18} />} label="Sessions" value={String(sessions)} />
         </div>
       </div>
