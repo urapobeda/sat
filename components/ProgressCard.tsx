@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Flame, Loader2, Target, TrendingUp } from "lucide-react";
+import { Flame, Loader2, Target, TrendingUp } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { getCurrentUser, getUserProgress } from "@/lib/supabase/queries";
@@ -9,10 +9,10 @@ type ProgressStats = Awaited<ReturnType<typeof getUserProgress>>;
 
 const FALLBACK_PREVIEW = {
   averageAccuracy: 84,
-  bestScore: 1370,
+  bestScore: 1550,
   questionsAnswered: 890,
   sessions: 12,
-  trend: [72, 76, 81, 79, 86, 89]
+  trend: [900, 1040, 1180, 1320, 1440, 1550]
 };
 
 export function ProgressCard() {
@@ -67,11 +67,16 @@ export function ProgressCard() {
   const sessions = hasLiveStats ? stats?.totalSessions ?? 0 : FALLBACK_PREVIEW.sessions;
   const trendPoints = useMemo(() => {
     if (!hasLiveStats) {
-      return FALLBACK_PREVIEW.trend.map((value, index) => {
+      const minScore = 850;
+      const maxScore = 1600;
+
+      return FALLBACK_PREVIEW.trend.map((score, index) => {
         const x =
           20 + index * (286 / Math.max(FALLBACK_PREVIEW.trend.length - 1, 1));
-        const y = 104 - value;
-        return { x, y: Math.max(16, Math.min(104, y)) };
+        const progress = (score - minScore) / (maxScore - minScore);
+        const y = 100 - progress * 78;
+
+        return { label: score, x, y: Math.max(18, Math.min(100, y)) };
       });
     }
 
@@ -84,20 +89,13 @@ export function ProgressCard() {
     return attempts.map((attempt, index) => {
       const x = 20 + index * (286 / Math.max(attempts.length - 1, 1));
       const y = 104 - attempt.percentage;
-      return { x, y: Math.max(16, Math.min(104, y)) };
+      return { label: attempt.estimatedScore ?? attempt.percentage, x, y: Math.max(16, Math.min(104, y)) };
     });
   }, [hasLiveStats, stats]);
 
   return (
     <div className="relative mx-auto w-full max-w-xl lg:max-w-none">
-      <div className="absolute -left-3 top-14 hidden h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-600/25 sm:flex">
-        <BarChart3 size={28} />
-      </div>
-      <div className="absolute -right-2 top-20 hidden h-14 w-14 items-center justify-center rounded-2xl bg-emerald-400 text-white shadow-xl shadow-emerald-400/25 sm:flex">
-        <Target size={30} />
-      </div>
-
-      <div className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/90 p-5 shadow-2xl shadow-blue-950/10 backdrop-blur sm:p-6 lg:rotate-1">
+      <div className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/90 p-5 shadow-2xl shadow-blue-950/10 backdrop-blur sm:p-6">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-violet-500 to-emerald-400" />
         <div className="flex items-start justify-between gap-4">
           <p className="text-lg font-black text-slate-950">Your Progress</p>
@@ -125,18 +123,19 @@ export function ProgressCard() {
             </p>
           </div>
 
-          <div className="relative h-28 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 via-white to-violet-50 p-3">
-            <div className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rounded-full bg-blue-300/30 blur-3xl" />
-            <div className="pointer-events-none absolute -left-2 bottom-0 h-20 w-20 rounded-full bg-violet-300/30 blur-3xl" />
-            <div className="pointer-events-none absolute right-3 top-5 h-16 w-32 rotate-[-6deg] rounded-2xl border border-white/70 bg-white/70 shadow-lg backdrop-blur-md" />
-            <div className="pointer-events-none absolute right-8 top-8 h-9 w-20 rounded-xl bg-gradient-to-r from-blue-500 to-violet-500 opacity-70 blur-[1px]" />
-            <div className="pointer-events-none absolute right-9 top-14 h-8 w-14 rounded-b-3xl bg-blue-600/80 blur-[1px]" />
-            <div className="pointer-events-none absolute left-6 top-7 text-xs font-black uppercase tracking-[0.14em] text-slate-500 blur-[1px]">
-              Complete sessions to see a trend
+          <div className="relative h-28 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 via-white to-violet-50 p-4">
+            <div className="pointer-events-none absolute -right-3 -top-2 h-24 w-24 rounded-full bg-blue-300/25 blur-3xl" />
+            <div className="pointer-events-none absolute -left-2 bottom-0 h-20 w-20 rounded-full bg-violet-300/20 blur-3xl" />
+            <div className="pointer-events-none absolute left-5 top-4 z-10 text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+              Score trend
+            </div>
+            <div className="pointer-events-none absolute bottom-3 left-5 right-5 z-10 flex items-center justify-between text-[10px] font-black text-slate-500">
+              <span>{hasLiveStats ? "Start" : "900"}</span>
+              <span>{hasLiveStats ? "Now" : "1550"}</span>
             </div>
             <svg
               aria-label="Weekly SAT score trend"
-              className="h-full w-full"
+              className="relative z-0 mt-3 h-[88px] w-full"
               role="img"
               viewBox="0 0 320 118"
             >
@@ -146,15 +145,68 @@ export function ProgressCard() {
                   <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
                 </linearGradient>
               </defs>
-              {trendPoints.length > 1 ? (
-                <polyline
-                  fill="none"
-                  points={trendPoints.map((point) => `${point.x},${point.y}`).join(" ")}
-                  stroke="#2563eb"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="5"
+              <line
+                stroke="#cbd5e1"
+                strokeLinecap="round"
+                strokeWidth="2"
+                x1="18"
+                x2="306"
+                y1="101"
+                y2="101"
+              />
+              <line
+                stroke="#cbd5e1"
+                strokeLinecap="round"
+                strokeWidth="2"
+                x1="18"
+                x2="18"
+                y1="20"
+                y2="101"
+              />
+              {[36, 62, 88].map((y) => (
+                <line
+                  key={`grid-y-${y}`}
+                  stroke="#e2e8f0"
+                  strokeDasharray="4 6"
+                  strokeWidth="1.5"
+                  x1="18"
+                  x2="306"
+                  y1={y}
+                  y2={y}
                 />
+              ))}
+              {[78, 136, 194, 252].map((x) => (
+                <line
+                  key={`grid-x-${x}`}
+                  stroke="#e2e8f0"
+                  strokeDasharray="4 6"
+                  strokeWidth="1.5"
+                  x1={x}
+                  x2={x}
+                  y1="20"
+                  y2="101"
+                />
+              ))}
+              {trendPoints.length > 1 ? (
+                <>
+                  <polyline
+                    fill="none"
+                    opacity="0.16"
+                    points={trendPoints.map((point) => `${point.x},${point.y + 14}`).join(" ")}
+                    stroke="#2563eb"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="12"
+                  />
+                  <polyline
+                    fill="none"
+                    points={trendPoints.map((point) => `${point.x},${point.y}`).join(" ")}
+                    stroke="#2563eb"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="5"
+                  />
+                </>
               ) : null}
               {trendPoints.map((point) => (
                 <circle
@@ -167,6 +219,18 @@ export function ProgressCard() {
                   strokeWidth="3"
                 />
               ))}
+              {!hasLiveStats && trendPoints.length > 0 ? (
+                <text
+                  fill="#0f172a"
+                  fontSize="15"
+                  fontWeight="900"
+                  textAnchor="middle"
+                  x={trendPoints[trendPoints.length - 1].x}
+                  y={trendPoints[trendPoints.length - 1].y - 12}
+                >
+                  1550
+                </text>
+              ) : null}
             </svg>
           </div>
         </div>
@@ -187,7 +251,7 @@ export function ProgressCard() {
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
-            <MetricTile icon={<Target size={18} />} label="Accuracy" value={`${averageAccuracy}%`} />
+          <MetricTile icon={<Target size={18} />} label="Accuracy" value={`${averageAccuracy}%`} />
           <MetricTile icon={<Flame size={18} />} label="Sessions" value={String(sessions)} />
         </div>
       </div>
