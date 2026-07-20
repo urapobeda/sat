@@ -19,6 +19,26 @@ export function isSupabaseConfigured() {
   );
 }
 
+export function getSupabaseConfigDiagnostics() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const normalizedUrl = supabaseUrl?.trim();
+  const normalizedKey = supabaseAnonKey?.trim();
+
+  return {
+    anonKeyPresent: Boolean(normalizedKey),
+    keyLooksUsable:
+      Boolean(normalizedKey) &&
+      (normalizedKey?.startsWith("sb_publishable_") ||
+        normalizedKey?.split(".").length === 3),
+    urlLooksUsable:
+      Boolean(normalizedUrl) &&
+      normalizedUrl?.startsWith("https://") &&
+      normalizedUrl?.includes(".supabase.co"),
+    urlPresent: Boolean(normalizedUrl)
+  };
+}
+
 export function getSupabaseBrowserClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

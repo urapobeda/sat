@@ -1,0 +1,30 @@
+[
+  {
+    "section": "math",
+    "topic": "Algebra",
+    "difficulty": "easy",
+    "question": "If 5x - 4 = 21, what is the value of x?",
+    "choices": [
+      { "label": "A", "text": "3" },
+      { "label": "B", "text": "4" },
+      { "label": "C", "text": "5" },
+      { "label": "D", "text": "6" }
+    ],
+    "correct_answer": "5",
+    "explanation": "Add 4 to both sides to get 5x = 25. Divide by 5 to get x = 5."
+  },
+  {
+    "section": "reading-writing",
+    "topic": "Transitions",
+    "difficulty": "medium",
+    "question": "Which transition best completes the sentence? The first trial was inconclusive; ____, the team repeated the experiment.",
+    "choices": [
+      { "label": "A", "text": "therefore" },
+      { "label": "B", "text": "however" },
+      { "label": "C", "text": "for example" },
+      { "label": "D", "text": "similarly" }
+    ],
+    "correct_answer": "therefore",
+    "explanation": "The second clause describes a result of the first trial being inconclusive, so therefore is the best transition."
+  }
+]

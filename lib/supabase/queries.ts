@@ -1,5 +1,8 @@
 import type { User } from "@supabase/supabase-js";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  getSupabaseBrowserClient,
+  getSupabaseConfigDiagnostics
+} from "@/lib/supabase/client";
 import { normalizeTopic } from "@/lib/questions";
 import type {
   Choice,
@@ -171,7 +174,15 @@ export async function getQuestions(filters: QuestionFilters = {}) {
     query = query.limit(filters.limit);
   }
 
-  const { data, error } = await query;
+  let result: Awaited<typeof query>;
+
+  try {
+    result = await query;
+  } catch (requestError) {
+    throw createSupabaseRequestError(requestError);
+  }
+
+  const { data, error } = result;
 
   if (error) {
     throw new Error(error.message);
@@ -187,6 +198,95 @@ export async function getQuestions(filters: QuestionFilters = {}) {
   }
 
   return filters.limit ? questions.slice(0, filters.limit) : questions;
+}
+
+export async function getIncorrectQuestionIds(userId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const [practiceResult, testResult] = await Promise.all([
+    supabase
+      .from("practice_answers")
+      .select("question_id")
+      .eq("user_id", userId)
+      .eq("is_correct", false),
+    supabase
+      .from("test_answers")
+      .select("question_id")
+      .eq("user_id", userId)
+      .eq("is_correct", false)
+  ]);
+
+  if (practiceResult.error || testResult.error) {
+    throw new Error(
+      practiceResult.error?.message ??
+        testResult.error?.message ??
+        "Unable to load incorrect answers."
+    );
+  }
+
+  return Array.from(
+    new Set([
+      ...(practiceResult.data ?? []).map((answer) => answer.question_id),
+      ...(testResult.data ?? []).map((answer) => answer.question_id)
+    ])
+  );
+}
+
+export async function getQuestionProgressLookup(userId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const [practiceResult, testResult] = await Promise.all([
+    supabase
+      .from("practice_answers")
+      .select("question_id,is_correct,created_at")
+      .eq("user_id", userId)
+      .not("is_correct", "is", null),
+    supabase
+      .from("test_answers")
+      .select("question_id,is_correct,created_at")
+      .eq("user_id", userId)
+      .not("is_correct", "is", null)
+  ]);
+
+  if (practiceResult.error || testResult.error) {
+    throw new Error(
+      practiceResult.error?.message ??
+        testResult.error?.message ??
+        "Unable to load question progress."
+    );
+  }
+
+  const latestByQuestionId = new Map<
+    string,
+    { created_at: string; is_correct: boolean | null; question_id: string }
+  >();
+  const answers = [
+    ...(practiceResult.data ?? []),
+    ...(testResult.data ?? [])
+  ];
+
+  answers.forEach((answer) => {
+    const existing = latestByQuestionId.get(answer.question_id);
+
+    if (!existing || new Date(answer.created_at) > new Date(existing.created_at)) {
+      latestByQuestionId.set(answer.question_id, answer);
+    }
+  });
+
+  const answeredIds = new Set<string>();
+  const correctIds = new Set<string>();
+  const incorrectIds = new Set<string>();
+
+  latestByQuestionId.forEach((answer) => {
+    answeredIds.add(answer.question_id);
+
+    if (answer.is_correct) {
+      correctIds.add(answer.question_id);
+      return;
+    }
+
+    incorrectIds.add(answer.question_id);
+  });
+
+  return { answeredIds, correctIds, incorrectIds };
 }
 
 export async function getQuestionStats() {
@@ -602,4 +702,38 @@ function mapQuestionRow(row: Question): AppQuestion {
     section: row.section,
     topic: row.topic
   };
+}
+
+function createSupabaseRequestError(requestError: unknown) {
+  const diagnostics = getSupabaseConfigDiagnostics();
+  const baseMessage =
+    requestError instanceof Error
+      ? requestError.message
+      : "Supabase request failed.";
+
+  if (!diagnostics.urlPresent || !diagnostics.anonKeyPresent) {
+    return new Error(
+      "Supabase environment variables are missing. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local."
+    );
+  }
+
+  if (!diagnostics.urlLooksUsable) {
+    return new Error(
+      "Supabase project URL does not look valid. Copy the Project URL from Supabase Settings > API into NEXT_PUBLIC_SUPABASE_URL."
+    );
+  }
+
+  if (!diagnostics.keyLooksUsable) {
+    return new Error(
+      "Supabase public anon/publishable key does not look valid. Copy the public anon key from Supabase Settings > API into NEXT_PUBLIC_SUPABASE_ANON_KEY."
+    );
+  }
+
+  if (baseMessage.toLowerCase().includes("failed to fetch")) {
+    return new Error(
+      "Supabase project could not be reached from the browser. Check that NEXT_PUBLIC_SUPABASE_URL points to an existing Supabase project and that the project is not paused."
+    );
+  }
+
+  return new Error(baseMessage);
 }

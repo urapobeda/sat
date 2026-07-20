@@ -67,14 +67,40 @@ If the schema was already created before the grants were added, run
 - `practice_answers`
 - `test_sessions`
 - `test_answers`
+- `study_plans`
 
 RLS is enabled on all tables. Questions are readable by anonymous and authenticated users, while profiles, sessions, and answers are owner-only through `auth.uid()`.
+
+## Adding Questions
+
+Questions are stored in the Supabase `questions` table. Each question needs:
+
+- `section`: `math` or `reading-writing`
+- `topic`: for example `Algebra`, `Transitions`, or `Reading Comprehension`
+- `difficulty`: `easy`, `medium`, or `hard`
+- `question`
+- `choices`: an array of `{ "label": "A", "text": "..." }`
+- `correct_answer`
+- `explanation`
+
+Use [data/questions-import.example.json](data/questions-import.example.json) as a template.
+Create a local file named `data/questions-import.json`, paste your questions there,
+then generate SQL:
+
+```bash
+npm run questions:sql
+```
+
+This creates `supabase/generated-questions.sql`. Run that SQL in the Supabase SQL
+Editor to save the questions in the database. The import updates existing rows
+when the same `question` text already exists.
 
 ## Current Features
 
 - Responsive landing page for SAT preparation
 - Question Bank powered by Supabase questions
 - Search and section filtering for topics/questions
+- Topic, difficulty, and answered-incorrectly filters
 - Practice flow from `/question-bank/practice`
 - Immediate feedback and explanations in practice mode
 - Timed 15-minute mini test from `/tests/start`
