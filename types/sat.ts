@@ -8,6 +8,7 @@ export type Question = {
   difficulty: QuestionDifficulty;
   explanation: string;
   id: string;
+  isBluebook: boolean;
   question: string;
   section: SatSection;
   topic: string;

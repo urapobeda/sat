@@ -1,8 +1,14 @@
 import type { Question } from "@/types/sat";
 
+export type QuestionBankSubtopic = {
+  aliases: string[];
+  title: string;
+};
+
 export type QuestionBankCategory = {
   description: string;
   section: Question["section"];
+  subtopics: QuestionBankSubtopic[];
   title: string;
 };
 
@@ -24,47 +30,115 @@ export const QUESTION_BANK_CATEGORIES: QuestionBankCategory[] = [
   {
     description: "Words in context, text structure, purpose, and paired texts",
     section: "reading-writing",
+    subtopics: [
+      subtopic("Words in Context", ["Vocabulary in Context"]),
+      subtopic("Text Structure and Purpose", ["Text Structure"]),
+      subtopic("Cross-Text Connections")
+    ],
     title: "Craft and Structure"
   },
   {
-    description: "Central ideas, evidence, inference, and comprehension",
+    description: "Central ideas, evidence, inference, and close reading",
     section: "reading-writing",
+    subtopics: [
+      subtopic("Central Ideas and Details", ["Reading Comprehension"]),
+      subtopic("Inferences", ["Inference"]),
+      subtopic("Command of Evidence")
+    ],
     title: "Information and Ideas"
   },
   {
-    description: "Grammar, punctuation, agreement, and sentence boundaries",
+    description: "Rhetorical synthesis, transitions, and effective expression",
     section: "reading-writing",
-    title: "Standard English Conventions"
-  },
-  {
-    description: "Transitions, rhetorical synthesis, and effective expression",
-    section: "reading-writing",
+    subtopics: [
+      subtopic("Rhetorical Synthesis"),
+      subtopic("Transitions")
+    ],
     title: "Expression of Ideas"
   },
   {
-    description: "Linear equations, systems, functions, and inequalities",
+    description: "Sentence boundaries, agreement, form, and conventions",
+    section: "reading-writing",
+    subtopics: [
+      subtopic("Boundaries", ["Grammar & Conventions", "Grammar and Conventions"]),
+      subtopic("Form, Structure, and Sense")
+    ],
+    title: "Standard English Conventions"
+  },
+  {
+    description: "Linear equations, functions, systems, and inequalities",
     section: "math",
+    subtopics: [
+      subtopic("Linear Equations in One Variable", ["Algebra"]),
+      subtopic("Linear Functions"),
+      subtopic("Linear Equations in Two Variables"),
+      subtopic("Systems of Two Linear Equations in Two Variables"),
+      subtopic("Linear Inequalities in One or Two Variables", ["Linear Inequalities"])
+    ],
     title: "Algebra"
   },
   {
-    description: "Nonlinear functions, equivalent expressions, and quadratics",
+    description: "Equivalent expressions, nonlinear equations, and functions",
     section: "math",
+    subtopics: [
+      subtopic("Equivalent Expressions", ["Advanced Math"]),
+      subtopic("Nonlinear Equations in One Variable"),
+      subtopic("Systems of Equations in Two Variables"),
+      subtopic("Nonlinear Functions")
+    ],
     title: "Advanced Math"
   },
   {
     description: "Ratios, percentages, statistics, probability, and data",
     section: "math",
+    subtopics: [
+      subtopic("Ratios, Rates, Proportional Relationships, and Units", [
+        "Problem Solving & Data Analysis",
+        "Problem-Solving and Data Analysis",
+        "Ratios",
+        "Rates"
+      ]),
+      subtopic("Percentages"),
+      subtopic("One-Variable Data: Distributions and Measures of Center and Spread", [
+        "One-Variable Data",
+        "Statistics"
+      ]),
+      subtopic("Two-Variable Data: Models and Scatterplots", [
+        "Two-Variable Data",
+        "Scatterplots"
+      ]),
+      subtopic("Probability and Conditional Probability", ["Probability"]),
+      subtopic("Inference from Sample Statistics and Margin of Error", [
+        "Inference from Sample Statistics",
+        "Margin of Error"
+      ]),
+      subtopic("Evaluating Statistical Claims: Observational Studies and Experiments", [
+        "Statistical Claims",
+        "Observational Studies",
+        "Experiments"
+      ])
+    ],
     title: "Problem-Solving and Data Analysis"
   },
   {
-    description: "Area, volume, triangles, circles, and trigonometry",
+    description: "Area, volume, lines, triangles, trigonometry, and circles",
     section: "math",
+    subtopics: [
+      subtopic("Area and Volume", ["Geometry & Trigonometry", "Geometry and Trigonometry"]),
+      subtopic("Lines, Angles, and Triangles", ["Triangles", "Angles"]),
+      subtopic("Right Triangles and Trigonometry", ["Trigonometry", "Right Triangles"]),
+      subtopic("Circles")
+    ],
     title: "Geometry and Trigonometry"
   }
 ];
 
 export function getQuestionCategory(question: Question) {
   return getCategoryForTopic(question.section, question.topic).title;
+}
+
+export function getQuestionSubtopic(question: Question) {
+  return getSubtopicForTopic(question.section, question.topic).title;
 }
 
 export function getCategoriesForSection(section: Question["section"]) {
@@ -75,10 +149,16 @@ export function getCategoryForTopic(
   section: Question["section"],
   topic: string
 ): QuestionBankCategory {
+  const subtopicMatch = getSubtopicMatch(section, topic);
+
+  if (subtopicMatch) {
+    return subtopicMatch.category;
+  }
+
   const normalizedTopic = normalize(topic);
 
   if (section === "math") {
-    if (normalizedTopic.includes("advanced")) {
+    if (normalizedTopic.includes("advanced") || normalizedTopic.includes("nonlinear")) {
       return getRequiredCategory("Advanced Math");
     }
 
@@ -86,7 +166,10 @@ export function getCategoryForTopic(
       normalizedTopic.includes("problem") ||
       normalizedTopic.includes("data") ||
       normalizedTopic.includes("statistics") ||
-      normalizedTopic.includes("ratio")
+      normalizedTopic.includes("ratio") ||
+      normalizedTopic.includes("rate") ||
+      normalizedTopic.includes("percentage") ||
+      normalizedTopic.includes("probability")
     ) {
       return getRequiredCategory("Problem-Solving and Data Analysis");
     }
@@ -95,7 +178,9 @@ export function getCategoryForTopic(
       normalizedTopic.includes("geometry") ||
       normalizedTopic.includes("trigonometry") ||
       normalizedTopic.includes("triangle") ||
-      normalizedTopic.includes("circle")
+      normalizedTopic.includes("circle") ||
+      normalizedTopic.includes("angle") ||
+      normalizedTopic.includes("volume")
     ) {
       return getRequiredCategory("Geometry and Trigonometry");
     }
@@ -106,8 +191,9 @@ export function getCategoryForTopic(
   if (
     normalizedTopic.includes("grammar") ||
     normalizedTopic.includes("convention") ||
-    normalizedTopic.includes("punctuation") ||
-    normalizedTopic.includes("boundary")
+    normalizedTopic.includes("boundary") ||
+    normalizedTopic.includes("form") ||
+    normalizedTopic.includes("structure and sense")
   ) {
     return getRequiredCategory("Standard English Conventions");
   }
@@ -121,7 +207,6 @@ export function getCategoryForTopic(
   }
 
   if (
-    normalizedTopic.includes("reading") ||
     normalizedTopic.includes("comprehension") ||
     normalizedTopic.includes("information") ||
     normalizedTopic.includes("idea") ||
@@ -132,6 +217,23 @@ export function getCategoryForTopic(
   }
 
   return getRequiredCategory("Craft and Structure");
+}
+
+export function getSubtopicForTopic(
+  section: Question["section"],
+  topic: string
+): QuestionBankSubtopic {
+  const match = getSubtopicMatch(section, topic);
+
+  if (match) {
+    return match.subtopic;
+  }
+
+  return getCategoryForTopic(section, topic).subtopics[0];
+}
+
+export function questionMatchesSubtopic(question: Question, subtopicTitle: string) {
+  return getQuestionSubtopic(question) === subtopicTitle;
 }
 
 export function getQuestionGroupStats(
@@ -166,6 +268,24 @@ export function getMastery(stats: QuestionGroupStats) {
   return Math.round((stats.correctQuestions / stats.answeredQuestions) * 100);
 }
 
+function getSubtopicMatch(section: Question["section"], topic: string) {
+  const normalizedTopic = normalize(topic);
+  const categories = getCategoriesForSection(section);
+
+  for (const category of categories) {
+    for (const currentSubtopic of category.subtopics) {
+      const labels = [currentSubtopic.title, ...currentSubtopic.aliases];
+      const hasMatch = labels.some((label) => normalize(label) === normalizedTopic);
+
+      if (hasMatch) {
+        return { category, subtopic: currentSubtopic };
+      }
+    }
+  }
+
+  return null;
+}
+
 function getRequiredCategory(title: string) {
   const category = QUESTION_BANK_CATEGORIES.find((item) => item.title === title);
 
@@ -176,6 +296,10 @@ function getRequiredCategory(title: string) {
   return category;
 }
 
+function subtopic(title: string, aliases: string[] = []): QuestionBankSubtopic {
+  return { aliases, title };
+}
+
 function normalize(value: string) {
-  return value.toLowerCase().replace(/&/g, "and");
+  return value.toLowerCase().replace(/&/g, "and").replace(/\s+/g, " ").trim();
 }

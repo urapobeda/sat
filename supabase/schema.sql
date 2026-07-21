@@ -16,6 +16,7 @@ create table if not exists public.questions (
   choices jsonb not null check (jsonb_typeof(choices) = 'array'),
   correct_answer text not null,
   explanation text not null,
+  is_bluebook boolean not null default false,
   created_at timestamptz default now()
 );
 
@@ -23,6 +24,7 @@ create unique index if not exists questions_question_key on public.questions (qu
 create index if not exists questions_section_idx on public.questions (section);
 create index if not exists questions_topic_idx on public.questions (topic);
 create index if not exists questions_difficulty_idx on public.questions (difficulty);
+create index if not exists questions_is_bluebook_idx on public.questions (is_bluebook);
 
 create table if not exists public.practice_sessions (
   id uuid primary key default gen_random_uuid(),
@@ -98,6 +100,16 @@ create table if not exists public.test_answers (
 create index if not exists test_answers_user_id_idx on public.test_answers (user_id);
 create index if not exists test_answers_session_id_idx on public.test_answers (test_session_id);
 
+create table if not exists public.question_marks (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  question_id uuid not null references public.questions(id) on delete cascade,
+  marked_at timestamptz not null default now(),
+  primary key (user_id, question_id)
+);
+
+create index if not exists question_marks_user_id_idx on public.question_marks (user_id);
+create index if not exists question_marks_question_id_idx on public.question_marks (question_id);
+
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -131,6 +143,7 @@ alter table public.practice_answers enable row level security;
 alter table public.test_sessions enable row level security;
 alter table public.test_answers enable row level security;
 alter table public.study_plans enable row level security;
+alter table public.question_marks enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select on public.questions to anon, authenticated;
@@ -140,6 +153,7 @@ grant select, insert, update, delete on public.practice_answers to authenticated
 grant select, insert, update, delete on public.test_sessions to authenticated;
 grant select, insert, update, delete on public.test_answers to authenticated;
 grant select, insert, update, delete on public.study_plans to authenticated;
+grant select, insert, update, delete on public.question_marks to authenticated;
 
 drop policy if exists "Users can read their profile" on public.profiles;
 create policy "Users can read their profile"
@@ -288,5 +302,30 @@ with check (auth.uid() = user_id);
 drop policy if exists "Users can delete their test answers" on public.test_answers;
 create policy "Users can delete their test answers"
 on public.test_answers for delete
+to authenticated
+using (auth.uid() = user_id);
+
+drop policy if exists "Users can read their question marks" on public.question_marks;
+create policy "Users can read their question marks"
+on public.question_marks for select
+to authenticated
+using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert their question marks" on public.question_marks;
+create policy "Users can insert their question marks"
+on public.question_marks for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update their question marks" on public.question_marks;
+create policy "Users can update their question marks"
+on public.question_marks for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "Users can delete their question marks" on public.question_marks;
+create policy "Users can delete their question marks"
+on public.question_marks for delete
 to authenticated
 using (auth.uid() = user_id);

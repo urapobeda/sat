@@ -17,9 +17,16 @@ export type Question = {
   difficulty: "easy" | "medium" | "hard";
   explanation: string;
   id: string;
+  is_bluebook: boolean;
   question: string;
   section: "math" | "reading-writing";
   topic: string;
+};
+
+export type QuestionMark = {
+  marked_at: string;
+  question_id: string;
+  user_id: string;
 };
 
 export type PracticeSession = {
@@ -124,6 +131,13 @@ export type Database = {
         Relationships: [];
         Row: Question;
         Update: Partial<Question>;
+      };
+      question_marks: {
+        Insert: Pick<QuestionMark, "question_id" | "user_id"> &
+          Partial<Pick<QuestionMark, "marked_at">>;
+        Relationships: [];
+        Row: QuestionMark;
+        Update: Partial<QuestionMark>;
       };
       test_answers: {
         Insert: Partial<TestAnswer> &

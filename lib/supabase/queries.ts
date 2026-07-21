@@ -289,6 +289,20 @@ export async function getQuestionProgressLookup(userId: string) {
   return { answeredIds, correctIds, incorrectIds };
 }
 
+export async function getMarkedQuestionIds(userId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("question_marks")
+    .select("question_id")
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return new Set((data ?? []).map((mark) => mark.question_id));
+}
+
 export async function getQuestionStats() {
   const questions = await getQuestions();
   const math = questions.filter((question) => question.section === "math").length;
@@ -698,6 +712,7 @@ function mapQuestionRow(row: Question): AppQuestion {
     difficulty: row.difficulty,
     explanation: row.explanation,
     id: row.id,
+    isBluebook: row.is_bluebook ?? false,
     question: row.question,
     section: row.section,
     topic: row.topic
