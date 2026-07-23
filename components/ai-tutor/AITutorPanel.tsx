@@ -220,7 +220,7 @@ export function AITutorPanel({
             onSend={(message) => sendTutorMessage("ask", message)}
           />
           <p className="text-center text-xs font-bold text-slate-500">
-            {questionRequests} / {AI_TUTOR_QUESTION_LIMIT} for this question ·{" "}
+            {questionRequests} / {AI_TUTOR_QUESTION_LIMIT} for this question /{" "}
             {sessionRequests} / {AI_TUTOR_SESSION_LIMIT} this session
           </p>
         </div>

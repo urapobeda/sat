@@ -69,7 +69,6 @@ export async function POST(request: NextRequest) {
       model,
       safety_identifier: sessionId,
       store: false,
-      temperature: 0.35,
       text: {
         format: {
           description: "A short SAT tutor response for the current question.",
