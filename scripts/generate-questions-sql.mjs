@@ -27,7 +27,8 @@ const rows = questions
       sqlString(question.question),
       `${sqlString(JSON.stringify(question.choices))}::jsonb`,
       sqlString(question.correct_answer),
-      sqlString(question.explanation)
+      sqlString(question.explanation),
+      question.is_bluebook === true ? "true" : "false"
     ].join(", ")
   )
   .map((row) => `  (${row})`)
@@ -40,7 +41,8 @@ const sql = `insert into public.questions (
   question,
   choices,
   correct_answer,
-  explanation
+  explanation,
+  is_bluebook
 )
 values
 ${rows}
@@ -51,7 +53,8 @@ set
   difficulty = excluded.difficulty,
   choices = excluded.choices,
   correct_answer = excluded.correct_answer,
-  explanation = excluded.explanation;
+  explanation = excluded.explanation,
+  is_bluebook = excluded.is_bluebook;
 `;
 
 await mkdir(path.dirname(outputPath), { recursive: true });
@@ -68,6 +71,13 @@ function validateQuestion(question, index) {
 
   if (!allowedDifficulties.has(question.difficulty)) {
     throw new Error(`${label}: difficulty must be "easy", "medium", or "hard".`);
+  }
+
+  if (
+    "is_bluebook" in question &&
+    typeof question.is_bluebook !== "boolean"
+  ) {
+    throw new Error(`${label}: is_bluebook must be true or false when provided.`);
   }
 
   ["topic", "question", "correct_answer", "explanation"].forEach((field) => {

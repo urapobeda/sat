@@ -59,10 +59,15 @@ If the schema was already created before the grants were added, run
 `supabase/fix-permissions.sql` once. This fixes errors like
 `permission denied for table questions` for the public question bank.
 
+If your Supabase project was created before the Question Bank review/source
+filters were added, also run `supabase/question-bank-filters.sql` once. It adds
+`questions.is_bluebook` and the `question_marks` table.
+
 ## Database Tables
 
 - `profiles`
 - `questions`
+- `question_marks`
 - `practice_sessions`
 - `practice_answers`
 - `test_sessions`
@@ -76,12 +81,18 @@ RLS is enabled on all tables. Questions are readable by anonymous and authentica
 Questions are stored in the Supabase `questions` table. Each question needs:
 
 - `section`: `math` or `reading-writing`
-- `topic`: for example `Algebra`, `Transitions`, or `Reading Comprehension`
+- `topic`: use a SAT skill/subskill, for example `Linear Equations in One Variable`, `Transitions`, or `Words in Context`
 - `difficulty`: `easy`, `medium`, or `hard`
 - `question`
 - `choices`: an array of `{ "label": "A", "text": "..." }`
 - `correct_answer`
 - `explanation`
+- `is_bluebook`: optional boolean, defaults to `false`
+
+Supported Question Bank topics:
+
+- Reading & Writing: `Words in Context`, `Text Structure and Purpose`, `Cross-Text Connections`, `Central Ideas and Details`, `Inferences`, `Command of Evidence`, `Rhetorical Synthesis`, `Transitions`, `Boundaries`, `Form, Structure, and Sense`
+- Math: `Linear Equations in One Variable`, `Linear Functions`, `Linear Equations in Two Variables`, `Systems of Two Linear Equations in Two Variables`, `Linear Inequalities in One or Two Variables`, `Equivalent Expressions`, `Nonlinear Equations in One Variable`, `Systems of Equations in Two Variables`, `Nonlinear Functions`, `Ratios, Rates, Proportional Relationships, and Units`, `Percentages`, `One-Variable Data: Distributions and Measures of Center and Spread`, `Two-Variable Data: Models and Scatterplots`, `Probability and Conditional Probability`, `Inference from Sample Statistics and Margin of Error`, `Evaluating Statistical Claims: Observational Studies and Experiments`, `Area and Volume`, `Lines, Angles, and Triangles`, `Right Triangles and Trigonometry`, `Circles`
 
 Use [data/questions-import.example.json](data/questions-import.example.json) as a template.
 Create a local file named `data/questions-import.json`, paste your questions there,
@@ -99,8 +110,8 @@ when the same `question` text already exists.
 
 - Responsive landing page for SAT preparation
 - Question Bank powered by Supabase questions
-- Search and section filtering for topics/questions
-- Topic, difficulty, and answered-incorrectly filters
+- Search across topics/questions
+- Difficulty, answered-incorrectly, marked-for-review, and Bluebook filters
 - Practice flow from `/question-bank/practice`
 - Immediate feedback and explanations in practice mode
 - Timed 15-minute mini test from `/tests/start`

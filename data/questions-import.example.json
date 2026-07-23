@@ -1,7 +1,7 @@
 [
   {
     "section": "math",
-    "topic": "Algebra",
+    "topic": "Linear Equations in One Variable",
     "difficulty": "easy",
     "question": "If 5x - 4 = 21, what is the value of x?",
     "choices": [
@@ -11,7 +11,8 @@
       { "label": "D", "text": "6" }
     ],
     "correct_answer": "5",
-    "explanation": "Add 4 to both sides to get 5x = 25. Divide by 5 to get x = 5."
+    "explanation": "Add 4 to both sides to get 5x = 25. Divide by 5 to get x = 5.",
+    "is_bluebook": false
   },
   {
     "section": "reading-writing",
@@ -25,6 +26,7 @@
       { "label": "D", "text": "similarly" }
     ],
     "correct_answer": "therefore",
-    "explanation": "The second clause describes a result of the first trial being inconclusive, so therefore is the best transition."
+    "explanation": "The second clause describes a result of the first trial being inconclusive, so therefore is the best transition.",
+    "is_bluebook": false
   }
 ]

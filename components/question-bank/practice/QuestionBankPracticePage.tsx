@@ -17,8 +17,10 @@ import { Layout } from "@/components/Layout";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
 import { ResultsCard } from "@/components/quiz/ResultsCard";
 import { Timer, formatTime } from "@/components/quiz/Timer";
+import { getQuestionSubtopic } from "@/lib/questionBankStructure";
 import {
   formatSection,
+  normalizeTopic,
   getWeakTopics
 } from "@/lib/questions";
 import {
@@ -82,7 +84,7 @@ export function QuestionBankPracticePage() {
 
       try {
         const [loadedQuestions, user] = await Promise.all([
-          getQuestions({ difficulty, section, topic }),
+          loadQuestionsForPractice({ difficulty, section, topic }),
           getCurrentUser().catch(() => null)
         ]);
 
@@ -441,4 +443,33 @@ function parseDifficulty(value: string | null): DifficultyFilter {
   return value === "easy" || value === "medium" || value === "hard"
     ? value
     : "all";
+}
+
+async function loadQuestionsForPractice({
+  difficulty,
+  section,
+  topic
+}: {
+  difficulty: DifficultyFilter;
+  section: SectionFilter;
+  topic: string | null;
+}) {
+  if (!topic) {
+    return getQuestions({ difficulty, section });
+  }
+
+  const loadedQuestions = await getQuestions({ difficulty, section, topic });
+
+  if (loadedQuestions.length > 0) {
+    return loadedQuestions;
+  }
+
+  const normalizedTopic = normalizeTopic(topic);
+  const sectionQuestions = await getQuestions({ difficulty, section });
+
+  return sectionQuestions.filter(
+    (question) =>
+      normalizeTopic(question.topic) === normalizedTopic ||
+      normalizeTopic(getQuestionSubtopic(question)) === normalizedTopic
+  );
 }
