@@ -88,6 +88,80 @@ export type StudyPlan = {
   weekly_goal: number;
 };
 
+export type ExamPaper = {
+  created_at: string;
+  description: string | null;
+  difficulty: "foundation" | "standard" | "advanced";
+  estimated_minutes: number | null;
+  id: string;
+  is_featured: boolean;
+  is_published: boolean;
+  license_notes: string | null;
+  mode: "adaptive" | "linear" | "untimed-practice";
+  paper_type: "full-length" | "reading-writing" | "math" | "mini-test";
+  slug: string;
+  source_name: string | null;
+  source_type: "original" | "licensed" | "public-permission";
+  source_url: string | null;
+  title: string;
+  updated_at: string;
+  year: number | null;
+};
+
+export type ExamModule = {
+  duration_seconds: number;
+  id: string;
+  module_number: number;
+  paper_id: string;
+  question_count: number;
+  route_type: "base" | "easier" | "harder" | null;
+  section: "math" | "reading-writing";
+  sort_order: number;
+};
+
+export type ExamModuleQuestion = {
+  id: string;
+  module_id: string;
+  question_id: string;
+  sort_order: number;
+};
+
+export type ExamAttempt = {
+  completed_at: string | null;
+  current_module_id: string | null;
+  current_question_index: number;
+  estimated_score: number | null;
+  id: string;
+  math_score: number | null;
+  paper_id: string;
+  raw_score: number | null;
+  reading_writing_score: number | null;
+  selected_section: "math" | "reading-writing" | "full" | null;
+  started_at: string;
+  status: "not-started" | "in-progress" | "completed";
+  time_spent_seconds: number;
+  user_id: string;
+};
+
+export type ExamAttemptAnswer = {
+  answered_at: string;
+  attempt_id: string;
+  id: string;
+  is_correct: boolean | null;
+  marked_for_review: boolean;
+  module_id: string;
+  question_id: string;
+  selected_answer: string | null;
+  time_spent_seconds: number;
+  user_id: string;
+};
+
+export type PaperBookmark = {
+  created_at: string;
+  paper_id: string;
+  user_id: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -115,6 +189,67 @@ export type Database = {
         Relationships: [];
         Row: StudyPlan;
         Update: Partial<StudyPlan>;
+      };
+      exam_attempt_answers: {
+        Insert: Partial<ExamAttemptAnswer> &
+          Pick<
+            ExamAttemptAnswer,
+            "attempt_id" | "module_id" | "question_id" | "user_id"
+          >;
+        Relationships: [];
+        Row: ExamAttemptAnswer;
+        Update: Partial<ExamAttemptAnswer>;
+      };
+      exam_attempts: {
+        Insert: Partial<ExamAttempt> &
+          Pick<ExamAttempt, "paper_id" | "status" | "user_id">;
+        Relationships: [];
+        Row: ExamAttempt;
+        Update: Partial<ExamAttempt>;
+      };
+      exam_module_questions: {
+        Insert: Partial<ExamModuleQuestion> &
+          Pick<ExamModuleQuestion, "module_id" | "question_id" | "sort_order">;
+        Relationships: [];
+        Row: ExamModuleQuestion;
+        Update: Partial<ExamModuleQuestion>;
+      };
+      exam_modules: {
+        Insert: Partial<ExamModule> &
+          Pick<
+            ExamModule,
+            | "duration_seconds"
+            | "module_number"
+            | "paper_id"
+            | "question_count"
+            | "section"
+            | "sort_order"
+          >;
+        Relationships: [];
+        Row: ExamModule;
+        Update: Partial<ExamModule>;
+      };
+      exam_papers: {
+        Insert: Partial<ExamPaper> &
+          Pick<
+            ExamPaper,
+            | "difficulty"
+            | "mode"
+            | "paper_type"
+            | "slug"
+            | "source_type"
+            | "title"
+          >;
+        Relationships: [];
+        Row: ExamPaper;
+        Update: Partial<ExamPaper>;
+      };
+      paper_bookmarks: {
+        Insert: Pick<PaperBookmark, "paper_id" | "user_id"> &
+          Partial<Pick<PaperBookmark, "created_at">>;
+        Relationships: [];
+        Row: PaperBookmark;
+        Update: Partial<PaperBookmark>;
       };
       questions: {
         Insert: Partial<Question> &

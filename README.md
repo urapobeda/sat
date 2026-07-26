@@ -63,6 +63,16 @@ If your Supabase project was created before the Question Bank review/source
 filters were added, also run `supabase/question-bank-filters.sql` once. It adds
 `questions.is_bluebook` and the `question_marks` table.
 
+For the Past Papers library, run:
+
+```sql
+supabase/migrations/add_past_papers.sql
+supabase/seed-past-papers.sql
+```
+
+The seed file creates only demo papers from existing original question-bank
+questions. It does not add protected or official SAT questions.
+
 ## Database Tables
 
 - `profiles`
@@ -73,6 +83,12 @@ filters were added, also run `supabase/question-bank-filters.sql` once. It adds
 - `test_sessions`
 - `test_answers`
 - `study_plans`
+- `exam_papers`
+- `exam_modules`
+- `exam_module_questions`
+- `exam_attempts`
+- `exam_attempt_answers`
+- `paper_bookmarks`
 
 RLS is enabled on all tables. Questions are readable by anonymous and authenticated users, while profiles, sessions, and answers are owner-only through `auth.uid()`.
 
@@ -109,9 +125,12 @@ when the same `question` text already exists.
 ## Current Features
 
 - Responsive landing page for SAT preparation
+- Unified dashboard at `/dashboard`
 - Question Bank powered by Supabase questions
 - Search across topics/questions
 - Difficulty, answered-incorrectly, marked-for-review, and Bluebook filters
+- Past Papers library and paper details backed by Supabase paper records
+- Development-safe More menu for future product modules
 - Practice flow from `/question-bank/practice`
 - Immediate feedback and explanations in practice mode
 - Timed 15-minute mini test from `/tests/start`
@@ -125,13 +144,19 @@ when the same `question` text already exists.
 ## Working Routes
 
 - `/`
+- `/dashboard`
 - `/auth`
 - `/question-bank`
 - `/question-bank/practice`
+- `/past-papers`
+- `/past-papers/[slug]`
+- `/past-papers/[slug]/start`
 - `/tests`
 - `/tests/start`
 - `/progress`
 - `/converter`
+- `/tools/ent-converter`
+- `/tools/sat-score-calculator`
 
 ## Checks
 
