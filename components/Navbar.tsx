@@ -154,7 +154,7 @@ export function Navbar() {
               </Link>
             )}
             <Link
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold !text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 [&_*]:!text-white"
               href="/question-bank"
             >
               <span>Get Started</span>
