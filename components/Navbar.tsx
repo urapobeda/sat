@@ -3,7 +3,6 @@
 import {
   ArrowRight,
   BookMarked,
-  Bookmark,
   Calculator,
   ChevronDown,
   Flame,
@@ -47,12 +46,6 @@ const moreItems = [
     icon: BookMarked,
     isComingSoon: true,
     label: "Mistake Review"
-  },
-  {
-    href: "/bookmarks",
-    icon: Bookmark,
-    isComingSoon: true,
-    label: "Bookmarks"
   },
   {
     href: "/score-predictor",
