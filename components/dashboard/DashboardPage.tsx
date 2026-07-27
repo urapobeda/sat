@@ -3,7 +3,6 @@ import {
   BookOpen,
   ClipboardList,
   Clock3,
-  FileText,
   Lightbulb,
   Quote,
   SquareRadical,
@@ -36,14 +35,6 @@ const featureCards = [
     tone: "from-violet-500 to-purple-700",
     cta: "Open tests",
     href: "/tests"
-  },
-  {
-    title: "Past Papers",
-    description: "Browse complete demo papers and sectional practice exams",
-    icon: FileText,
-    tone: "from-cyan-500 to-blue-600",
-    cta: "Browse papers",
-    href: "/past-papers"
   },
   {
     title: "Track Progress",
@@ -100,7 +91,7 @@ export function DashboardPage() {
         <SATCountdown />
       </section>
 
-      <section className="mt-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="mt-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {featureCards.map((feature) => (
           <FeatureCard key={feature.title} {...feature} />
         ))}
@@ -118,11 +109,11 @@ export function DashboardPage() {
           </div>
           <Button
             className="w-full rounded-xl sm:w-auto"
-            href="/past-papers"
+            href="/tests"
             icon={<ArrowRight size={18} />}
             variant="secondary"
           >
-            Browse Past Papers
+            Open Tests
           </Button>
         </div>
 
