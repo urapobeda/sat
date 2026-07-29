@@ -24,14 +24,18 @@ import {
   getWeakTopics
 } from "@/lib/questions";
 import {
-  completePracticeSession,
   createPracticeSession,
   getCurrentUser,
-  getQuestions,
-  savePracticeAnswer
+  getQuestions
 } from "@/lib/supabase/queries";
+import { getSupabaseAuthHeaders } from "@/lib/supabase/authHeaders";
 import type { User } from "@supabase/supabase-js";
-import type { DifficultyFilter, Question, SectionFilter } from "@/types/sat";
+import type {
+  DifficultyFilter,
+  Question,
+  QuestionFeedback,
+  SectionFilter
+} from "@/types/sat";
 
 export function QuestionBankPracticePage() {
   const searchParams = useSearchParams();
@@ -41,6 +45,7 @@ export function QuestionBankPracticePage() {
   const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [feedback, setFeedback] = useState<Record<string, QuestionFeedback>>({});
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,14 +60,12 @@ export function QuestionBankPracticePage() {
 
   const currentQuestion = practiceQuestions[currentIndex];
   const selectedAnswer = currentQuestion ? answers[currentQuestion.id] ?? null : null;
-  const score = practiceQuestions.filter(
-    (question) => answers[question.id] === question.correctAnswer
-  ).length;
+  const score = Object.values(feedback).filter((item) => item.isCorrect).length;
   const percentage =
     practiceQuestions.length > 0
       ? Math.round((score / practiceQuestions.length) * 100)
       : 0;
-  const weakTopics = getWeakTopics(practiceQuestions, answers);
+  const weakTopics = getWeakTopics(practiceQuestions, feedback);
   const displayTopic = practiceQuestions[0]?.topic ?? topic;
 
   useEffect(() => {
@@ -74,6 +77,7 @@ export function QuestionBankPracticePage() {
       setPersistenceMessage(null);
       setPracticeQuestions([]);
       setAnswers({});
+      setFeedback({});
       setCurrentIndex(0);
       setIsFinished(false);
       setElapsedSeconds(0);
@@ -169,21 +173,32 @@ export function QuestionBankPracticePage() {
       [currentQuestion.id]: choice
     }));
 
-    if (!currentUser || !sessionId) {
-      return;
-    }
-
     try {
-      await savePracticeAnswer({
-        correct_answer: currentQuestion.correctAnswer,
-        is_correct: choice === currentQuestion.correctAnswer,
-        question_id: currentQuestion.id,
-        selected_answer: choice,
-        session_id: sessionId,
-        user_id: currentUser.id
+      const authHeaders = currentUser ? await getSupabaseAuthHeaders() : {};
+      const response = await fetch("/api/practice/answers", {
+        body: JSON.stringify({
+          questionId: currentQuestion.id,
+          selectedAnswer: choice,
+          sessionId
+        }),
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders
+        },
+        method: "POST"
       });
+
+      if (!response.ok) {
+        throw new Error("Unable to verify answer.");
+      }
+
+      const verifiedFeedback = (await response.json()) as QuestionFeedback;
+      setFeedback((currentFeedback) => ({
+        ...currentFeedback,
+        [currentQuestion.id]: verifiedFeedback
+      }));
     } catch {
-      setPersistenceMessage("Answer selected, but Supabase did not save it.");
+      setPersistenceMessage("Answer selected, but feedback could not be verified.");
     }
   }
 
@@ -211,11 +226,15 @@ export function QuestionBankPracticePage() {
 
     try {
       if (sessionId) {
-        await completePracticeSession(sessionId, {
-          percentage,
-          score,
-          total: practiceQuestions.length
+        const authHeaders = currentUser ? await getSupabaseAuthHeaders() : {};
+        const response = await fetch(`/api/practice/sessions/${sessionId}/complete`, {
+          headers: authHeaders,
+          method: "POST"
         });
+
+        if (!response.ok) {
+          throw new Error("Unable to complete practice session.");
+        }
       }
     } catch {
       setPersistenceMessage("Results are shown here, but Supabase did not save them.");
@@ -227,6 +246,7 @@ export function QuestionBankPracticePage() {
 
   async function restartPractice() {
     setAnswers({});
+    setFeedback({});
     setCurrentIndex(0);
     setIsFinished(false);
     setElapsedSeconds(0);
@@ -335,7 +355,7 @@ export function QuestionBankPracticePage() {
                   onClick={() => {
                     const missedQuestion =
                       practiceQuestions.find(
-                        (question) => answers[question.id] !== question.correctAnswer
+                        (question) => feedback[question.id]?.isCorrect === false
                       ) ?? practiceQuestions[0];
                     setReviewQuestion(missedQuestion);
                   }}
@@ -380,9 +400,10 @@ export function QuestionBankPracticePage() {
             <QuestionCard
               currentIndex={currentIndex}
               onSelect={handleSelect}
+              feedback={currentQuestion ? feedback[currentQuestion.id] : null}
               question={currentQuestion}
               selectedAnswer={selectedAnswer}
-              showFeedback={selectedAnswer !== null}
+              showFeedback={Boolean(currentQuestion && feedback[currentQuestion.id])}
               totalQuestions={practiceQuestions.length}
             />
 

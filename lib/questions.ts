@@ -98,12 +98,12 @@ export function getUniqueTopicCount(questions: Question[], section?: SectionFilt
 
 export function getWeakTopics(
   questions: Question[],
-  answers: Record<string, string>
+  feedback: Record<string, { isCorrect: boolean }>
 ) {
   const misses = new Map<string, number>();
 
   questions.forEach((question) => {
-    if (answers[question.id] !== question.correctAnswer) {
+    if (feedback[question.id]?.isCorrect === false) {
       misses.set(question.topic, (misses.get(question.topic) ?? 0) + 1);
     }
   });

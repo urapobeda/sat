@@ -22,16 +22,23 @@ import { QuestionCard } from "@/components/quiz/QuestionCard";
 import { ReviewAnswers } from "@/components/quiz/ReviewAnswers";
 import { Timer, formatTime } from "@/components/quiz/Timer";
 import {
-  completeTestSession,
   createTestSession,
   getCurrentUser,
-  getRandomQuestions,
-  saveTestAnswer
+  getRandomQuestions
 } from "@/lib/supabase/queries";
-import type { Question } from "@/types/sat";
+import { getSupabaseAuthHeaders } from "@/lib/supabase/authHeaders";
+import type { Question, ReviewQuestion } from "@/types/sat";
 
 const TEST_DURATION_SECONDS = 65 * 60;
 const TEST_QUESTION_LIMIT = 40;
+
+type TestCompletionResult = {
+  estimatedSatScore: number;
+  percentage: number;
+  reviewQuestions: ReviewQuestion[];
+  score: number;
+  total: number;
+};
 
 export function TestStartPage() {
   const [testQuestions, setTestQuestions] = useState<Question[]>([]);
@@ -47,20 +54,18 @@ export function TestStartPage() {
   const [timeUp, setTimeUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState<string | null>(null);
-  const [reviewQuestion, setReviewQuestion] = useState<Question | null>(null);
+  const [reviewQuestion, setReviewQuestion] = useState<ReviewQuestion | null>(null);
+  const [completionResult, setCompletionResult] = useState<TestCompletionResult | null>(null);
   const hasSaved = useRef(false);
 
   const currentQuestion = testQuestions[currentIndex];
   const selectedAnswer = currentQuestion ? answers[currentQuestion.id] ?? null : null;
   const answeredCount = Object.keys(answers).length;
   const flaggedCount = Object.values(flaggedQuestions).filter(Boolean).length;
-  const score = testQuestions.filter(
-    (question) => answers[question.id] === question.correctAnswer
-  ).length;
-  const percentage =
-    testQuestions.length > 0 ? Math.round((score / testQuestions.length) * 100) : 0;
   const timeSpent = TEST_DURATION_SECONDS - remainingSeconds;
-  const estimatedScore = Math.min(1600, Math.max(400, 400 + Math.round(percentage * 12)));
+  const score = completionResult?.score ?? 0;
+  const percentage = completionResult?.percentage ?? 0;
+  const estimatedScore = completionResult?.estimatedSatScore ?? 0;
 
   useEffect(() => {
     let isMounted = true;
@@ -185,28 +190,30 @@ export function TestStartPage() {
     const spentSeconds = expired ? TEST_DURATION_SECONDS : timeSpent;
 
     try {
-      if (currentUser && testSessionId) {
-        await Promise.all(
-          testQuestions.map((question) =>
-            saveTestAnswer({
-              correct_answer: question.correctAnswer,
-              is_correct: answers[question.id] === question.correctAnswer,
-              question_id: question.id,
-              selected_answer: answers[question.id] ?? null,
-              test_session_id: testSessionId,
-              user_id: currentUser.id
-            })
-          )
-        );
+      const authHeaders = currentUser ? await getSupabaseAuthHeaders() : {};
+      const response = await fetch("/api/tests/complete", {
+        body: JSON.stringify({
+          answers: Object.fromEntries(
+            testQuestions.map((question) => [
+              question.id,
+              answers[question.id] ?? null
+            ])
+          ),
+          testSessionId,
+          timeSpentSeconds: spentSeconds
+        }),
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders
+        },
+        method: "POST"
+      });
 
-        await completeTestSession(testSessionId, {
-          estimated_sat_score: estimatedScore,
-          percentage,
-          score,
-          time_spent_seconds: spentSeconds,
-          total: testQuestions.length
-        });
+      if (!response.ok) {
+        throw new Error("Unable to complete test.");
       }
+
+      setCompletionResult((await response.json()) as TestCompletionResult);
     } catch {
       setPersistenceMessage("Results are shown here, but Supabase did not save them.");
     } finally {
@@ -312,9 +319,12 @@ export function TestStartPage() {
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:shadow-xl"
                 onClick={() => {
                   const missedQuestion =
-                    testQuestions.find(
+                    completionResult?.reviewQuestions.find(
                       (question) => answers[question.id] !== question.correctAnswer
-                    ) ?? testQuestions[0];
+                    ) ?? completionResult?.reviewQuestions[0];
+                  if (!missedQuestion) {
+                    return;
+                  }
                   setReviewQuestion(missedQuestion);
                 }}
                 type="button"
@@ -331,7 +341,10 @@ export function TestStartPage() {
             </div>
             </article>
 
-            <ReviewAnswers answers={answers} questions={testQuestions} />
+            <ReviewAnswers
+              answers={answers}
+              questions={completionResult?.reviewQuestions ?? []}
+            />
           </div>
           {reviewQuestion ? (
             <AITutorPanel

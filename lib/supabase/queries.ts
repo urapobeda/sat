@@ -24,6 +24,9 @@ type QuestionFilters = {
   topic?: string | null;
 };
 
+const PUBLIC_QUESTION_COLUMNS =
+  "id,section,topic,difficulty,question,choices,is_bluebook,created_at";
+
 type SessionResult = {
   percentage: number;
   score: number;
@@ -160,7 +163,10 @@ export async function updateStudyPlan(
 
 export async function getQuestions(filters: QuestionFilters = {}) {
   const supabase = getSupabaseBrowserClient();
-  let query = supabase.from("questions").select("*").order("created_at");
+  let query = supabase
+    .from("questions")
+    .select(PUBLIC_QUESTION_COLUMNS)
+    .order("created_at");
 
   if (filters.section && filters.section !== "all") {
     query = query.eq("section", filters.section);
@@ -384,8 +390,7 @@ export async function savePracticeAnswer(
   data: Pick<
     PracticeAnswer,
     "question_id" | "selected_answer" | "session_id" | "user_id"
-  > &
-    Partial<Pick<PracticeAnswer, "correct_answer" | "is_correct">>
+  >
 ) {
   const supabase = getSupabaseBrowserClient();
   const { data: answer, error } = await supabase
@@ -470,8 +475,7 @@ export async function saveTestAnswer(
   data: Pick<
     TestAnswer,
     "question_id" | "selected_answer" | "test_session_id" | "user_id"
-  > &
-    Partial<Pick<TestAnswer, "correct_answer" | "is_correct">>
+  >
 ) {
   const supabase = getSupabaseBrowserClient();
   const { data: answer, error } = await supabase
@@ -708,9 +712,7 @@ export async function clearUserProgress(userId: string) {
 function mapQuestionRow(row: Question): AppQuestion {
   return {
     choices: row.choices.map((choice: Choice) => choice.text),
-    correctAnswer: row.correct_answer,
     difficulty: row.difficulty,
-    explanation: row.explanation,
     id: row.id,
     isBluebook: row.is_bluebook ?? false,
     question: row.question,

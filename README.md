@@ -32,7 +32,13 @@ Fill in `.env.local`:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
+
+`SUPABASE_SERVICE_ROLE_KEY` is server-only. It is required for API routes that
+verify answers and load `question_solutions`. Never expose it in client code,
+browser logs, or public hosting variables that are prefixed with
+`NEXT_PUBLIC_`.
 
 Run the development server:
 
@@ -52,8 +58,10 @@ http://127.0.0.1:3000
 2. Open the Supabase SQL Editor.
 3. Run `supabase/schema.sql`.
 4. Run `supabase/seed.sql`.
-5. In Authentication settings, enable Email/Password sign-in.
-6. Use only the public anon key in `.env.local`. Do not put a service role key in the frontend.
+5. Run `supabase/migrations/secure_question_solutions.sql`.
+6. In Authentication settings, enable Email/Password sign-in.
+7. Use only the public anon key in frontend variables. Keep the service role key
+   server-only.
 
 If the schema was already created before the grants were added, run
 `supabase/fix-permissions.sql` once. This fixes errors like
@@ -73,10 +81,15 @@ supabase/seed-past-papers.sql
 The seed file creates only demo papers from existing original question-bank
 questions. It does not add protected or official SAT questions.
 
+Important: after `secure_question_solutions.sql`, public `questions` rows no
+longer contain `correct_answer` or `explanation`. Solutions live in
+`question_solutions` and are read only by trusted server routes.
+
 ## Database Tables
 
 - `profiles`
 - `questions`
+- `question_solutions`
 - `question_marks`
 - `practice_sessions`
 - `practice_answers`
@@ -90,19 +103,22 @@ questions. It does not add protected or official SAT questions.
 - `exam_attempt_answers`
 - `paper_bookmarks`
 
-RLS is enabled on all tables. Questions are readable by anonymous and authenticated users, while profiles, sessions, and answers are owner-only through `auth.uid()`.
+RLS is enabled on all tables. Public questions are readable by anonymous and
+authenticated users, but solutions are not publicly selectable. Profiles,
+sessions, attempts, marks, and answers are owner-only through `auth.uid()`.
 
 ## Adding Questions
 
-Questions are stored in the Supabase `questions` table. Each question needs:
+Questions are stored in the Supabase `questions` table, with answers stored in
+`question_solutions`. Each question needs:
 
 - `section`: `math` or `reading-writing`
 - `topic`: use a SAT skill/subskill, for example `Linear Equations in One Variable`, `Transitions`, or `Words in Context`
 - `difficulty`: `easy`, `medium`, or `hard`
 - `question`
 - `choices`: an array of `{ "label": "A", "text": "..." }`
-- `correct_answer`
-- `explanation`
+- `correct_answer`: stored in `question_solutions`
+- `explanation`: stored in `question_solutions`
 - `is_bluebook`: optional boolean, defaults to `false`
 
 Supported Question Bank topics:
@@ -118,9 +134,9 @@ then generate SQL:
 npm run questions:sql
 ```
 
-This creates `supabase/generated-questions.sql`. Run that SQL in the Supabase SQL
-Editor to save the questions in the database. The import updates existing rows
-when the same `question` text already exists.
+This creates `supabase/generated-questions.sql`. If you have already run
+`secure_question_solutions.sql`, make sure new imports insert public question
+fields into `questions` and solution fields into `question_solutions`.
 
 ## Current Features
 
@@ -132,9 +148,9 @@ when the same `question` text already exists.
 - Past Papers library and paper details backed by Supabase paper records
 - Development-safe More menu for future product modules
 - Practice flow from `/question-bank/practice`
-- Immediate feedback and explanations in practice mode
+- Server-verified feedback and explanations in practice mode
 - Timed 15-minute mini test from `/tests/start`
-- Test results review with selected answers, correct answers, and explanations
+- Server-verified test results review with selected answers, correct answers, and explanations after completion
 - Supabase Auth page at `/auth`
 - Progress dashboard from Supabase session history
 - Weak-area analytics from missed practice/test answers
@@ -154,9 +170,37 @@ when the same `question` text already exists.
 - `/tests`
 - `/tests/start`
 - `/progress`
-- `/converter`
+- `/converter` redirects to `/tools/ent-converter`
 - `/tools/ent-converter`
 - `/tools/sat-score-calculator`
+
+## Security Model
+
+- The browser receives only public question fields: `id`, `section`, `topic`,
+  `difficulty`, `question`, `choices`, `is_bluebook`, and metadata.
+- The browser must not receive `correct_answer`, `explanation`, or solution
+  steps before an answer is submitted or a test is completed.
+- Practice answer verification runs through `/api/practice/answers`.
+- Practice session completion runs through
+  `/api/practice/sessions/[sessionId]/complete`.
+- Test completion runs through `/api/tests/complete`.
+- AI Tutor requests send `questionId`, not trusted question/solution text.
+- AI Tutor loads solution context server-side only after a submitted answer or
+  review context.
+
+## Testing
+
+Run unit and security-boundary tests:
+
+```bash
+npm run test:unit
+```
+
+Run a dependency audit:
+
+```bash
+npm audit --omit=dev
+```
 
 ## Checks
 

@@ -3,13 +3,14 @@ import { AnswerOption } from "@/components/quiz/AnswerOption";
 import { ProgressBar } from "@/components/quiz/ProgressBar";
 import { Timer } from "@/components/quiz/Timer";
 import { TopicBadge } from "@/components/quiz/TopicBadge";
-import type { Question } from "@/types/sat";
+import type { Question, QuestionFeedback } from "@/types/sat";
 
 type QuestionCardProps = {
   currentIndex: number;
   mode?: "practice" | "test";
   onSelect: (choice: string) => void;
   question: Question;
+  feedback?: QuestionFeedback | null;
   selectedAnswer: string | null;
   showFeedback?: boolean;
   timerSeconds?: number;
@@ -21,13 +22,14 @@ export function QuestionCard({
   mode = "practice",
   onSelect,
   question,
+  feedback,
   selectedAnswer,
   showFeedback = false,
   timerSeconds,
   totalQuestions
 }: QuestionCardProps) {
   const hasAnswered = selectedAnswer !== null;
-  const isCorrect = selectedAnswer === question.correctAnswer;
+  const isCorrect = feedback?.isCorrect ?? false;
   const progress = ((currentIndex + 1) / Math.max(totalQuestions, 1)) * 100;
 
   return (
@@ -68,7 +70,7 @@ export function QuestionCard({
         {question.choices.map((choice, index) => (
           <AnswerOption
             choice={choice}
-            correctAnswer={question.correctAnswer}
+            correctAnswer={feedback?.correctAnswer}
             index={index}
             isDisabled={mode === "practice" && hasAnswered}
             isSelected={selectedAnswer === choice}
@@ -79,7 +81,7 @@ export function QuestionCard({
         ))}
       </div>
 
-      {showFeedback && hasAnswered ? (
+      {showFeedback && hasAnswered && feedback ? (
         <div
           className={[
             "mt-6 rounded-2xl border p-5",
@@ -93,9 +95,9 @@ export function QuestionCard({
           </p>
           <p className="mt-2 text-sm leading-6">
             Correct answer:{" "}
-            <span className="font-black">{question.correctAnswer}</span>
+            <span className="font-black">{feedback.correctAnswer}</span>
           </p>
-          <p className="mt-2 text-sm leading-6">{question.explanation}</p>
+          <p className="mt-2 text-sm leading-6">{feedback.explanation}</p>
         </div>
       ) : null}
     </article>

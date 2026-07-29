@@ -4,14 +4,23 @@ export type QuestionDifficulty = "easy" | "medium" | "hard";
 
 export type Question = {
   choices: string[];
-  correctAnswer: string;
   difficulty: QuestionDifficulty;
-  explanation: string;
   id: string;
   isBluebook: boolean;
   question: string;
   section: SatSection;
   topic: string;
+};
+
+export type QuestionFeedback = {
+  correctAnswer: string;
+  explanation: string;
+  isCorrect: boolean;
+};
+
+export type ReviewQuestion = Question & {
+  correctAnswer: string;
+  explanation: string;
 };
 
 export type SectionFilter = "all" | SatSection;

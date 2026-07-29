@@ -19,21 +19,28 @@ import {
   estimateModule2Route,
   estimateTotalScore,
   type ModuleRoute,
+  type RouteSource,
   type SectionEstimateResult
 } from "@/lib/sat-score-estimator";
+
+type RouteChoice = ModuleRoute | "auto";
 
 type CalculatorState = {
   mathModule1: number;
   mathModule2: number;
+  mathRoute: RouteChoice;
   readingWritingModule1: number;
   readingWritingModule2: number;
+  readingWritingRoute: RouteChoice;
 };
 
 const DEFAULT_STATE: CalculatorState = {
   mathModule1: 20,
   mathModule2: 19,
+  mathRoute: "auto",
   readingWritingModule1: 23,
-  readingWritingModule2: 22
+  readingWritingModule2: 22,
+  readingWritingRoute: "auto"
 };
 
 const MODULE_TOTALS = {
@@ -63,6 +70,7 @@ export default function SatScoreCalculatorRoute() {
           MODULE_TOTALS.math,
           DEFAULT_STATE.mathModule2
         ),
+        mathRoute: readRouteParam(params, "mRoute", DEFAULT_STATE.mathRoute),
         readingWritingModule1: readCorrectParam(
           params,
           "rw1",
@@ -74,6 +82,11 @@ export default function SatScoreCalculatorRoute() {
           "rw2",
           MODULE_TOTALS.readingWriting,
           DEFAULT_STATE.readingWritingModule2
+        ),
+        readingWritingRoute: readRouteParam(
+          params,
+          "rwRoute",
+          DEFAULT_STATE.readingWritingRoute
         )
       });
       setHasLoadedUrlState(true);
@@ -92,6 +105,14 @@ export default function SatScoreCalculatorRoute() {
     module1Total: MODULE_TOTALS.math,
     section: "math"
   });
+  const readingWritingRoute =
+    state.readingWritingRoute === "auto"
+      ? autoReadingWritingRoute
+      : state.readingWritingRoute;
+  const mathRoute = state.mathRoute === "auto" ? autoMathRoute : state.mathRoute;
+  const readingWritingRouteSource: RouteSource =
+    state.readingWritingRoute === "auto" ? "auto" : "manual";
+  const mathRouteSource: RouteSource = state.mathRoute === "auto" ? "auto" : "manual";
 
   const result = useMemo(
     () =>
@@ -100,22 +121,24 @@ export default function SatScoreCalculatorRoute() {
           module1Correct: state.mathModule1,
           module1Total: MODULE_TOTALS.math,
           module2Correct: state.mathModule2,
-          module2Route: autoMathRoute,
+          module2Route: mathRoute,
           module2Total: MODULE_TOTALS.math
         },
-        mathRouteSource: "auto",
+        mathRouteSource,
         readingWriting: {
           module1Correct: state.readingWritingModule1,
           module1Total: MODULE_TOTALS.readingWriting,
           module2Correct: state.readingWritingModule2,
-          module2Route: autoReadingWritingRoute,
+          module2Route: readingWritingRoute,
           module2Total: MODULE_TOTALS.readingWriting
         },
-        readingWritingRouteSource: "auto"
+        readingWritingRouteSource
       }),
     [
-      autoMathRoute,
-      autoReadingWritingRoute,
+      mathRoute,
+      mathRouteSource,
+      readingWritingRoute,
+      readingWritingRouteSource,
       state.mathModule1,
       state.mathModule2,
       state.readingWritingModule1,
@@ -137,6 +160,10 @@ export default function SatScoreCalculatorRoute() {
       ...current,
       [key]: clampCorrectAnswers(value, max)
     }));
+  }
+
+  function updateRoute(key: "mathRoute" | "readingWritingRoute", value: RouteChoice) {
+    setState((current) => ({ ...current, [key]: value }));
   }
 
   function resetCalculator() {
@@ -203,6 +230,8 @@ export default function SatScoreCalculatorRoute() {
             module2Key="readingWritingModule2"
             module2Value={state.readingWritingModule2}
             onCorrectChange={updateCorrect}
+            onRouteChange={(value) => updateRoute("readingWritingRoute", value)}
+            route={state.readingWritingRoute}
             title="Reading & Writing"
             total={MODULE_TOTALS.readingWriting}
           />
@@ -214,6 +243,8 @@ export default function SatScoreCalculatorRoute() {
             module2Key="mathModule2"
             module2Value={state.mathModule2}
             onCorrectChange={updateCorrect}
+            onRouteChange={(value) => updateRoute("mathRoute", value)}
+            route={state.mathRoute}
             title="Math"
             total={MODULE_TOTALS.math}
           />
@@ -256,6 +287,8 @@ function SectionInputPanel({
   module2Key,
   module2Value,
   onCorrectChange,
+  onRouteChange,
+  route,
   title,
   total
 }: {
@@ -266,6 +299,8 @@ function SectionInputPanel({
   module2Key: keyof CalculatorState;
   module2Value: number;
   onCorrectChange: (key: keyof CalculatorState, value: number, max: number) => void;
+  onRouteChange: (value: RouteChoice) => void;
+  route: RouteChoice;
   title: string;
   total: number;
 }) {
@@ -312,10 +347,10 @@ function SectionInputPanel({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-black text-slate-950">
-              Estimated Module 2 Route
+              Module 2 Route
             </p>
             <p className="mt-1 text-xs leading-5 text-slate-500">
-              The route updates automatically from Module 1 performance.
+              Choose manually or keep Auto based on Module 1 performance.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:items-end">
@@ -341,6 +376,28 @@ function SectionInputPanel({
         <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-xs leading-5 text-slate-500 ring-1 ring-slate-100">
           Based on Module 1, this section is currently routed to{" "}
           <span className="font-black capitalize text-blue-700">{autoRoute}</span>.
+        </div>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          {(["auto", "harder", "easier"] as RouteChoice[]).map((option) => (
+            <button
+              aria-pressed={route === option}
+              className={[
+                "min-h-11 rounded-xl border px-4 text-sm font-black capitalize transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500",
+                route === option
+                  ? `border-transparent bg-gradient-to-r ${accentClasses
+                      .split(" ")
+                      .slice(0, 2)
+                      .join(" ")} !text-white shadow-lg shadow-blue-600/15`
+                  : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50"
+              ].join(" ")}
+              key={option}
+              onClick={() => onRouteChange(option)}
+              type="button"
+            >
+              {option === "auto" ? "Auto" : option}
+            </button>
+          ))}
         </div>
       </div>
     </article>
@@ -589,12 +646,26 @@ function buildEstimateUrl(state: CalculatorState) {
   const params = new URLSearchParams({
     m1: String(state.mathModule1),
     m2: String(state.mathModule2),
+    mRoute: state.mathRoute,
     rw1: String(state.readingWritingModule1),
     rw2: String(state.readingWritingModule2),
+    rwRoute: state.readingWritingRoute,
     s: "calculator"
   });
 
   return `/tools/sat-score-calculator?${params.toString()}`;
+}
+
+function readRouteParam(
+  params: URLSearchParams,
+  key: string,
+  fallback: RouteChoice
+): RouteChoice {
+  const value = params.get(key);
+
+  return value === "harder" || value === "easier" || value === "auto"
+    ? value
+    : fallback;
 }
 
 function formatResultText(result: ReturnType<typeof estimateTotalScore>) {

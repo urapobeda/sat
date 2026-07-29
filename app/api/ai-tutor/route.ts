@@ -5,20 +5,18 @@ import {
   AI_TUTOR_SESSION_LIMIT,
   type AITutorResponse
 } from "@/lib/aiTutor";
+import {
+  getQuestionPublicContext,
+  getQuestionSolution
+} from "@/lib/server/questionSolutions";
 import { getOpenAIClient, getOpenAIModel } from "@/lib/openai";
 
 const tutorRequestSchema = z.object({
   action: z.enum(["hint", "next-step", "explain", "explain-mistake", "ask"]),
-  choices: z.array(z.string().trim().min(1).max(500)).min(2).max(6),
-  correctAnswer: z.string().trim().max(500).optional(),
-  difficulty: z.string().trim().min(1).max(80),
-  explanation: z.string().trim().max(2000).optional(),
-  hasSubmitted: z.boolean(),
+  contextType: z.enum(["practice", "test-review", "past-paper-review"]),
   message: z.string().trim().min(1).max(1200),
-  question: z.string().trim().min(1).max(3000),
-  section: z.string().trim().min(1).max(80),
-  selectedAnswer: z.string().trim().max(500).optional(),
-  topic: z.string().trim().min(1).max(120)
+  questionId: z.string().uuid(),
+  selectedAnswer: z.string().trim().max(500).optional()
 });
 
 const tutorResponseSchema = z.object({
@@ -45,25 +43,29 @@ export async function POST(request: NextRequest) {
       return jsonError("Please send a valid SAT question and tutor request.", 400, sessionId);
     }
 
-    const usageError = consumeSessionUsage(sessionId, parsedRequest.data.question);
+    const usageError = consumeSessionUsage(sessionId, parsedRequest.data.questionId);
 
     if (usageError) {
       return jsonError(usageError, 429, sessionId);
     }
 
+    const question = await getQuestionPublicContext(parsedRequest.data.questionId);
+    const canRevealSolution =
+      parsedRequest.data.contextType === "test-review" ||
+      parsedRequest.data.contextType === "past-paper-review" ||
+      Boolean(parsedRequest.data.selectedAnswer);
+    const solution = canRevealSolution
+      ? await getQuestionSolution(parsedRequest.data.questionId)
+      : null;
     const openai = getOpenAIClient();
     const model = getOpenAIModel();
-    const safeTutorPayload = parsedRequest.data.hasSubmitted
-      ? parsedRequest.data
-      : {
-          ...parsedRequest.data,
-          correctAnswer: undefined,
-          explanation: undefined,
-          selectedAnswer: undefined
-        };
 
     const response = await openai.responses.create({
-      input: buildTutorPrompt(safeTutorPayload),
+      input: buildTutorPrompt({
+        request: parsedRequest.data,
+        question,
+        solution
+      }),
       instructions: TUTOR_INSTRUCTIONS,
       max_output_tokens: 700,
       model,
@@ -122,17 +124,16 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function consumeSessionUsage(sessionId: string, question: string) {
+function consumeSessionUsage(sessionId: string, questionId: string) {
   const usage = sessionUsage.get(sessionId) ?? { questions: new Map<string, number>(), total: 0 };
-  const questionKey = question.toLowerCase().slice(0, 180);
-  const questionCount = usage.questions.get(questionKey) ?? 0;
+  const questionCount = usage.questions.get(questionId) ?? 0;
 
   if (usage.total >= AI_TUTOR_SESSION_LIMIT || questionCount >= AI_TUTOR_QUESTION_LIMIT) {
     return "You have reached the AI Tutor limit for this session.";
   }
 
   usage.total += 1;
-  usage.questions.set(questionKey, questionCount + 1);
+  usage.questions.set(questionId, questionCount + 1);
   sessionUsage.set(sessionId, usage);
 
   return null;
@@ -166,25 +167,34 @@ function jsonError(message: string, status: number, sessionId: string) {
   return response;
 }
 
-function buildTutorPrompt(request: z.infer<typeof tutorRequestSchema>) {
-  const choices = request.choices
+function buildTutorPrompt({
+  question,
+  request,
+  solution
+}: {
+  question: Awaited<ReturnType<typeof getQuestionPublicContext>>;
+  request: z.infer<typeof tutorRequestSchema>;
+  solution: Awaited<ReturnType<typeof getQuestionSolution>> | null;
+}) {
+  const choices = question.choices
     .map((choice, index) => `${String.fromCharCode(65 + index)}. ${choice}`)
     .join("\n");
-  const submittedContext = request.hasSubmitted
+  const submittedContext = solution
     ? [
         `Selected answer: ${request.selectedAnswer ?? "No answer selected"}`,
-        `Correct answer: ${request.correctAnswer ?? "Not provided"}`,
-        `Existing explanation: ${request.explanation ?? "Not provided"}`
+        `Correct answer: ${solution.correct_answer}`,
+        `Existing explanation: ${solution.explanation}`
       ].join("\n")
     : "The student has not submitted an answer yet. Do not reveal the correct answer, the answer letter, or a full solution.";
 
   return [
     `Action: ${request.action}`,
+    `Context type: ${request.contextType}`,
     `Student message: ${request.message}`,
-    `Section: ${request.section}`,
-    `Topic: ${request.topic}`,
-    `Difficulty: ${request.difficulty}`,
-    `Question: ${request.question}`,
+    `Section: ${question.section}`,
+    `Topic: ${question.topic}`,
+    `Difficulty: ${question.difficulty}`,
+    `Question: ${question.question}`,
     `Choices:\n${choices}`,
     submittedContext
   ].join("\n\n");

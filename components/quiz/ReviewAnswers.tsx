@@ -1,8 +1,8 @@
-import type { Question } from "@/types/sat";
+import type { ReviewQuestion } from "@/types/sat";
 
 type ReviewAnswersProps = {
   answers: Record<string, string>;
-  questions: Question[];
+  questions: ReviewQuestion[];
 };
 
 export function ReviewAnswers({ answers, questions }: ReviewAnswersProps) {

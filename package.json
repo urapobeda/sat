@@ -8,13 +8,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/adaptive-routing.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/sat-score-estimator.test.ts",
+    "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/adaptive-routing.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/sat-score-estimator.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/security-boundary.test.ts",
     "questions:sql": "node scripts/generate-questions-sql.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.107.0",
     "lucide-react": "latest",
-    "next": "latest",
+    "next": "^16.2.12",
     "openai": "^6.48.0",
     "react": "latest",
     "react-dom": "latest",
@@ -28,8 +28,11 @@
     "autoprefixer": "latest",
     "eslint": "latest",
     "eslint-config-next": "latest",
-    "postcss": "latest",
+    "postcss": "8.5.25",
     "tailwindcss": "latest",
     "typescript": "latest"
+  },
+  "overrides": {
+    "sharp": "0.35.3"
   }
 }

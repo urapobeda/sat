@@ -152,8 +152,7 @@ export function QuestionBankPage() {
         question.question.toLowerCase().includes(query) ||
         question.topic.toLowerCase().includes(query) ||
         category.toLowerCase().includes(query) ||
-        subtopic.toLowerCase().includes(query) ||
-        question.explanation.toLowerCase().includes(query);
+        subtopic.toLowerCase().includes(query);
 
       return (
         matchesDifficulty &&

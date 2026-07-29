@@ -12,15 +12,23 @@ export type Profile = {
 
 export type Question = {
   choices: Choice[];
-  correct_answer: string;
   created_at: string;
   difficulty: "easy" | "medium" | "hard";
-  explanation: string;
   id: string;
   is_bluebook: boolean;
   question: string;
   section: "math" | "reading-writing";
   topic: string;
+};
+
+export type QuestionSolution = {
+  correct_answer: string;
+  created_at: string;
+  explanation: string;
+  question_id: string;
+  scoring_metadata: Record<string, unknown> | null;
+  solution_steps: unknown[] | null;
+  updated_at: string;
 };
 
 export type QuestionMark = {
@@ -256,9 +264,7 @@ export type Database = {
           Pick<
             Question,
             | "choices"
-            | "correct_answer"
             | "difficulty"
-            | "explanation"
             | "question"
             | "section"
             | "topic"
@@ -266,6 +272,21 @@ export type Database = {
         Relationships: [];
         Row: Question;
         Update: Partial<Question>;
+      };
+      question_solutions: {
+        Insert: Pick<
+          QuestionSolution,
+          "correct_answer" | "explanation" | "question_id"
+        > &
+          Partial<
+            Pick<
+              QuestionSolution,
+              "created_at" | "scoring_metadata" | "solution_steps" | "updated_at"
+            >
+          >;
+        Relationships: [];
+        Row: QuestionSolution;
+        Update: Partial<QuestionSolution>;
       };
       question_marks: {
         Insert: Pick<QuestionMark, "question_id" | "user_id"> &

@@ -12,16 +12,10 @@ export type AITutorAction =
 
 export type AITutorRequest = {
   action: AITutorAction;
-  choices: string[];
-  correctAnswer?: string;
-  difficulty: string;
-  explanation?: string;
-  hasSubmitted: boolean;
+  contextType: "past-paper-review" | "practice" | "test-review";
   message: string;
-  question: string;
-  section: string;
+  questionId: string;
   selectedAnswer?: string;
-  topic: string;
 };
 
 export type AITutorResponse = {
@@ -55,15 +49,9 @@ export function createTutorRequest({
 
   return {
     action,
-    choices: question.choices,
-    correctAnswer: hasSubmitted ? question.correctAnswer : undefined,
-    difficulty: question.difficulty,
-    explanation: hasSubmitted ? question.explanation : undefined,
-    hasSubmitted,
+    contextType: hasSubmitted ? "test-review" : "practice",
     message,
-    question: question.question,
-    section: question.section,
+    questionId: question.id,
     selectedAnswer: selectedAnswer ?? undefined,
-    topic: question.topic
   };
 }
