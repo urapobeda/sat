@@ -485,16 +485,6 @@ function ResultsPanel({
         </div>
       </article>
 
-      <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex gap-3">
-          <Info className="mt-0.5 shrink-0 text-blue-600" size={20} />
-          <p className="text-sm leading-6 text-slate-600">
-            Some Digital SAT questions may be pretest questions and may not
-            count toward the official score. A generic calculator cannot
-            identify those questions.
-          </p>
-        </div>
-      </article>
     </aside>
   );
 }
@@ -543,8 +533,6 @@ function SectionResultCard({
         <Breakdown label="Module 2" value={`${module2Correct} / ${module2Total}`} />
         <Breakdown label="Correct" value={`${value.rawCorrect} / ${value.rawTotal}`} />
         <Breakdown label="Incorrect" value={`${value.rawTotal - value.rawCorrect}`} />
-        <Breakdown label="Route Source" value={value.routeSource} />
-        <Breakdown label="Confidence" value={value.confidence} />
       </div>
     </div>
   );
