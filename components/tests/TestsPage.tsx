@@ -133,11 +133,11 @@ export function TestsPage() {
         <HeaderIllustration />
 
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+          <div className="lg:max-w-2xl lg:pt-3">
             <h1 className="text-4xl font-black leading-tight text-slate-950 sm:text-5xl">
               Full-Length Tests
             </h1>
-            <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
+            <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg lg:max-w-xl">
               Take full-length SAT-style tests under real exam conditions. Track
               your performance and improve your score.
             </p>
