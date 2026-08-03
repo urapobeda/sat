@@ -19,6 +19,7 @@ import {
   getSupabaseBrowserClient,
   isSupabaseConfigured
 } from "@/lib/supabase/client";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
@@ -131,7 +132,12 @@ export function Navbar() {
             </span>
           </Link>
 
+          <div className="flex items-center gap-2 md:hidden">
+            <ThemeToggle />
+          </div>
+
           <div className="hidden items-center gap-3 md:flex">
+            <ThemeToggle />
             {user ? (
               <>
                 <Link
