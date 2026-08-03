@@ -65,7 +65,6 @@ export function Navbar() {
   const supabaseConfigured = isSupabaseConfigured();
   const showComingSoon = process.env.NODE_ENV !== "production";
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(!supabaseConfigured);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement | null>(null);
   const visibleMoreItems = moreItems.filter(
@@ -81,14 +80,12 @@ export function Navbar() {
 
     supabase.auth
       .getUser()
-      .then(({ data }) => setUser(data.user))
-      .finally(() => setIsAuthReady(true));
+      .then(({ data }) => setUser(data.user));
 
     const {
       data: { subscription }
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setIsAuthReady(true);
     });
 
     return () => subscription.unsubscribe();
@@ -152,18 +149,10 @@ export function Navbar() {
                   Logout
                 </button>
               </>
-            ) : (
-              <Link
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-4 text-sm font-bold text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
-                href="/auth"
-              >
-                <UserRound size={17} />
-                <span>{isAuthReady ? "Sign in" : "Loading"}</span>
-              </Link>
-            )}
+            ) : null}
             <Link
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold !text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 [&_*]:!text-white"
-              href="/question-bank"
+              href="/auth?mode=signup"
             >
               <span>Get Started</span>
               <ArrowRight size={17} />

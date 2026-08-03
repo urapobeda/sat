@@ -12,9 +12,13 @@ import { ensureProfile } from "@/lib/supabase/queries";
 
 type AuthMode = "signin" | "signup";
 
-export function AuthPage() {
+type AuthPageProps = {
+  initialMode?: AuthMode;
+};
+
+export function AuthPage({ initialMode = "signin" }: AuthPageProps) {
   const router = useRouter();
-  const [mode, setMode] = useState<AuthMode>("signin");
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
