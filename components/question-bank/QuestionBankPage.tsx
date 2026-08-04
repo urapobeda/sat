@@ -81,11 +81,11 @@ export function QuestionBankPage() {
   const [markedQuestionIds, setMarkedQuestionIds] = useState<Set<string>>(EMPTY_MARKS);
   const [hasAnswerHistory, setHasAnswerHistory] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function loadQuestionBank() {
     setIsLoading(true);
-    setError(false);
+    setError(null);
 
     try {
       const [loadedQuestions, user] = await Promise.all([
@@ -111,7 +111,11 @@ export function QuestionBankPage() {
       setHasAnswerHistory(loadedProgress.answeredIds.size > 0);
     } catch (requestError) {
       console.error("Question Bank load failed", requestError);
-      setError(true);
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Questions could not be loaded."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -287,7 +291,10 @@ export function QuestionBankPage() {
           {isLoading ? (
             <QuestionBankSkeleton />
           ) : error ? (
-            <QuestionBankError onRetry={() => void loadQuestionBank()} />
+            <QuestionBankError
+              message={error}
+              onRetry={() => void loadQuestionBank()}
+            />
           ) : questions.length === 0 ? (
             <StatusCard
               description="Questions will appear here after they are added to Supabase."
@@ -620,7 +627,13 @@ function QuestionBankSkeleton() {
   );
 }
 
-function QuestionBankError({ onRetry }: { onRetry: () => void }) {
+function QuestionBankError({
+  message,
+  onRetry
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
   return (
     <div className="rounded-3xl border border-rose-100 bg-rose-50 p-6 text-center shadow-sm">
       <Search className="mx-auto text-rose-600" size={30} />
@@ -628,8 +641,11 @@ function QuestionBankError({ onRetry }: { onRetry: () => void }) {
         Questions could not be loaded. Please try again.
       </h2>
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-rose-700">
-        Check your Supabase URL, anon key, internet connection, and the SELECT policy
-        on the questions table.
+        {message}
+      </p>
+      <p className="mx-auto mt-3 max-w-xl text-xs font-bold leading-5 text-rose-600">
+        If this mentions permissions or missing columns, run
+        supabase/repair-question-bank-access.sql in Supabase SQL Editor.
       </p>
       <button
         className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-black text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"

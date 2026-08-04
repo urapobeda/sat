@@ -11,13 +11,20 @@ export type Profile = {
 };
 
 export type Question = {
+  category: string | null;
   choices: Choice[];
   created_at: string;
   difficulty: "easy" | "medium" | "hard";
   id: string;
+  image_urls: string[];
   is_bluebook: boolean;
   question: string;
+  question_type: "multiple-choice" | "student-produced-response";
   section: "math" | "reading-writing";
+  source_name: string | null;
+  source_page_end: number | null;
+  source_page_start: number | null;
+  source_question_id: string | null;
   topic: string;
 };
 

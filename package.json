@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/adaptive-routing.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/sat-score-estimator.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/security-boundary.test.ts",
     "questions:extract-pdf": "python scripts/extract-question-bank-pdfs.py",
+    "questions:import-supabase": "node scripts/import-questions-supabase.mjs",
     "questions:sql": "node scripts/generate-questions-sql.mjs"
   },
   "dependencies": {

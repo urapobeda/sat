@@ -96,6 +96,8 @@ def main() -> None:
                 args.engine,
                 args.limit,
                 args.max_pages,
+                args.render_question_images,
+                args.asset_output,
             )
         )
 
@@ -107,6 +109,8 @@ def main() -> None:
                 args.engine,
                 args.limit,
                 args.max_pages,
+                False,
+                args.asset_output,
             )
         )
 
@@ -141,6 +145,17 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--limit", type=int, help="Stop after this many questions.")
     parser.add_argument("--max-pages", type=int, help="Read only the first N pages.")
+    parser.add_argument(
+        "--render-question-images",
+        action="store_true",
+        help="Render Math question prompts as PNG crops for formula/graph fallback.",
+    )
+    parser.add_argument(
+        "--asset-output",
+        default=Path("data/question-assets"),
+        type=Path,
+        help="Folder for rendered question images.",
+    )
     parsed = parser.parse_args()
 
     if not parsed.math_pdf and not parsed.wr_pdf:
@@ -155,14 +170,36 @@ def extract_pdf(
     engine: str,
     limit: int | None,
     max_pages: int | None,
+    render_question_images: bool,
+    asset_output: Path,
 ) -> list[dict]:
     records = split_question_records(path, engine, limit, max_pages)
     questions = []
 
-    for text, start_page, end_page in records:
-      question = parse_question(text, section, path.stem, start_page, end_page)
-      if question:
-          questions.append(question)
+    pdf = pdfplumber.open(path) if render_question_images else None
+
+    try:
+        for text, start_page, end_page in records:
+            question = parse_question(text, section, path.stem, start_page, end_page)
+
+            if not question:
+                continue
+
+            if render_question_images:
+                image_files = render_question_images_for_record(
+                    pdf,
+                    question["source_question_id"],
+                    start_page,
+                    end_page,
+                    asset_output / section,
+                )
+                question["image_files"] = image_files
+                question["image_urls"] = []
+
+            questions.append(question)
+    finally:
+        if pdf:
+            pdf.close()
 
     return questions
 
@@ -261,6 +298,8 @@ def parse_question(
         "choices": choices,
         "correct_answer": correct_answer,
         "explanation": explanation,
+        "image_files": [],
+        "image_urls": [],
         "is_bluebook": True,
         "question_type": "multiple-choice" if choices else "student-produced-response",
         "source_page_start": source_page_start,
@@ -306,6 +345,61 @@ def parse_choices(answer_block: str) -> list[dict]:
             choices.append({"label": match.group(1), "text": text})
 
     return choices
+
+
+def render_question_images_for_record(
+    pdf,
+    source_question_id: str,
+    source_page_start: int,
+    source_page_end: int,
+    output_dir: Path,
+) -> list[str]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    image_files = []
+
+    for page_number in range(source_page_start, source_page_end + 1):
+        page = pdf.pages[page_number - 1]
+        top = get_question_crop_top(page) if page_number == source_page_start else 0
+        bottom = get_question_crop_bottom(page) if page_number == source_page_end else page.height
+
+        top = max(0, top)
+        bottom = min(page.height, bottom)
+
+        if bottom <= top + 8:
+            continue
+
+        output_path = output_dir / f"{source_question_id}-{page_number}.png"
+        crop = page.crop((0, top, page.width, bottom))
+        crop.to_image(resolution=160, antialias=True).save(output_path)
+        image_files.append(output_path.as_posix())
+
+    return image_files
+
+
+def get_question_crop_top(page) -> float:
+    hits = page.search("Question")
+
+    if len(hits) >= 2:
+        return hits[1]["top"] - 10
+
+    if hits:
+        return hits[0]["top"] - 10
+
+    return 0
+
+
+def get_question_crop_bottom(page) -> float:
+    correct_hits = page.search("Correct Answer:")
+
+    if correct_hits:
+        return correct_hits[0]["top"] - 10
+
+    rationale_hits = page.search("Rationale")
+
+    if rationale_hits:
+        return rationale_hits[0]["top"] - 10
+
+    return page.height
 
 
 def resolve_correct_answer(raw_answer: str, choices: list[dict]) -> str:

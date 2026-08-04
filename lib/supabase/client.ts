@@ -22,7 +22,7 @@ export function isSupabaseConfigured() {
 export function getSupabaseConfigDiagnostics() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const normalizedUrl = supabaseUrl?.trim();
+  const normalizedUrl = normalizeSupabaseUrl(supabaseUrl);
   const normalizedKey = supabaseAnonKey?.trim();
 
   return {
@@ -40,7 +40,7 @@ export function getSupabaseConfigDiagnostics() {
 }
 
 export function getSupabaseBrowserClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
@@ -58,4 +58,13 @@ export function getSupabaseBrowserClient() {
   }
 
   return browserClient;
+}
+
+export function normalizeSupabaseUrl(value?: string) {
+  return value
+    ?.trim()
+    .replace(/\/rest\/v1\/?$/i, "")
+    .replace(/\/auth\/v1\/?$/i, "")
+    .replace(/\/storage\/v1\/?$/i, "")
+    .replace(/\/+$/g, "");
 }

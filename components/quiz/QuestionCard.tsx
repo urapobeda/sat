@@ -1,6 +1,7 @@
 "use client";
 
 import { Flag, Send } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 import { AnswerOption } from "@/components/quiz/AnswerOption";
 import { ProgressBar } from "@/components/quiz/ProgressBar";
@@ -66,9 +67,25 @@ export function QuestionCard({
         />
       </div>
 
-      <h2 className="mt-6 text-xl font-black leading-8 text-slate-950 sm:text-2xl sm:leading-9">
-        {question.question}
-      </h2>
+      {question.imageUrls.length > 0 ? (
+        <div className="mt-6 grid gap-4">
+          {question.imageUrls.map((imageUrl, imageIndex) => (
+            <Image
+              alt={`Question ${currentIndex + 1} visual ${imageIndex + 1}`}
+              className="w-full rounded-2xl border border-slate-200 bg-white object-contain shadow-sm"
+              height={420}
+              key={`${question.id}-image-${imageUrl}`}
+              src={imageUrl}
+              unoptimized
+              width={1200}
+            />
+          ))}
+        </div>
+      ) : (
+        <h2 className="mt-6 text-xl font-black leading-8 text-slate-950 sm:text-2xl sm:leading-9">
+          {question.question}
+        </h2>
+      )}
 
       {hasChoices ? (
         <div className="mt-7 grid gap-3">

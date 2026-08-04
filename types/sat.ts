@@ -6,6 +6,7 @@ export type Question = {
   choices: string[];
   difficulty: QuestionDifficulty;
   id: string;
+  imageUrls: string[];
   isBluebook: boolean;
   question: string;
   questionType: "multiple-choice" | "student-produced-response";

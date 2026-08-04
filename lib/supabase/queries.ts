@@ -25,7 +25,33 @@ type QuestionFilters = {
 };
 
 const PUBLIC_QUESTION_COLUMNS =
-  "id,section,topic,difficulty,question,choices,is_bluebook,created_at";
+  "id,section,topic,difficulty,question,choices,is_bluebook,image_urls,question_type,category,source_name,source_page_start,source_page_end,source_question_id,created_at";
+const LEGACY_QUESTION_COLUMNS =
+  "id,section,topic,difficulty,question,choices,created_at";
+
+type PublicQuestionRow = Pick<
+  Question,
+  | "choices"
+  | "created_at"
+  | "difficulty"
+  | "id"
+  | "question"
+  | "section"
+  | "topic"
+> &
+  Partial<
+    Pick<
+      Question,
+      | "category"
+      | "image_urls"
+      | "is_bluebook"
+      | "question_type"
+      | "source_name"
+      | "source_page_end"
+      | "source_page_start"
+      | "source_question_id"
+    >
+  >;
 
 type SessionResult = {
   percentage: number;
@@ -163,32 +189,22 @@ export async function updateStudyPlan(
 
 export async function getQuestions(filters: QuestionFilters = {}) {
   const supabase = getSupabaseBrowserClient();
-  let query = supabase
-    .from("questions")
-    .select(PUBLIC_QUESTION_COLUMNS)
-    .order("created_at");
-
-  if (filters.section && filters.section !== "all") {
-    query = query.eq("section", filters.section);
-  }
-
-  if (filters.difficulty && filters.difficulty !== "all") {
-    query = query.eq("difficulty", filters.difficulty);
-  }
-
-  if (filters.limit && !filters.topic) {
-    query = query.limit(filters.limit);
-  }
-
-  let result: Awaited<typeof query>;
+  let result: Awaited<ReturnType<typeof requestQuestions>>;
 
   try {
-    result = await query;
+    result = await requestQuestions(PUBLIC_QUESTION_COLUMNS);
   } catch (requestError) {
     throw createSupabaseRequestError(requestError);
   }
 
-  const { data, error } = result;
+  if (result.error && isMissingColumnError(result.error.message)) {
+    result = await requestQuestions(LEGACY_QUESTION_COLUMNS);
+  }
+
+  const { data, error } = result as {
+    data: PublicQuestionRow[] | null;
+    error: { message: string } | null;
+  };
 
   if (error) {
     throw new Error(error.message);
@@ -204,6 +220,27 @@ export async function getQuestions(filters: QuestionFilters = {}) {
   }
 
   return filters.limit ? questions.slice(0, filters.limit) : questions;
+
+  function requestQuestions(columns: string) {
+    let query = supabase
+      .from("questions")
+      .select(columns)
+      .order("created_at");
+
+    if (filters.section && filters.section !== "all") {
+      query = query.eq("section", filters.section);
+    }
+
+    if (filters.difficulty && filters.difficulty !== "all") {
+      query = query.eq("difficulty", filters.difficulty);
+    }
+
+    if (filters.limit && !filters.topic) {
+      query = query.limit(filters.limit);
+    }
+
+    return query;
+  }
 }
 
 export async function getIncorrectQuestionIds(userId: string) {
@@ -709,20 +746,26 @@ export async function clearUserProgress(userId: string) {
   }
 }
 
-function mapQuestionRow(row: Question): AppQuestion {
+function mapQuestionRow(row: PublicQuestionRow): AppQuestion {
   const choices = row.choices.map((choice: Choice) => choice.text);
 
   return {
     choices,
     difficulty: row.difficulty,
     id: row.id,
+    imageUrls: row.image_urls ?? [],
     isBluebook: row.is_bluebook ?? false,
     question: row.question,
     questionType:
-      choices.length > 0 ? "multiple-choice" : "student-produced-response",
+      row.question_type ??
+      (choices.length > 0 ? "multiple-choice" : "student-produced-response"),
     section: row.section,
     topic: row.topic
   };
+}
+
+function isMissingColumnError(message: string) {
+  return /column .* does not exist/i.test(message);
 }
 
 function createSupabaseRequestError(requestError: unknown) {

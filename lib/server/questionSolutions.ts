@@ -3,7 +3,7 @@ import type { QuestionFeedback, ReviewQuestion } from "@/types/sat";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const PUBLIC_QUESTION_COLUMNS =
-  "id,section,topic,difficulty,question,choices,is_bluebook,created_at";
+  "id,section,topic,difficulty,question,choices,is_bluebook,image_urls,question_type,category,source_name,source_page_start,source_page_end,source_question_id,created_at";
 
 export async function gradeQuestionAnswer({
   questionId,
@@ -67,12 +67,14 @@ export async function getReviewQuestions(
         difficulty: row.difficulty,
         explanation: solution.explanation,
         id: row.id,
+        imageUrls: row.image_urls ?? [],
         isBluebook: row.is_bluebook ?? false,
         question: row.question,
         questionType:
-          (row.choices as Choice[]).length > 0
+          row.question_type ??
+          ((row.choices as Choice[]).length > 0
             ? "multiple-choice"
-            : "student-produced-response",
+            : "student-produced-response"),
         section: row.section,
         topic: row.topic
       } satisfies ReviewQuestion;
@@ -99,10 +101,12 @@ export async function getQuestionPublicContext(questionId: string) {
     choices,
     difficulty: data.difficulty,
     id: data.id,
+    imageUrls: data.image_urls ?? [],
     isBluebook: data.is_bluebook ?? false,
     question: data.question,
     questionType:
-      choices.length > 0 ? "multiple-choice" : "student-produced-response",
+      data.question_type ??
+      (choices.length > 0 ? "multiple-choice" : "student-produced-response"),
     section: data.section,
     topic: data.topic
   };
