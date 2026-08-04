@@ -1,0 +1,50 @@
+[
+  {
+    "source_question_id": "ac472881",
+    "source_name": "math",
+    "section": "math",
+    "category": "Algebra",
+    "topic": "Algebra",
+    "difficulty": "hard",
+    "question": "In the given equation, and are constants, and . If the equation has infinitely many solutions, what is the value of ?",
+    "choices": [],
+    "correct_answer": "403",
+    "explanation": "The correct answer is . For a linear equation in one variable to have infinitely many solutions, the coefficients of the variable must be equal on both sides of the equation and the constant terms must also be equal on both sides of the equation. The given equation can be rewritten as , or . Applying the distributive property to the right-hand side of this equation yields . For this equation to have infinitely many solutions, the coefficients of must be equal, so it follows that . Additionally, the constant terms must be equal, which means . Substituting for in this equation yields , or . Adding to both sides of this equation yields . Adding to both sides of this equation yields . Multiplying both sides of this equation by yields . Therefore, if the equation has infinitely many solutions, the value of is .",
+    "is_bluebook": true,
+    "question_type": "student-produced-response",
+    "source_page_start": 1,
+    "source_page_end": 1
+  },
+  {
+    "source_question_id": "3f5a3602",
+    "source_name": "math",
+    "section": "math",
+    "category": "Algebra",
+    "topic": "Algebra",
+    "difficulty": "hard",
+    "question": "What system of linear equations is represented by the lines shown?",
+    "choices": [],
+    "correct_answer": "D",
+    "explanation": "Choice D is correct. A line in the xy-plane that passes through the points and has slope , where , and can be defined by an equation of the form . One of the lines shown in the graph passes through the points and . Substituting for , for , for , and for in the equation yields , or . Substituting for , for and for in the equation yields , which is equivalent to . Adding to both sides of this equation yields . Multiplying both sides of this equation by yields . Therefore, an equation of this line is . Similarly, the other line shown in the graph passes through the points and . Substituting for , for , for , and for in the equation yields , or . Substituting for , for , and for in the equation yields , which is equivalent to . Adding to both sides of this equation yields . Multiplying both sides of this equation by yields . Therefore, an equation of this line is . So, the system of linear equations represented by the lines shown is and . Choice A is incorrect and may result from conceptual or calculation errors. Choice B is incorrect and may result from conceptual or calculation errors. Choice C is incorrect and may result from conceptual or calculation errors.",
+    "is_bluebook": true,
+    "question_type": "student-produced-response",
+    "source_page_start": 2,
+    "source_page_end": 3
+  },
+  {
+    "source_question_id": "3d1070c9",
+    "source_name": "math",
+    "section": "math",
+    "category": "Algebra",
+    "topic": "Linear Functions",
+    "difficulty": "easy",
+    "question": "The function is defined by . What is the value of when ?",
+    "choices": [],
+    "correct_answer": "C",
+    "explanation": "Choice C is correct. It’s given that the function is defined by . Substituting for in this equation yields , which is equivalent to , or . Therefore, the value of is when . Choice A is incorrect. This is the value of , not . Choice B is incorrect. This is the value of , not . Choice D is incorrect. This is the value of , not .",
+    "is_bluebook": true,
+    "question_type": "student-produced-response",
+    "source_page_start": 4,
+    "source_page_end": 4
+  }
+]

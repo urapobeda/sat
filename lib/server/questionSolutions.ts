@@ -69,6 +69,10 @@ export async function getReviewQuestions(
         id: row.id,
         isBluebook: row.is_bluebook ?? false,
         question: row.question,
+        questionType:
+          (row.choices as Choice[]).length > 0
+            ? "multiple-choice"
+            : "student-produced-response",
         section: row.section,
         topic: row.topic
       } satisfies ReviewQuestion;
@@ -89,12 +93,16 @@ export async function getQuestionPublicContext(questionId: string) {
     throw new Error("Question was not found.");
   }
 
+  const choices = (data.choices as Choice[]).map((choice) => choice.text);
+
   return {
-    choices: (data.choices as Choice[]).map((choice) => choice.text),
+    choices,
     difficulty: data.difficulty,
     id: data.id,
     isBluebook: data.is_bluebook ?? false,
     question: data.question,
+    questionType:
+      choices.length > 0 ? "multiple-choice" : "student-produced-response",
     section: data.section,
     topic: data.topic
   };

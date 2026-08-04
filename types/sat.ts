@@ -8,6 +8,7 @@ export type Question = {
   id: string;
   isBluebook: boolean;
   question: string;
+  questionType: "multiple-choice" | "student-produced-response";
   section: SatSection;
   topic: string;
 };

@@ -710,12 +710,16 @@ export async function clearUserProgress(userId: string) {
 }
 
 function mapQuestionRow(row: Question): AppQuestion {
+  const choices = row.choices.map((choice: Choice) => choice.text);
+
   return {
-    choices: row.choices.map((choice: Choice) => choice.text),
+    choices,
     difficulty: row.difficulty,
     id: row.id,
     isBluebook: row.is_bluebook ?? false,
     question: row.question,
+    questionType:
+      choices.length > 0 ? "multiple-choice" : "student-produced-response",
     section: row.section,
     topic: row.topic
   };

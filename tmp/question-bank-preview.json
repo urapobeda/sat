@@ -1,0 +1,115 @@
+[
+  {
+    "source_question_id": "ac472881",
+    "source_name": "math",
+    "section": "math",
+    "category": "",
+    "topic": "Uncategorized",
+    "difficulty": "medium",
+    "question": "In the given equation, and are constants, and . If the equation has infinitely many solutions, what is the value of ? Correct Answer: 403 Rationale The correct answer is . For a linear equation in one variable to have infinitely many solutions, the coefficients of the variable must be equal on both sides of the equation and the constant terms must also be equal on both sides of the equation. The given equation can be rewritten as , or . Applying the distributive property to the right-hand side of this equation yields . For this equation to have infinitely many solutions, the coefficients of must be equal, so it follows that . Additionally, the constant terms must be equal, which means . Substituting for in this equation yields , or . Adding to both sides of this equation yields . Adding to both sides of this equation yields . Multiplying both sides of this equation by yields . Therefore, if the equation has infinitely many solutions, the value of is .",
+    "choices": [],
+    "correct_answer": "403",
+    "explanation": "The correct answer is . For a linear equation in one variable to have infinitely many solutions, the coefficients of the variable must be equal on both sides of the equation and the constant terms must also be equal on both sides of the equation. The given equation can be rewritten as , or . Applying the distributive property to the right-hand side of this equation yields . For this equation to have infinitely many solutions, the coefficients of must be equal, so it follows that . Additionally, the constant terms must be equal, which means . Substituting for in this equation yields , or . Adding to both sides of this equation yields . Adding to both sides of this equation yields . Multiplying both sides of this equation by yields . Therefore, if the equation has infinitely many solutions, the value of is .",
+    "is_bluebook": true,
+    "question_type": "student-produced-response",
+    "source_page_start": 1,
+    "source_page_end": 1
+  },
+  {
+    "source_question_id": "3f5a3602",
+    "source_name": "math",
+    "section": "math",
+    "category": "",
+    "topic": "Uncategorized",
+    "difficulty": "medium",
+    "question": "What system of linear equations is represented by the lines shown?",
+    "choices": [],
+    "correct_answer": "D",
+    "explanation": "Choice D is correct. A line in the xy-plane that passes through the points and has slope , where , and can be defined by an equation of the form . One of the lines shown in the graph passes through the points and . Substituting for , for , for , and for in the equation yields , or . Substituting for , for and for in the equation yields , which is equivalent to . Adding to both sides of this equation yields . Multiplying both sides of this equation by yields . Therefore, an equation of this line is . Similarly, the other line shown in the graph passes through the points and . Substituting for , for , for , and for in the equation yields , or . Substituting for , for , and for in the equation yields , which is equivalent to . Adding to both sides of this equation yields . Multiplying both sides of this equation by yields . Therefore, an equation of this line is . So, the system of linear equations represented by the lines shown is and . Choice A is incorrect and may result from conceptual or calculation errors. Choice B is incorrect and may result from conceptual or calculation errors. Choice C is incorrect and may result from conceptual or calculation errors.",
+    "is_bluebook": true,
+    "question_type": "student-produced-response",
+    "source_page_start": 2,
+    "source_page_end": 3
+  },
+  {
+    "source_question_id": "3d1070c9",
+    "source_name": "math",
+    "section": "math",
+    "category": "",
+    "topic": "Uncategorized",
+    "difficulty": "medium",
+    "question": "The function is defined by . What is the value of when ?",
+    "choices": [],
+    "correct_answer": "C",
+    "explanation": "Choice C is correct. It’s given that the function is defined by . Substituting for in this equation yields , which is equivalent to , or . Therefore, the value of is when . Choice A is incorrect. This is the value of , not . Choice B is incorrect. This is the value of , not . Choice D is incorrect. This is the value of , not .",
+    "is_bluebook": true,
+    "question_type": "student-produced-response",
+    "source_page_start": 4,
+    "source_page_end": 4
+  },
+  {
+    "source_question_id": "002dba45",
+    "source_name": "math",
+    "section": "math",
+    "category": "",
+    "topic": "Uncategorized",
+    "difficulty": "medium",
+    "question": "Line is defined by . Line is perpendicular to line in the xy-plane. What is the slope of line ? Correct Answer: .1764, .1765, 3/17 Rationale The correct answer is . It’s given that line is perpendicular to line in the xy-plane. This means that the slope of line is the negative reciprocal of the slope of line . The equation of line , , is written in slope-intercept form , where is the slope of the line and is the y-coordinate of the y-intercept of the line. It follows that the slope of line is . The negative reciprocal of a number is divided by the number. Therefore, the negative reciprocal of is , or . Thus, the slope of line is . Note that 3/17, .1764, .1765, and 0.176 are examples of ways to enter a correct answer.",
+    "choices": [],
+    "correct_answer": ".1764, .1765, 3/17",
+    "explanation": "The correct answer is . It’s given that line is perpendicular to line in the xy-plane. This means that the slope of line is the negative reciprocal of the slope of line . The equation of line , , is written in slope-intercept form , where is the slope of the line and is the y-coordinate of the y-intercept of the line. It follows that the slope of line is . The negative reciprocal of a number is divided by the number. Therefore, the negative reciprocal of is , or . Thus, the slope of line is . Note that 3/17, .1764, .1765, and 0.176 are examples of ways to enter a correct answer.",
+    "is_bluebook": true,
+    "question_type": "student-produced-response",
+    "source_page_start": 5,
+    "source_page_end": 5
+  },
+  {
+    "source_question_id": "edc1b7b7",
+    "source_name": "math",
+    "section": "math",
+    "category": "",
+    "topic": "Uncategorized",
+    "difficulty": "medium",
+    "question": "The solution to the given system of equations is . What is the value of ? Correct Answer: 3 Rationale The correct answer is . Adding the second equation to the first equation in the given system of equations yields , or . Dividing both sides of this equation by yields . Substituting for in the first equation, , yields , or . Subtracting from both sides of this equation yields . Dividing both sides of this equation by yields . Substituting for and for in the expression yields , or . Therefore, the value of is .",
+    "choices": [],
+    "correct_answer": "3",
+    "explanation": "The correct answer is . Adding the second equation to the first equation in the given system of equations yields , or . Dividing both sides of this equation by yields . Substituting for in the first equation, , yields , or . Subtracting from both sides of this equation yields . Dividing both sides of this equation by yields . Substituting for and for in the expression yields , or . Therefore, the value of is .",
+    "is_bluebook": true,
+    "question_type": "student-produced-response",
+    "source_page_start": 6,
+    "source_page_end": 6
+  },
+  {
+    "source_question_id": "f224df07",
+    "source_name": "math",
+    "section": "math",
+    "category": "",
+    "topic": "Uncategorized",
+    "difficulty": "medium",
+    "question": "A cargo helicopter delivers only 100-pound packages and 120-pound packages. For each delivery trip, the helicopter must carry at least 10 packages, and the total weight of the packages can be at most 1,100 pounds. What is the maximum number of 120-pound packages that the helicopter can carry per trip?",
+    "choices": [
+      {
+        "label": "A",
+        "text": "2"
+      },
+      {
+        "label": "B",
+        "text": "4"
+      },
+      {
+        "label": "C",
+        "text": "5"
+      },
+      {
+        "label": "D",
+        "text": "6"
+      }
+    ],
+    "correct_answer": "5",
+    "explanation": "Choice C is correct. Let a equal the number of 120-pound packages, and let b equal the number of 100-pound packages. It’s given that the total weight of the packages can be at most 1,100 pounds: the inequality represents this situation. It’s also given that the helicopter must carry at least 10 packages: the inequality represents this situation. Values of a and b that satisfy these two inequalities represent the allowable numbers of 120-pound packages and 100-pound packages the helicopter can transport. To maximize the number of 120-pound packages, a, in the helicopter, the number of 100-pound packages, b, in the helicopter needs to be minimized. Expressing b in terms of a in the second inequality yields , so the minimum value of b is equal to . Substituting for b in the first inequality results in . Using the distributive property to rewrite this inequality yields , or . Subtracting 1,000 from both sides of this inequality yields . Dividing both sides of this inequality by 20 results in . This means that the maximum number of 120-pound packages that the helicopter can carry per trip is 5. Choices A, B, and D are incorrect and may result from incorrectly creating or solving the system of inequalities.",
+    "is_bluebook": true,
+    "question_type": "multiple-choice",
+    "source_page_start": 7,
+    "source_page_end": 7
+  }
+]
