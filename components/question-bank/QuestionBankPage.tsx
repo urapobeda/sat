@@ -203,7 +203,7 @@ export function QuestionBankPage() {
   }
 
   return (
-    <Layout>
+    <Layout align="left">
       <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-white p-6 shadow-soft sm:p-8">
         <HeaderIllustration />
 
@@ -692,3 +692,4 @@ function HeaderIllustration() {
     </div>
   );
 }
+
