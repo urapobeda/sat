@@ -5,9 +5,13 @@ import {
   BookMarked,
   Calculator,
   ChevronDown,
+  FileText,
   Flame,
   GraduationCap,
+  LayoutDashboard,
   Languages,
+  LineChart,
+  NotebookTabs,
   Target,
   UserRound
 } from "lucide-react";
@@ -22,11 +26,11 @@ import {
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/question-bank", label: "Question Bank" },
-  { href: "/tests", label: "Tests" },
-  { href: "/study-plan", label: "Study Plan" },
-  { href: "/progress", label: "Progress" }
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/question-bank", icon: NotebookTabs, label: "Question Bank" },
+  { href: "/tests", icon: FileText, label: "Tests" },
+  { href: "/study-plan", icon: Target, label: "Study Plan" },
+  { href: "/progress", icon: LineChart, label: "Progress" }
 ];
 
 const moreItems = [
@@ -120,8 +124,74 @@ export function Navbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-blue-100 bg-white/95 shadow-sm backdrop-blur">
-      <div className="flex w-full flex-col gap-3 px-4 py-3 sm:px-5 lg:px-8">
+    <>
+      <aside className="fixed inset-y-0 left-0 z-50 hidden w-56 flex-col border-r border-blue-100 bg-white/95 p-3 shadow-sm backdrop-blur lg:flex">
+        <Link
+          className="flex min-w-0 items-center gap-3 rounded-2xl px-2 py-2"
+          href="/dashboard"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
+            <GraduationCap size={24} />
+          </span>
+          <span className="truncate text-lg font-extrabold text-slate-950">
+            <span className="text-blue-600">SAT</span> Hub
+          </span>
+        </Link>
+
+        <nav className="mt-5 space-y-1" aria-label="Main navigation">
+          {navItems.map((item) => (
+            <SidebarLink item={item} key={item.href} pathname={pathname} />
+          ))}
+        </nav>
+
+        {visibleMoreItems.length > 0 ? (
+          <div className="mt-5 border-t border-slate-200 pt-4">
+            <p className="px-3 text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+              More
+            </p>
+            <div className="mt-2 space-y-1">
+              {visibleMoreItems.map((item) => (
+                <SidebarMoreLink item={item} key={item.href} pathname={pathname} />
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-auto space-y-3">
+          {user ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+              <Link
+                className="flex items-center gap-2 text-sm font-black text-slate-900 transition hover:text-blue-600"
+                href="/progress"
+              >
+                <UserRound size={17} />
+                Profile
+              </Link>
+              <button
+                className="mt-3 w-full rounded-xl border border-rose-100 bg-white px-3 py-2 text-sm font-black text-rose-600 transition hover:bg-rose-50"
+                onClick={handleSignOut}
+                type="button"
+              >
+                Logout
+              </button>
+            </div>
+          ) : null}
+
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link
+              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold !text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 [&_*]:!text-white"
+              href="/auth?mode=signup"
+            >
+              Start
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+        </div>
+      </aside>
+
+      <header className="sticky top-0 z-50 border-b border-blue-100 bg-white/95 shadow-sm backdrop-blur lg:hidden">
+        <div className="flex w-full flex-col gap-3 px-4 py-3 sm:px-5">
         <div className="flex items-center justify-between gap-4">
           <Link className="flex min-w-0 items-center gap-3" href="/dashboard">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
@@ -149,7 +219,7 @@ export function Navbar() {
             <ThemeToggle />
           </div>
 
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-3 md:flex lg:hidden">
             <ThemeToggle />
             {user ? (
               <>
@@ -180,7 +250,7 @@ export function Navbar() {
         </div>
 
         <nav
-          className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 md:hidden"
+          className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1"
           aria-label="Main navigation"
         >
           <NavigationLinks
@@ -193,6 +263,70 @@ export function Navbar() {
         </nav>
       </div>
     </header>
+    </>
+  );
+}
+
+function SidebarLink({
+  item,
+  pathname
+}: {
+  item: (typeof navItems)[number];
+  pathname: string;
+}) {
+  const Icon = item.icon;
+  const isActive =
+    item.href === "/dashboard"
+      ? pathname === "/" || pathname.startsWith("/dashboard")
+      : pathname.startsWith(item.href);
+
+  return (
+    <Link
+      aria-current={isActive ? "page" : undefined}
+      className={[
+        "flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-black transition",
+        isActive
+          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+          : "text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+      ].join(" ")}
+      href={item.href}
+    >
+      <Icon size={18} />
+      <span className="truncate">{item.label}</span>
+    </Link>
+  );
+}
+
+function SidebarMoreLink({
+  item,
+  pathname
+}: {
+  item: (typeof moreItems)[number];
+  pathname: string;
+}) {
+  const Icon = item.icon;
+  const isActive = pathname.startsWith(item.href);
+
+  return (
+    <Link
+      className={[
+        "flex min-h-10 items-center justify-between gap-2 rounded-xl px-3 text-sm font-black transition",
+        isActive
+          ? "bg-blue-50 text-blue-700"
+          : "text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+      ].join(" ")}
+      href={item.href}
+    >
+      <span className="flex min-w-0 items-center gap-3">
+        <Icon size={17} />
+        <span className="truncate">{item.label}</span>
+      </span>
+      {item.isComingSoon ? (
+        <span className="rounded-full bg-violet-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-violet-700">
+          Soon
+        </span>
+      ) : null}
+    </Link>
   );
 }
 
