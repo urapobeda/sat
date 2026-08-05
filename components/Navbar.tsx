@@ -286,7 +286,7 @@ function SidebarLink({
       className={[
         "flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-black transition",
         isActive
-          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+          ? "bg-blue-600 !text-white shadow-lg shadow-blue-600/20 [&_*]:!text-white"
           : "text-slate-700 hover:bg-blue-50 hover:text-blue-700"
       ].join(" ")}
       href={item.href}
@@ -312,7 +312,7 @@ function SidebarMoreLink({
       className={[
         "flex min-h-10 items-center justify-between gap-2 rounded-xl px-3 text-sm font-black transition",
         isActive
-          ? "bg-blue-50 text-blue-700"
+          ? "bg-blue-600 !text-white shadow-lg shadow-blue-600/15 [&_*]:!text-white"
           : "text-slate-700 hover:bg-blue-50 hover:text-blue-700"
       ].join(" ")}
       href={item.href}
