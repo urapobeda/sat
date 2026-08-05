@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
   getSupabaseBrowserClient,
@@ -121,7 +121,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-blue-100 bg-white/95 shadow-sm backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-5 lg:px-8">
+      <div className="flex w-full flex-col gap-3 px-4 py-3 sm:px-5 lg:px-8">
         <div className="flex items-center justify-between gap-4">
           <Link className="flex min-w-0 items-center gap-3" href="/dashboard">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
@@ -131,6 +131,19 @@ export function Navbar() {
               <span className="text-blue-600">SAT</span> Practice Hub
             </span>
           </Link>
+
+          <nav
+            className="hidden min-w-0 flex-1 items-center gap-2 overflow-visible px-4 md:flex"
+            aria-label="Main navigation"
+          >
+            <NavigationLinks
+              isMoreOpen={isMoreOpen}
+              moreMenuRef={moreMenuRef}
+              pathname={pathname}
+              setIsMoreOpen={setIsMoreOpen}
+              visibleMoreItems={visibleMoreItems}
+            />
+          </nav>
 
           <div className="flex items-center gap-2 md:hidden">
             <ThemeToggle />
@@ -167,93 +180,121 @@ export function Navbar() {
         </div>
 
         <nav
-          className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 md:absolute md:left-1/2 md:top-5 md:mx-0 md:-translate-x-1/2 md:overflow-visible md:pb-0"
+          className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 md:hidden"
           aria-label="Main navigation"
         >
-          {navItems.map((item) => {
-            const isActive =
-              item.href === "/dashboard"
-                ? pathname === "/" || pathname.startsWith("/dashboard")
-                : pathname.startsWith(item.href);
-
-            return (
-              <Link
-                aria-current={isActive ? "page" : undefined}
-                className={[
-                  "relative shrink-0 rounded-xl px-3 py-2 text-sm font-bold transition",
-                  isActive
-                    ? "text-blue-600 after:absolute after:inset-x-3 after:-bottom-2 after:h-0.5 after:rounded-full after:bg-blue-600"
-                    : "text-slate-900 hover:bg-blue-50 hover:text-blue-600"
-                ].join(" ")}
-                href={item.href}
-                key={item.href}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-          <div
-            className="relative shrink-0"
-            onMouseEnter={() => setIsMoreOpen(true)}
-            onMouseLeave={() => setIsMoreOpen(false)}
-            ref={moreMenuRef}
-          >
-            <button
-              aria-expanded={isMoreOpen}
-              className={[
-                "relative inline-flex items-center gap-1 rounded-xl px-3 py-2 text-sm font-bold transition",
-                visibleMoreItems.some((item) => pathname.startsWith(item.href))
-                  ? "text-blue-600 after:absolute after:inset-x-3 after:-bottom-2 after:h-0.5 after:rounded-full after:bg-blue-600"
-                  : "text-slate-900 hover:bg-blue-50 hover:text-blue-600"
-              ].join(" ")}
-              onClick={() => setIsMoreOpen((current) => !current)}
-              type="button"
-            >
-              More
-              <ChevronDown
-                className={isMoreOpen ? "rotate-180 transition" : "transition"}
-                size={15}
-              />
-            </button>
-
-            <div
-              className={[
-                "absolute left-0 top-full z-50 w-72 pt-2 transition md:left-auto md:right-0",
-                isMoreOpen
-                  ? "visible translate-y-0 opacity-100"
-                  : "invisible translate-y-1 opacity-0"
-              ].join(" ")}
-            >
-              <div className="rounded-3xl border border-slate-200 bg-white p-2 shadow-2xl shadow-blue-950/10">
-              {visibleMoreItems.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <Link
-                    className="flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-sm font-black text-slate-800 transition hover:bg-blue-50 hover:text-blue-700"
-                    href={item.href}
-                    key={item.href}
-                    onClick={() => setIsMoreOpen(false)}
-                  >
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                        <Icon size={17} />
-                      </span>
-                      <span className="truncate">{item.label}</span>
-                    </span>
-                    {item.isComingSoon ? (
-                      <span className="rounded-full bg-violet-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-violet-700">
-                        Soon
-                      </span>
-                    ) : null}
-                  </Link>
-                );
-              })}
-              </div>
-            </div>
-          </div>
+          <NavigationLinks
+            isMoreOpen={isMoreOpen}
+            moreMenuRef={moreMenuRef}
+            pathname={pathname}
+            setIsMoreOpen={setIsMoreOpen}
+            visibleMoreItems={visibleMoreItems}
+          />
         </nav>
       </div>
     </header>
+  );
+}
+
+type NavigationLinksProps = {
+  isMoreOpen: boolean;
+  moreMenuRef: RefObject<HTMLDivElement | null>;
+  pathname: string;
+  setIsMoreOpen: Dispatch<SetStateAction<boolean>>;
+  visibleMoreItems: typeof moreItems;
+};
+
+function NavigationLinks({
+  isMoreOpen,
+  moreMenuRef,
+  pathname,
+  setIsMoreOpen,
+  visibleMoreItems
+}: NavigationLinksProps) {
+  return (
+    <>
+      {navItems.map((item) => {
+        const isActive =
+          item.href === "/dashboard"
+            ? pathname === "/" || pathname.startsWith("/dashboard")
+            : pathname.startsWith(item.href);
+
+        return (
+          <Link
+            aria-current={isActive ? "page" : undefined}
+            className={[
+              "relative shrink-0 rounded-xl px-3 py-2 text-sm font-bold transition",
+              isActive
+                ? "text-blue-600 after:absolute after:inset-x-3 after:-bottom-2 after:h-0.5 after:rounded-full after:bg-blue-600"
+                : "text-slate-900 hover:bg-blue-50 hover:text-blue-600"
+            ].join(" ")}
+            href={item.href}
+            key={item.href}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+      <div
+        className="relative shrink-0"
+        onMouseEnter={() => setIsMoreOpen(true)}
+        onMouseLeave={() => setIsMoreOpen(false)}
+        ref={moreMenuRef}
+      >
+        <button
+          aria-expanded={isMoreOpen}
+          className={[
+            "relative inline-flex items-center gap-1 rounded-xl px-3 py-2 text-sm font-bold transition",
+            visibleMoreItems.some((item) => pathname.startsWith(item.href))
+              ? "text-blue-600 after:absolute after:inset-x-3 after:-bottom-2 after:h-0.5 after:rounded-full after:bg-blue-600"
+              : "text-slate-900 hover:bg-blue-50 hover:text-blue-600"
+          ].join(" ")}
+          onClick={() => setIsMoreOpen((current) => !current)}
+          type="button"
+        >
+          More
+          <ChevronDown
+            className={isMoreOpen ? "rotate-180 transition" : "transition"}
+            size={15}
+          />
+        </button>
+
+        <div
+          className={[
+            "absolute left-0 top-full z-50 w-72 pt-2 transition md:left-auto md:right-0",
+            isMoreOpen
+              ? "visible translate-y-0 opacity-100"
+              : "invisible translate-y-1 opacity-0"
+          ].join(" ")}
+        >
+          <div className="rounded-3xl border border-slate-200 bg-white p-2 shadow-2xl shadow-blue-950/10">
+            {visibleMoreItems.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  className="flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-sm font-black text-slate-800 transition hover:bg-blue-50 hover:text-blue-700"
+                  href={item.href}
+                  key={item.href}
+                  onClick={() => setIsMoreOpen(false)}
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                      <Icon size={17} />
+                    </span>
+                    <span className="truncate">{item.label}</span>
+                  </span>
+                  {item.isComingSoon ? (
+                    <span className="rounded-full bg-violet-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-violet-700">
+                      Soon
+                    </span>
+                  ) : null}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
