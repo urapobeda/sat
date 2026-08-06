@@ -5,13 +5,10 @@ import {
   BookOpen,
   Bookmark,
   CheckCircle2,
-  ChevronDown,
   FileText,
-  FolderOpen,
   RotateCcw,
   Search,
   SlidersHorizontal,
-  Sparkles,
   SquareRadical,
   XCircle,
   type LucideIcon
@@ -19,7 +16,6 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
-import { ProgressSidebar } from "@/components/question-bank/ProgressSidebar";
 import { SearchInput } from "@/components/question-bank/SearchInput";
 import {
   getCategoriesForSection,
@@ -32,7 +28,7 @@ import {
   type QuestionBankSubtopic,
   type QuestionProgressLookup
 } from "@/lib/questionBankStructure";
-import { getTopicSummaries, getUniqueTopicCount, normalizeTopic } from "@/lib/questions";
+import { normalizeTopic } from "@/lib/questions";
 import {
   getCurrentUser,
   getMarkedQuestionIds,

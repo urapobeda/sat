@@ -21,3 +21,4 @@ on public.questions (question_type);
 
 create index if not exists questions_image_urls_idx
 on public.questions using gin (image_urls);
+bo
