@@ -4,7 +4,6 @@ import {
   ArrowRight,
   BookOpen,
   Bookmark,
-  CheckCircle2,
   FileText,
   RotateCcw,
   Search,
@@ -309,33 +308,48 @@ function QuestionBankSection({
   const Icon = section.icon;
   const stats = getQuestionGroupStats(questions, progress);
   const categories = getCategoriesForSection(section.key);
+  const startHref = `/question-bank/practice?section=${section.key}`;
 
   return (
-    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex items-start gap-4">
-        <span
-          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${section.tone} text-white shadow-lg`}
-        >
-          <Icon size={28} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-2xl font-black text-slate-950">{section.title}</h2>
-            <span className="rounded-full bg-slate-50 px-3 py-1.5 text-xs font-black text-slate-600 ring-1 ring-slate-200">
-              {stats.totalQuestions.toLocaleString()} Questions
+    <div className="space-y-4">
+      <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:shadow-md sm:p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span
+              className={`hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${section.tone} text-white shadow-lg sm:flex`}
+            >
+              <Icon size={22} />
             </span>
+            <div className="min-w-0">
+              <h2 className="text-xl font-black text-slate-950">{section.title}</h2>
+              <p className="mt-0.5 text-sm font-medium text-slate-500">
+                {stats.totalQuestions.toLocaleString()} questions
+              </p>
+            </div>
           </div>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
-            {section.description}
-          </p>
+          <Link
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-black text-white shadow-lg shadow-red-600/20 transition hover:-translate-y-0.5 hover:bg-red-700"
+            href={startHref}
+          >
+            <ArrowRight size={15} />
+            Start
+          </Link>
         </div>
-      </div>
 
-      <StatsGrid stats={stats} />
+        <div className="mt-5 flex items-center gap-3">
+          <ProgressMeter percent={stats.totalQuestions > 0 ? Math.round((stats.answeredQuestions / stats.totalQuestions) * 100) : 0} />
+          <span className="whitespace-nowrap text-xs font-bold text-slate-600">
+            {stats.answeredQuestions.toLocaleString()}/{stats.totalQuestions.toLocaleString()}
+          </span>
+          <span className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+            Attempted
+          </span>
+        </div>
+      </article>
 
-      <div className="mt-5 space-y-3">
+      <div className="space-y-3">
         {categories.map((category) => (
-          <CategoryAccordion
+          <CategoryCard
             category={category}
             key={category.title}
             progress={progress}
@@ -345,11 +359,11 @@ function QuestionBankSection({
           />
         ))}
       </div>
-    </article>
+    </div>
   );
 }
 
-function CategoryAccordion({
+function CategoryCard({
   category,
   progress,
   questions
@@ -358,65 +372,42 @@ function CategoryAccordion({
   progress: QuestionProgressLookup;
   questions: Question[];
 }) {
-  const [isOpen, setIsOpen] = useState(questions.length > 0);
   const stats = getQuestionGroupStats(questions, progress);
-  const mastery = getMastery(stats);
+  const percent =
+    stats.totalQuestions > 0
+      ? Math.round((stats.answeredQuestions / stats.totalQuestions) * 100)
+      : 0;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/60">
-      <button
-        className="flex w-full flex-col gap-4 p-4 text-left transition hover:bg-blue-50/60 sm:flex-row sm:items-center sm:justify-between"
-        onClick={() => setIsOpen((value) => !value)}
-        type="button"
-      >
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-3">
-            <h3 className="font-black text-slate-950">{category.title}</h3>
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm ring-1 ring-slate-200">
-              {stats.totalQuestions.toLocaleString()} Questions
-            </span>
-            {mastery !== null ? (
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
-                {mastery}% Mastery
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-1 text-sm leading-5 text-slate-600">
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-100 hover:shadow-md">
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+        <div>
+          <h3 className="font-black text-slate-950">{category.title}</h3>
+          <p className="mt-1 line-clamp-1 text-xs font-medium text-slate-500">
             {category.description}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
-            <CountPill label="Answered" value={stats.answeredQuestions} />
-            <CountPill label="Correct" tone="text-emerald-700" value={stats.correctQuestions} />
-            <CountPill label="Incorrect" tone="text-rose-700" value={stats.incorrectQuestions} />
-            <CountPill label="Remaining" value={stats.remainingQuestions} />
-          </div>
         </div>
-
-        <ChevronDown
-          className={[
-            "shrink-0 text-blue-600 transition",
-            isOpen ? "rotate-180" : ""
-          ].join(" ")}
-          size={22}
+        <QuestionCount
+          answered={stats.answeredQuestions}
+          percent={percent}
+          total={stats.totalQuestions}
         />
-      </button>
+      </div>
 
-      {isOpen ? (
-        <div className="space-y-2 border-t border-slate-200 bg-white p-3">
-          {category.subtopics.map((subtopic) => (
-            <SubtopicLinkRow
-              category={category}
-              key={subtopic.title}
-              progress={progress}
-              questions={questions.filter((question) =>
-                questionMatchesSubtopic(question, subtopic.title)
-              )}
-              subtopic={subtopic}
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
+      <div className="mt-4 space-y-1 border-l border-slate-200 pl-4">
+        {category.subtopics.map((subtopic) => (
+          <SubtopicLinkRow
+            category={category}
+            key={subtopic.title}
+            progress={progress}
+            questions={questions.filter((question) =>
+              questionMatchesSubtopic(question, subtopic.title)
+            )}
+            subtopic={subtopic}
+          />
+        ))}
+      </div>
+    </article>
   );
 }
 
@@ -433,38 +424,46 @@ function SubtopicLinkRow({
 }) {
   const stats = getQuestionGroupStats(questions, progress);
   const mastery = getMastery(stats);
+  const percent =
+    stats.totalQuestions > 0
+      ? Math.round((stats.answeredQuestions / stats.totalQuestions) * 100)
+      : 0;
   const href = `/question-bank/practice?section=${category.section}&category=${encodeURIComponent(category.title)}&topic=${normalizeTopic(subtopic.title)}`;
   const content = (
     <>
-      <div>
-        <p className="font-black text-slate-950">{subtopic.title}</p>
-        <div className="mt-2 flex flex-wrap gap-2 text-xs font-black">
-          <CountPill label="Questions" value={stats.totalQuestions} />
-          <CountPill label="Answered" value={stats.answeredQuestions} />
-          <CountPill label="Correct" tone="text-emerald-700" value={stats.correctQuestions} />
-          <CountPill label="Incorrect" tone="text-rose-700" value={stats.incorrectQuestions} />
-          {mastery !== null ? (
-            <CountPill label="Mastery" tone="text-blue-700" value={`${mastery}%`} />
-          ) : null}
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-slate-700 transition group-hover:text-blue-700">
+          {subtopic.title}
+        </p>
+        {mastery !== null ? (
+          <p className="mt-1 text-[11px] font-black uppercase tracking-[0.08em] text-blue-600">
+            {mastery}% mastery
+          </p>
+        ) : null}
+      </div>
+      <div className="flex items-center justify-end gap-3">
+        <QuestionCount
+          answered={stats.answeredQuestions}
+          percent={percent}
+          total={stats.totalQuestions}
+        />
+        <div
+          className={[
+            "hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition sm:flex",
+            stats.totalQuestions > 0
+              ? "border-slate-200 bg-white text-blue-600 group-hover:border-blue-600 group-hover:bg-blue-600 group-hover:text-white"
+              : "border-slate-100 bg-slate-50 text-slate-300"
+          ].join(" ")}
+        >
+          <ArrowRight size={14} />
         </div>
       </div>
-      <span
-        className={[
-          "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-black shadow-sm transition",
-          stats.totalQuestions > 0
-            ? "border-slate-200 bg-white text-blue-600 group-hover:border-blue-200 group-hover:bg-blue-600 group-hover:text-white"
-            : "border-slate-100 bg-slate-50 text-slate-400"
-        ].join(" ")}
-      >
-        {stats.totalQuestions > 0 ? "Practice" : "Empty"}
-        {stats.totalQuestions > 0 ? <ArrowRight size={16} /> : null}
-      </span>
     </>
   );
 
   if (stats.totalQuestions === 0) {
     return (
-      <div className="grid gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
+      <div className="grid min-h-10 gap-3 rounded-xl px-3 py-2 opacity-60 sm:grid-cols-[1fr_auto] sm:items-center">
         {content}
       </div>
     );
@@ -472,7 +471,7 @@ function SubtopicLinkRow({
 
   return (
     <Link
-      className="group grid gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 transition hover:border-blue-200 hover:bg-blue-50/60 sm:grid-cols-[1fr_auto] sm:items-center"
+      className="group grid min-h-10 gap-3 rounded-xl px-3 py-2 transition hover:bg-blue-50/70 sm:grid-cols-[1fr_auto] sm:items-center"
       href={href}
     >
       {content}
@@ -480,60 +479,123 @@ function SubtopicLinkRow({
   );
 }
 
-function StatsGrid({ stats }: { stats: ReturnType<typeof getQuestionGroupStats> }) {
+function QuestionCount({
+  answered,
+  percent,
+  total
+}: {
+  answered: number;
+  percent: number;
+  total: number;
+}) {
   return (
-    <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5 xl:grid-cols-2 2xl:grid-cols-5">
-      <StatTile label="Total" value={stats.totalQuestions} />
-      <StatTile label="Answered" value={stats.answeredQuestions} />
-      <StatTile label="Correct" tone="text-emerald-700" value={stats.correctQuestions} />
-      <StatTile label="Incorrect" tone="text-rose-700" value={stats.incorrectQuestions} />
-      <StatTile label="Remaining" value={stats.remainingQuestions} />
+    <div className="flex items-center gap-3">
+      <ProgressMeter percent={percent} />
+      <span className="min-w-14 text-right text-xs font-medium text-slate-600">
+        {answered.toLocaleString()}/{total.toLocaleString()}
+      </span>
     </div>
   );
 }
 
-function StatTile({
-  label,
-  tone = "text-slate-950",
-  value
-}: {
-  label: string;
-  tone?: string;
-  value: number;
-}) {
-  return (
-    <div className="rounded-2xl bg-slate-50 px-3 py-3 text-center ring-1 ring-slate-100">
-      <p className={`text-xl font-black ${tone}`}>{value.toLocaleString()}</p>
-      <p className="mt-1 text-xs font-bold text-slate-500">{label}</p>
-    </div>
-  );
-}
+function ProgressMeter({ percent }: { percent: number }) {
+  const clampedPercent = Math.max(0, Math.min(100, percent));
 
-function CountPill({
-  label,
-  tone = "text-slate-600",
-  value
-}: {
-  label: string;
-  tone?: string;
-  value: number | string;
-}) {
   return (
-    <span className={`rounded-full bg-slate-50 px-2.5 py-1 ring-1 ring-slate-200 ${tone}`}>
-      {label}: {typeof value === "number" ? value.toLocaleString() : value}
+    <span className="h-1.5 w-28 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+      <span
+        className="block h-full rounded-full bg-red-600 transition-all"
+        style={{ width: `${clampedPercent}%` }}
+      />
     </span>
   );
 }
 
-function FilterSelect({
-  accent,
+function DifficultyTabs({
+  onChange,
+  value
+}: {
+  onChange: (value: DifficultyFilter) => void;
+  value: DifficultyFilter;
+}) {
+  const items: Array<{ label: string; value: DifficultyFilter }> = [
+    { label: "All", value: "all" },
+    { label: "Easy", value: "easy" },
+    { label: "Medium", value: "medium" },
+    { label: "Hard", value: "hard" }
+  ];
+
+  return (
+    <div className="flex w-full flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm xl:w-auto">
+      {items.map((item) => {
+        const isActive = item.value === value;
+
+        return (
+          <button
+            className={[
+              "inline-flex min-h-9 items-center justify-center rounded-lg px-4 text-xs font-black transition",
+              isActive
+                ? "bg-red-600 text-white shadow-sm"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+            ].join(" ")}
+            key={item.value}
+            onClick={() => onChange(item.value)}
+            type="button"
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function MarkedTabs({
+  onChange,
+  value
+}: {
+  onChange: (value: MarkedFilter) => void;
+  value: MarkedFilter;
+}) {
+  const items: Array<{ label: string; value: MarkedFilter }> = [
+    { label: "All", value: "all" },
+    { label: "Marked", value: "marked" },
+    { label: "Not Marked", value: "unmarked" }
+  ];
+
+  return (
+    <div className="flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+      <Bookmark size={15} className="ml-2 text-slate-500" />
+      {items.map((item) => {
+        const isActive = item.value === value;
+
+        return (
+          <button
+            className={[
+              "inline-flex min-h-9 items-center justify-center rounded-lg px-3 text-xs font-black transition",
+              isActive
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-slate-600 hover:bg-white hover:text-slate-950"
+            ].join(" ")}
+            key={item.value}
+            onClick={() => onChange(item.value)}
+            type="button"
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CompactFilterSelect({
   icon: Icon,
   label,
   onChange,
   options,
   value
 }: {
-  accent: string;
   icon: LucideIcon;
   label: string;
   onChange: (value: string) => void;
@@ -541,14 +603,15 @@ function FilterSelect({
   value: string;
 }) {
   return (
-    <label className="grid min-h-16 grid-cols-[auto_1fr] items-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg">
-      <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${accent}`}>
-        <Icon size={21} />
+    <label className="grid min-h-10 grid-cols-[auto_1fr] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50/50">
+      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-blue-600">
+        <Icon size={15} />
       </span>
       <span className="min-w-0">
-        <span className="block text-xs font-black text-slate-500">{label}</span>
+        <span className="sr-only">{label}</span>
         <select
-          className="mt-1 w-full truncate bg-transparent text-sm font-black text-slate-950 outline-none"
+          aria-label={label}
+          className="w-full truncate bg-transparent outline-none"
           onChange={(event) => onChange(event.target.value)}
           value={value}
         >
@@ -635,22 +698,4 @@ function StatusCard({
   );
 }
 
-function HeaderIllustration() {
-  return (
-    <div className="pointer-events-none absolute right-[25%] top-4 hidden lg:block">
-      <Sparkles className="absolute -left-10 top-8 text-blue-500" size={18} />
-      <Sparkles className="absolute -right-8 top-4 text-emerald-400" size={18} />
-      <Sparkles className="absolute right-8 -top-2 text-violet-500" size={18} />
-
-      <div className="relative h-32 w-44">
-        <div className="absolute left-8 top-2 h-24 w-24 rotate-6 rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-xl shadow-blue-700/20" />
-        <div className="absolute left-0 top-8 h-20 w-32 rounded-2xl bg-gradient-to-br from-violet-300 to-blue-400 shadow-lg">
-          <FolderOpen className="absolute left-8 top-5 text-white" size={42} />
-        </div>
-        <div className="absolute bottom-0 right-0 h-16 w-16 rounded-full border-8 border-blue-400 bg-white shadow-lg" />
-        <div className="absolute bottom-0 right-0 h-10 w-3 translate-x-3 translate-y-3 rotate-[-45deg] rounded-full bg-blue-600" />
-      </div>
-    </div>
-  );
-}
 
