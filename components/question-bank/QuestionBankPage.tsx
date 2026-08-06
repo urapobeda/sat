@@ -173,11 +173,6 @@ export function QuestionBankPage() {
     searchQuery
   ]);
 
-  const topicSummaries = useMemo(
-    () => getTopicSummaries(filteredQuestions),
-    [filteredQuestions]
-  );
-
   const filterEmptyDescription = useMemo(() => {
     if (answerFilter === "incorrect" && !hasAnswerHistory) {
       return "Sign in and complete practice or tests to build your incorrect-answer list.";
@@ -200,89 +195,67 @@ export function QuestionBankPage() {
 
   return (
     <Layout align="left">
-      <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-white p-6 shadow-soft sm:p-8">
-        <HeaderIllustration />
-
-        <div className="relative z-10">
-          <h1 className="text-4xl font-black leading-tight text-slate-950 sm:text-5xl">
-            Question Bank
-          </h1>
-          <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
-            Explore SAT-style questions by skill, difficulty, source type, and
-            review history.
-          </p>
-        </div>
-
-        <div className="relative z-10 mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
-          <FilterSelect
-            accent="bg-emerald-50 text-emerald-600"
-            icon={CheckCircle2}
-            label="Difficulty"
-            onChange={(value) => setDifficultyFilter(value as DifficultyFilter)}
-            options={[
-              { label: "All Levels", value: "all" },
-              { label: "Easy", value: "easy" },
-              { label: "Medium", value: "medium" },
-              { label: "Hard", value: "hard" }
-            ]}
-            value={difficultyFilter}
-          />
-
-          <FilterSelect
-            accent="bg-orange-50 text-orange-600"
-            icon={XCircle}
-            label="Answered Incorrectly"
-            onChange={(value) => setAnswerFilter(value as AnswerFilter)}
-            options={[
-              { label: "All", value: "all" },
-              { label: "Yes", value: "incorrect" },
-              { label: "No", value: "not-incorrect" }
-            ]}
-            value={answerFilter}
-          />
-
-          <FilterSelect
-            accent="bg-violet-50 text-violet-600"
-            icon={Bookmark}
-            label="Marked for Review"
-            onChange={(value) => setMarkedFilter(value as MarkedFilter)}
-            options={[
-              { label: "All", value: "all" },
-              { label: "Marked", value: "marked" },
-              { label: "Not Marked", value: "unmarked" }
-            ]}
-            value={markedFilter}
-          />
-
-          <FilterSelect
-            accent="bg-blue-50 text-blue-600"
-            icon={FileText}
-            label="Bluebook"
-            onChange={(value) => setBluebookFilter(value as BluebookFilter)}
-            options={[
-              { label: "All Questions", value: "all" },
-              { label: "Bluebook Only", value: "bluebook-only" },
-              { label: "Exclude Bluebook", value: "exclude-bluebook" }
-            ]}
-            value={bluebookFilter}
-          />
-
-          <button
-            className="inline-flex min-h-16 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-blue-600 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:shadow-lg"
-            onClick={resetFilters}
-            type="button"
-          >
-            <SlidersHorizontal size={19} />
-            Reset
-          </button>
-        </div>
-      </section>
-
-      <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-5">
-          <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-            <SearchInput onChange={setSearchQuery} value={searchQuery} />
+      <section className="space-y-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="text-red-600">
+                <BookOpen size={24} />
+              </span>
+              <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+                Question Bank
+              </h1>
+            </div>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+              Explore SAT-style questions by section, topic, difficulty, source,
+              and review history.
+            </p>
           </div>
+
+          <div className="flex flex-col gap-3 xl:items-end">
+            <DifficultyTabs
+              onChange={setDifficultyFilter}
+              value={difficultyFilter}
+            />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <CompactFilterSelect
+                icon={XCircle}
+                label="Incorrect"
+                onChange={(value) => setAnswerFilter(value as AnswerFilter)}
+                options={[
+                  { label: "All", value: "all" },
+                  { label: "Yes", value: "incorrect" },
+                  { label: "No", value: "not-incorrect" }
+                ]}
+                value={answerFilter}
+              />
+              <CompactFilterSelect
+                icon={FileText}
+                label="Bluebook"
+                onChange={(value) => setBluebookFilter(value as BluebookFilter)}
+                options={[
+                  { label: "All", value: "all" },
+                  { label: "Only", value: "bluebook-only" },
+                  { label: "Exclude", value: "exclude-bluebook" }
+                ]}
+                value={bluebookFilter}
+              />
+              <button
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+                onClick={resetFilters}
+                type="button"
+              >
+                <SlidersHorizontal size={15} />
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
+          <SearchInput onChange={setSearchQuery} value={searchQuery} />
+          <MarkedTabs onChange={setMarkedFilter} value={markedFilter} />
+        </div>
 
           {isLoading ? (
             <QuestionBankSkeleton />
@@ -319,14 +292,6 @@ export function QuestionBankPage() {
               </div>
             </>
           )}
-        </div>
-
-        <ProgressSidebar
-          questionsAnswered={progress.answeredIds.size}
-          totalQuestions={questions.length}
-          totalTopics={getUniqueTopicCount(filteredQuestions)}
-          topicSummaries={topicSummaries}
-        />
       </section>
     </Layout>
   );
