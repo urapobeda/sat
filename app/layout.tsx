@@ -11,8 +11,7 @@ const themeScript = `
 (() => {
   try {
     const storedTheme = localStorage.getItem("sat-practice-theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const theme = storedTheme || (prefersDark ? "dark" : "light");
+    const theme = storedTheme === "dark" ? "dark" : "light";
 
     document.documentElement.classList.toggle("dark", theme === "dark");
     document.documentElement.style.colorScheme = theme;
