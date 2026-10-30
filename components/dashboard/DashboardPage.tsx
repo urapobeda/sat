@@ -1,5 +1,16 @@
 import Link from "next/link";
-import { Download, Play } from "lucide-react";
+import {
+  BookOpen,
+  CalendarDays,
+  ClipboardList,
+  Download,
+  FileText,
+  FolderOpen,
+  Home,
+  NotebookPen,
+  Play,
+  Video
+} from "lucide-react";
 
 // Draft redesign — student/teacher workflow (homework, schedule, lesson
 // recordings, teacher comments) is not implemented in Supabase yet, so all
@@ -8,14 +19,26 @@ import { Download, Play } from "lucide-react";
 const STUDENT_NAME = "Алия";
 
 const sidebarNav = [
-  { label: "Главная", href: "/dashboard", active: true },
-  { label: "Домашние задания", href: "/dashboard", badge: "3", badgeTone: "amber" as const },
-  { label: "Банк вопросов", href: "/question-bank" },
-  { label: "Пробные тесты", href: "/tests" },
-  { label: "Тетрадь ошибок", href: "/question-bank/practice", badge: "17", badgeTone: "slate" as const },
-  { label: "Расписание", href: "/dashboard" },
-  { label: "Записи уроков", href: "/dashboard" },
-  { label: "Материалы", href: "/dashboard" }
+  { label: "Главная", href: "/dashboard", icon: Home, active: true },
+  {
+    label: "Домашние задания",
+    href: "/dashboard",
+    icon: ClipboardList,
+    badge: "3",
+    badgeTone: "amber" as const
+  },
+  { label: "Банк вопросов", href: "/question-bank", icon: BookOpen },
+  { label: "Пробные тесты", href: "/tests", icon: FileText },
+  {
+    label: "Тетрадь ошибок",
+    href: "/question-bank/practice",
+    icon: NotebookPen,
+    badge: "17",
+    badgeTone: "slate" as const
+  },
+  { label: "Расписание", href: "/dashboard", icon: CalendarDays },
+  { label: "Записи уроков", href: "/dashboard", icon: Video },
+  { label: "Материалы", href: "/dashboard", icon: FolderOpen }
 ];
 
 const topStats = [
@@ -163,7 +186,10 @@ export function DashboardPage() {
                 href={item.href}
                 key={item.label}
               >
-                <span>{item.label}</span>
+                <span className="flex items-center gap-3">
+                  <item.icon size={18} />
+                  {item.label}
+                </span>
                 {item.badge ? (
                   <span
                     className={[
