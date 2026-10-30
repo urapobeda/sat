@@ -16,35 +16,35 @@ import {
 // recordings, teacher comments) is not implemented in Supabase yet, so all
 // content below is placeholder data standing in for that future model.
 
-const STUDENT_NAME = "Алия";
+const STUDENT_NAME = "Aliya";
 
 const sidebarNav = [
-  { label: "Главная", href: "/dashboard", icon: Home, active: true },
+  { label: "Home", href: "/dashboard", icon: Home, active: true },
   {
-    label: "Домашние задания",
+    label: "Homework",
     href: "/dashboard",
     icon: ClipboardList,
     badge: "3",
     badgeTone: "amber" as const
   },
-  { label: "Банк вопросов", href: "/question-bank", icon: BookOpen },
-  { label: "Пробные тесты", href: "/tests", icon: FileText },
+  { label: "Question Bank", href: "/question-bank", icon: BookOpen },
+  { label: "Practice Tests", href: "/tests", icon: FileText },
   {
-    label: "Тетрадь ошибок",
+    label: "Mistake Notebook",
     href: "/question-bank/practice",
     icon: NotebookPen,
     badge: "17",
     badgeTone: "slate" as const
   },
-  { label: "Расписание", href: "/dashboard", icon: CalendarDays },
-  { label: "Записи уроков", href: "/dashboard", icon: Video },
-  { label: "Материалы", href: "/dashboard", icon: FolderOpen }
+  { label: "Schedule", href: "/dashboard", icon: CalendarDays },
+  { label: "Lesson Recordings", href: "/dashboard", icon: Video },
+  { label: "Materials", href: "/dashboard", icon: FolderOpen }
 ];
 
 const topStats = [
-  { label: "SAT · сб, 7 нояб", value: "9 дней" },
-  { label: "Последний пробник", value: "1330" },
-  { label: "Цель", value: "1450" }
+  { label: "SAT · Sat, Nov 7", value: "9 days" },
+  { label: "Last Practice Test", value: "1330" },
+  { label: "Goal", value: "1450" }
 ];
 
 type HomeworkRow = {
@@ -60,51 +60,51 @@ type HomeworkRow = {
 const homeworkRows: HomeworkRow[] = [
   {
     title: "Unit 9 · Nonlinear functions",
-    meta: "Math · 22 вопроса · без лимита времени",
-    due: "Сегодня, 23:59",
+    meta: "Math · 22 questions · no time limit",
+    due: "Today, 11:59 PM",
     dueTone: "today",
     progress: { done: 14, total: 22 },
-    action: { label: "Продолжить", href: "/question-bank/practice", variant: "primary" }
+    action: { label: "Continue", href: "/question-bank/practice", variant: "primary" }
   },
   {
     title: "Article Annotation III",
-    meta: "Reading & Writing · текст + 12 вопросов",
-    due: "Пт, 30 окт",
+    meta: "Reading & Writing · passage + 12 questions",
+    due: "Fri, Oct 30",
     dueTone: "default",
-    action: { label: "Начать", href: "/question-bank?section=reading-writing", variant: "outline" }
+    action: { label: "Start", href: "/question-bank?section=reading-writing", variant: "outline" }
   },
   {
     title: "Mini test #6 · Module 2 (hard)",
-    meta: "Тест · 27 вопросов · 35 минут · 1 попытка",
-    due: "Вс, 1 нояб",
+    meta: "Test · 27 questions · 35 minutes · 1 attempt",
+    due: "Sun, Nov 1",
     dueTone: "default",
-    action: { label: "Начать", href: "/tests/start", variant: "outline" }
+    action: { label: "Start", href: "/tests/start", variant: "outline" }
   },
   {
     title: "Unit 8 · Linear equations",
-    meta: "Сдано 28 окт",
-    due: "Ср, 28 окт",
+    meta: "Submitted Oct 28",
+    due: "Wed, Oct 28",
     dueTone: "done",
     percent: 90,
     progress: { done: 18, total: 20 },
-    action: { label: "Разбор ошибок", href: "/progress", variant: "link" }
+    action: { label: "Review mistakes", href: "/progress", variant: "link" }
   },
   {
     title: "Words in Context #4",
-    meta: "Проверено · есть комментарий преподавателя",
-    due: "Пн, 26 окт",
+    meta: "Graded · teacher left a comment",
+    due: "Mon, Oct 26",
     dueTone: "done",
     percent: 92,
     progress: { done: 11, total: 12 },
-    action: { label: "Комментарий", href: "/progress", variant: "link" }
+    action: { label: "Comment", href: "/progress", variant: "link" }
   }
 ];
 
 const practiceTests = [
-  { label: "#4 · 26 окт", breakdown: "R&W 660 · M 670", score: 1330, delta: "+60" },
-  { label: "#3 · 12 окт", breakdown: "R&W 640 · M 630", score: 1270, delta: "+50" },
-  { label: "#2 · 28 сен", breakdown: "R&W 620 · M 600", score: 1220, delta: "+70" },
-  { label: "#1 · 14 сен", breakdown: "R&W 590 · M 560", score: 1150, delta: null }
+  { label: "#4 · Oct 26", breakdown: "R&W 660 · M 670", score: 1330, delta: "+60" },
+  { label: "#3 · Oct 12", breakdown: "R&W 640 · M 630", score: 1270, delta: "+50" },
+  { label: "#2 · Sep 28", breakdown: "R&W 620 · M 600", score: 1220, delta: "+70" },
+  { label: "#1 · Sep 14", breakdown: "R&W 590 · M 560", score: 1150, delta: null }
 ];
 
 const weakTopics = [
@@ -115,14 +115,14 @@ const weakTopics = [
 ];
 
 function getGreeting(hour: number) {
-  if (hour < 6) return "Доброй ночи";
-  if (hour < 12) return "Доброе утро";
-  if (hour < 18) return "Добрый день";
-  return "Добрый вечер";
+  if (hour < 6) return "Good night";
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 function getDateLine(date: Date) {
-  return new Intl.DateTimeFormat("ru-RU", {
+  return new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     day: "numeric",
     month: "long"
@@ -145,11 +145,11 @@ export function DashboardPage() {
     <div className="min-h-screen bg-slate-50">
       <div className="flex items-center justify-between bg-slate-950 px-5 py-3 text-white sm:px-7">
         <span className="text-sm font-semibold text-slate-300">
-          Ученик — главная
+          Student — Home
         </span>
         <div className="flex items-center gap-3">
           <button
-            aria-label="Скачать отчёт"
+            aria-label="Download report"
             className="rounded-lg p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
             type="button"
           >
@@ -219,7 +219,7 @@ export function DashboardPage() {
                     {getGreeting(now.getHours())}, {STUDENT_NAME}
                   </h1>
                   <p className="mt-1 text-sm text-slate-600">
-                    Одно задание нужно сдать сегодня до 23:59.
+                    One assignment is due today by 11:59 PM.
                   </p>
                 </div>
 
@@ -243,13 +243,13 @@ export function DashboardPage() {
               <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-base font-black text-slate-950">
-                    Домашние задания
+                    Homework
                   </h2>
                   <Link
                     className="text-sm font-bold text-blue-600 hover:underline"
                     href="/dashboard"
                   >
-                    Все задания
+                    All assignments
                   </Link>
                 </div>
 
@@ -257,10 +257,10 @@ export function DashboardPage() {
                   <table className="w-full min-w-[640px] border-collapse text-sm">
                     <thead>
                       <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase tracking-wide text-slate-400">
-                        <th className="pb-2 pr-3 font-bold">Задание</th>
-                        <th className="pb-2 pr-3 font-bold">Срок</th>
-                        <th className="pb-2 pr-3 font-bold">Прогресс</th>
-                        <th className="pb-2 font-bold">Действие</th>
+                        <th className="pb-2 pr-3 font-bold">Assignment</th>
+                        <th className="pb-2 pr-3 font-bold">Due</th>
+                        <th className="pb-2 pr-3 font-bold">Progress</th>
+                        <th className="pb-2 font-bold">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -300,7 +300,7 @@ export function DashboardPage() {
                                 ) : null}
                               </div>
                             ) : (
-                              <span className="text-slate-400">Не начато</span>
+                              <span className="text-slate-400">Not started</span>
                             )}
                           </td>
                           <td className="py-3 align-top">
@@ -337,37 +337,38 @@ export function DashboardPage() {
               <section className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
                 <div>
                   <h2 className="text-base font-black text-slate-950">
-                    Тетрадь ошибок
+                    Mistake Notebook
                   </h2>
                   <p className="mt-1 text-sm text-slate-600">
-                    17 вопросов ждут повтора. Больше всего ошибок в темах
-                    Boundaries (6) и Nonlinear functions (4).
+                    17 questions are waiting for review. Most mistakes are in
+                    Boundaries (6) and Nonlinear functions (4).
                   </p>
                 </div>
                 <Link
                   className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold !text-white transition hover:bg-slate-800"
                   href="/question-bank/practice"
                 >
-                  Повторить 10 вопросов
+                  Review 10 questions
                 </Link>
               </section>
 
               <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                 <h2 className="text-base font-black text-slate-950">
-                  От преподавателя
+                  From your teacher
                 </h2>
                 <div className="mt-4 border-t border-slate-100 pt-4">
                   <div className="flex items-center justify-between text-sm">
                     <p className="font-bold text-slate-900">
-                      Даньяр · Words in Context #4
+                      Daniyar · Words in Context #4
                     </p>
-                    <p className="text-xs text-slate-400">26 окт, 21:10</p>
+                    <p className="text-xs text-slate-400">Oct 26, 9:10 PM</p>
                   </div>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Хорошо, Алия. В 7-м вопросе ты выбрала слово по общему
-                    смыслу текста, а нужно смотреть на контраст после
-                    «however». Пересмотри разбор и сделай 5 похожих в банке
-                    вопросов.
+                    Good work, Aliya. On question 7 you picked a word based on
+                    the passage&apos;s general meaning, but you need to look at
+                    the contrast after &quot;however.&quot; Review the
+                    explanation and do 5 similar questions in the Question
+                    Bank.
                   </p>
                 </div>
               </section>
@@ -376,29 +377,29 @@ export function DashboardPage() {
             <aside className="space-y-6">
               <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                  Следующий урок
+                  Next Lesson
                 </p>
                 <p className="mt-2 text-base font-black text-slate-950">
-                  Пн, 2 нояб · 18:00
+                  Mon, Nov 2 · 6:00 PM
                 </p>
                 <p className="mt-1 text-sm text-slate-500">
-                  90 минут · Группа SAT · Ноябрь
+                  90 minutes · SAT Group · November
                 </p>
                 <p className="mt-3 text-sm font-semibold text-slate-800">
-                  Inferences и Command of Evidence: разбор пробника #4
+                  Inferences and Command of Evidence: Practice Test #4 review
                 </p>
                 <div className="mt-4 flex flex-col gap-2">
                   <button
                     className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800"
                     type="button"
                   >
-                    Ссылка на урок
+                    Lesson link
                   </button>
                   <button
                     className="text-left text-xs font-bold text-blue-600 hover:underline"
                     type="button"
                   >
-                    Запись от 28 окт
+                    Recording from Oct 28
                   </button>
                 </div>
               </section>
@@ -406,10 +407,10 @@ export function DashboardPage() {
               <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-black text-slate-950">
-                    Пробные тесты
+                    Practice Tests
                   </h2>
                   <p className="text-xs font-semibold text-slate-400">
-                    шкала 1000–1600
+                    scale 1000–1600
                   </p>
                 </div>
 
@@ -444,18 +445,18 @@ export function DashboardPage() {
                     />
                   </div>
                   <div className="mt-1.5 flex justify-between text-xs font-semibold text-slate-500">
-                    <span>Сейчас 1330</span>
-                    <span>Цель 1450</span>
+                    <span>Now 1330</span>
+                    <span>Goal 1450</span>
                   </div>
                 </div>
               </section>
 
               <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="text-sm font-black text-slate-950">
-                  Слабые темы
+                  Weak Topics
                 </h2>
                 <p className="mt-1 text-xs text-slate-400">
-                  Точность за последние 30 дней
+                  Accuracy over the last 30 days
                 </p>
 
                 <ul className="mt-4 space-y-3">
@@ -483,7 +484,7 @@ export function DashboardPage() {
                   className="mt-4 inline-block text-sm font-bold text-blue-600 hover:underline"
                   href="/question-bank"
                 >
-                  Тренировать слабые темы
+                  Practice weak topics
                 </Link>
               </section>
             </aside>
