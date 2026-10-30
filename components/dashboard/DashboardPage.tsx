@@ -157,7 +157,7 @@ export function DashboardPage() {
                 className={[
                   "flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-bold transition",
                   item.active
-                    ? "bg-slate-900 text-white"
+                    ? "bg-slate-900 !text-white"
                     : "text-slate-700 hover:bg-slate-100"
                 ].join(" ")}
                 href={item.href}
@@ -280,7 +280,7 @@ export function DashboardPage() {
                           <td className="py-3 align-top">
                             {row.action.variant === "primary" ? (
                               <Link
-                                className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700"
+                                className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold !text-white shadow-sm transition hover:bg-blue-700"
                                 href={row.action.href}
                               >
                                 {row.action.label}
@@ -319,7 +319,7 @@ export function DashboardPage() {
                   </p>
                 </div>
                 <Link
-                  className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800"
+                  className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold !text-white transition hover:bg-slate-800"
                   href="/question-bank/practice"
                 >
                   Повторить 10 вопросов
