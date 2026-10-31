@@ -57,7 +57,7 @@ const sidebarNav: NavItem[] = [
     badge: "17",
     badgeTone: "slate"
   },
-  { id: "schedule", label: "Schedule", href: "/dashboard", icon: CalendarDays },
+  { id: "schedule", label: "Schedule", href: "/schedule", icon: CalendarDays },
   { id: "recordings", label: "Lesson Recordings", href: "/dashboard", icon: Video },
   { id: "materials", label: "Materials", href: "/dashboard", icon: FolderOpen }
 ];

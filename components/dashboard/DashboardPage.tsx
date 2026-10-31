@@ -149,9 +149,17 @@ export function DashboardPage() {
 
         <aside className="space-y-6">
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-              Next Lesson
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                Next Lesson
+              </p>
+              <Link
+                className="text-xs font-bold text-blue-600 hover:underline"
+                href="/schedule"
+              >
+                Full schedule
+              </Link>
+            </div>
             <p className="mt-2 text-base font-black text-slate-950">
               Mon, Nov 2 · 6:00 PM
             </p>
