@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Layout } from "@/components/Layout";
+import { StudentShell } from "@/components/dashboard/StudentShell";
 import { SearchInput } from "@/components/question-bank/SearchInput";
 import {
   getCategoriesForSection,
@@ -193,12 +193,12 @@ export function QuestionBankPage() {
   }
 
   return (
-    <Layout align="left">
+    <StudentShell active="question-bank" title="Student — Question Bank">
       <section className="space-y-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <span className="text-red-600">
+              <span className="text-blue-600">
                 <BookOpen size={24} />
               </span>
               <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
@@ -292,7 +292,7 @@ export function QuestionBankPage() {
             </>
           )}
       </section>
-    </Layout>
+    </StudentShell>
   );
 }
 
@@ -328,7 +328,7 @@ function QuestionBankSection({
             </div>
           </div>
           <Link
-            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-black text-white shadow-lg shadow-red-600/20 transition hover:-translate-y-0.5 hover:bg-red-700"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-black !text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
             href={startHref}
           >
             <ArrowRight size={15} />
@@ -504,7 +504,7 @@ function ProgressMeter({ percent }: { percent: number }) {
   return (
     <span className="h-1.5 w-28 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
       <span
-        className="block h-full rounded-full bg-red-600 transition-all"
+        className="block h-full rounded-full bg-blue-600 transition-all"
         style={{ width: `${clampedPercent}%` }}
       />
     </span>
@@ -535,7 +535,7 @@ function DifficultyTabs({
             className={[
               "inline-flex min-h-9 items-center justify-center rounded-lg px-4 text-xs font-black transition",
               isActive
-                ? "bg-red-600 text-white shadow-sm"
+                ? "bg-blue-600 text-white shadow-sm"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
             ].join(" ")}
             key={item.value}
