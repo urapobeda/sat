@@ -52,7 +52,7 @@ const sidebarNav: NavItem[] = [
   {
     id: "mistakes",
     label: "Mistake Notebook",
-    href: "/question-bank/practice",
+    href: "/mistakes",
     icon: NotebookPen,
     badge: "17",
     badgeTone: "slate"

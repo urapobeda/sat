@@ -119,7 +119,7 @@ export function DashboardPage() {
             </div>
             <Link
               className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold !text-white transition hover:bg-slate-800"
-              href="/question-bank/practice"
+              href="/mistakes"
             >
               Review 10 questions
             </Link>
