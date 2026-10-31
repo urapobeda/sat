@@ -58,8 +58,8 @@ const sidebarNav: NavItem[] = [
     badgeTone: "slate"
   },
   { id: "schedule", label: "Schedule", href: "/schedule", icon: CalendarDays },
-  { id: "recordings", label: "Lesson Recordings", href: "/dashboard", icon: Video },
-  { id: "materials", label: "Materials", href: "/dashboard", icon: FolderOpen }
+  { id: "recordings", label: "Lesson Recordings", href: "/recordings", icon: Video },
+  { id: "materials", label: "Materials", href: "/materials", icon: FolderOpen }
 ];
 
 export function StudentShell({
