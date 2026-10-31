@@ -10,7 +10,7 @@ import {
   Trophy
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Layout } from "@/components/Layout";
+import { StudentShell } from "@/components/dashboard/StudentShell";
 import { ScoreProgressChart } from "@/components/tests/ScoreProgressChart";
 import { StartTestCTA } from "@/components/tests/StartTestCTA";
 import { StatCard } from "@/components/tests/StatCard";
@@ -128,7 +128,7 @@ export function TestsPage() {
     );
 
   return (
-    <Layout>
+    <StudentShell active="tests" title="Student — Practice Tests">
       <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-white p-6 shadow-soft sm:p-8">
         <HeaderIllustration />
 
@@ -173,7 +173,7 @@ export function TestsPage() {
       <section className="mt-6">
         <StartTestCTA />
       </section>
-    </Layout>
+    </StudentShell>
   );
 }
 

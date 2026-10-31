@@ -77,7 +77,7 @@ export function TestRow({ test }: TestRowProps) {
           className={[
             "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition-all duration-300",
             isInProgress
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700"
+              ? "bg-blue-600 !text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700"
               : "border border-slate-200 bg-white text-slate-900 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
           ].join(" ")}
           href={isInProgress ? "/tests/start" : "/progress"}
