@@ -118,7 +118,7 @@ export function DashboardPage() {
               </p>
             </div>
             <Link
-              className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold !text-white transition hover:bg-slate-800"
+              className="inline-flex shrink-0 items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold !text-white transition hover:bg-blue-700"
               href="/mistakes"
             >
               Review 10 questions
@@ -171,7 +171,7 @@ export function DashboardPage() {
             </p>
             <div className="mt-4 flex flex-col gap-2">
               <button
-                className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800"
+                className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
                 type="button"
               >
                 Lesson link

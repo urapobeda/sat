@@ -73,12 +73,12 @@ export function StudentShell({
 }) {
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="flex items-center justify-between bg-slate-950 px-5 py-3 text-white sm:px-7">
-        <span className="text-sm font-semibold text-slate-300">{title}</span>
+      <div className="flex items-center justify-between bg-blue-600 px-5 py-3 text-white sm:px-7">
+        <span className="text-sm font-semibold text-blue-100">{title}</span>
         <div className="flex items-center gap-3">
           <button
             aria-label="Download report"
-            className="rounded-lg p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
+            className="rounded-lg p-2 text-blue-100 transition hover:bg-white/10 hover:text-white"
             type="button"
           >
             <Download size={18} />
@@ -111,7 +111,7 @@ export function StudentShell({
                   className={[
                     "flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-bold transition",
                     isActive
-                      ? "bg-slate-900 !text-white"
+                      ? "bg-blue-600 !text-white"
                       : "text-slate-700 hover:bg-slate-100"
                   ].join(" ")}
                   href={item.href}

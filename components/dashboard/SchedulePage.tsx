@@ -61,7 +61,7 @@ export function SchedulePage() {
                   </p>
                 </div>
                 <button
-                  className="inline-flex shrink-0 items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-slate-800 sm:w-auto"
+                  className="inline-flex shrink-0 items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 sm:w-auto"
                   type="button"
                 >
                   Lesson link
