@@ -24,7 +24,7 @@ export function HomeworkPage() {
   ];
 
   return (
-    <StudentShell active="homework" title="Student — Homework">
+    <StudentShell active="homework">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-black text-slate-950">Homework</h1>

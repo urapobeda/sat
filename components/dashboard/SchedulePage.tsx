@@ -1,20 +1,114 @@
-import { lessons } from "@/components/dashboard/scheduleData";
+"use client";
+
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { lessons, type LessonRow } from "@/components/dashboard/scheduleData";
 import { StudentShell } from "@/components/dashboard/StudentShell";
 
+const WEEKDAY_LABELS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday"
+];
+
+function dateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
+function isSameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function getCalendarDays(viewDate: Date) {
+  const firstOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+  const gridStart = new Date(firstOfMonth);
+  gridStart.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const day = new Date(gridStart);
+    day.setDate(gridStart.getDate() + index);
+    return day;
+  });
+}
+
+function formatLessonDate(dateIso: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric"
+  }).format(new Date(`${dateIso}T00:00:00`));
+}
+
 export function SchedulePage() {
+  const today = new Date();
+  const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+
+  const lessonsByDate = useMemo(() => {
+    const map = new Map<string, LessonRow[]>();
+
+    for (const lesson of lessons) {
+      const existing = map.get(lesson.date) ?? [];
+      existing.push(lesson);
+      map.set(lesson.date, existing);
+    }
+
+    return map;
+  }, []);
+
+  const calendarDays = useMemo(() => getCalendarDays(viewDate), [viewDate]);
+
+  const monthLessons = useMemo(
+    () =>
+      lessons
+        .filter((lesson) => {
+          const lessonDate = new Date(`${lesson.date}T00:00:00`);
+          return (
+            lessonDate.getFullYear() === viewDate.getFullYear() &&
+            lessonDate.getMonth() === viewDate.getMonth()
+          );
+        })
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    [viewDate]
+  );
+
   const upcoming = lessons.filter((lesson) => lesson.status === "upcoming");
   const completed = lessons.filter((lesson) => lesson.status === "completed");
   const nextLesson = upcoming[0];
 
   const summaryStats = [
-    { label: "Next Lesson", value: nextLesson ? nextLesson.date : "—" },
+    {
+      label: "Next Lesson",
+      value: nextLesson ? formatLessonDate(nextLesson.date) : "—"
+    },
     { label: "Upcoming", value: String(upcoming.length) },
     { label: "Completed", value: String(completed.length) },
     { label: "Group", value: "SAT Group" }
   ];
 
+  function goToPreviousMonth() {
+    setViewDate((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
+  }
+
+  function goToNextMonth() {
+    setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
+  }
+
+  function goToToday() {
+    setViewDate(new Date(today.getFullYear(), today.getMonth(), 1));
+  }
+
   return (
-    <StudentShell active="schedule" title="Student — Schedule">
+    <StudentShell active="schedule">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-black text-slate-950">Schedule</h1>
@@ -40,69 +134,148 @@ export function SchedulePage() {
         </div>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h2 className="text-base font-black text-slate-950">
-            Upcoming Lessons
-          </h2>
-          <ul className="mt-4 divide-y divide-slate-100">
-            {upcoming.map((lesson) => (
-              <li
-                className="grid gap-3 py-4 sm:grid-cols-[1fr_auto] sm:items-center"
-                key={`${lesson.date}-${lesson.time}`}
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-black text-slate-950">
+              {new Intl.DateTimeFormat("en-US", {
+                month: "long",
+                year: "numeric"
+              }).format(viewDate)}
+            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                onClick={goToToday}
+                type="button"
               >
-                <div>
-                  <p className="font-bold text-slate-900">
-                    {lesson.date} · {lesson.time}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {lesson.duration} · {lesson.group}
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-800">
-                    {lesson.topic}
-                  </p>
-                </div>
-                <button
-                  className="inline-flex shrink-0 items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 sm:w-auto"
-                  type="button"
-                >
-                  Lesson link
-                </button>
-              </li>
+                Today
+              </button>
+              <button
+                aria-label="Previous month"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
+                onClick={goToPreviousMonth}
+                type="button"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                aria-label="Next month"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
+                onClick={goToNextMonth}
+                type="button"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200">
+            {WEEKDAY_LABELS.map((label) => (
+              <div
+                className="bg-slate-50 py-2 text-center text-[11px] font-black uppercase tracking-wide text-slate-500"
+                key={label}
+              >
+                {label}
+              </div>
             ))}
-          </ul>
+
+            {calendarDays.map((day) => {
+              const dayLessons = lessonsByDate.get(dateKey(day)) ?? [];
+              const isCurrentMonth = day.getMonth() === viewDate.getMonth();
+              const isToday = isSameDay(day, today);
+
+              return (
+                <div
+                  className={[
+                    "min-h-24 bg-white p-1.5 sm:min-h-28",
+                    isCurrentMonth ? "" : "bg-slate-50/60"
+                  ].join(" ")}
+                  key={day.toISOString()}
+                >
+                  <span
+                    className={[
+                      "inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold",
+                      isToday
+                        ? "bg-blue-600 text-white"
+                        : isCurrentMonth
+                          ? "text-slate-700"
+                          : "text-slate-300"
+                    ].join(" ")}
+                  >
+                    {day.getDate()}
+                  </span>
+
+                  <div className="mt-1 space-y-1">
+                    {dayLessons.map((lesson) => (
+                      <div
+                        className={[
+                          "truncate rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-tight",
+                          lesson.status === "upcoming"
+                            ? "bg-blue-50 text-blue-700"
+                            : "bg-slate-100 text-slate-500"
+                        ].join(" ")}
+                        key={lesson.date + lesson.topic}
+                        title={`${lesson.time} · ${lesson.topic}`}
+                      >
+                        {lesson.time} {lesson.topic}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <h2 className="text-base font-black text-slate-950">
-            Past Lessons
+            {new Intl.DateTimeFormat("en-US", {
+              month: "long",
+              year: "numeric"
+            }).format(viewDate)}{" "}
+            Lessons
           </h2>
-          <ul className="mt-4 divide-y divide-slate-100">
-            {completed.map((lesson) => (
-              <li
-                className="grid gap-3 py-4 sm:grid-cols-[1fr_auto] sm:items-center"
-                key={`${lesson.date}-${lesson.time}`}
-              >
-                <div>
-                  <p className="font-bold text-slate-900">
-                    {lesson.date} · {lesson.time}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {lesson.duration} · {lesson.group}
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-800">
-                    {lesson.topic}
-                  </p>
-                </div>
-                {lesson.hasRecording ? (
-                  <button
-                    className="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-800 transition hover:bg-slate-50 sm:w-auto"
-                    type="button"
-                  >
-                    Watch recording
-                  </button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+
+          {monthLessons.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-500">
+              No lessons scheduled this month.
+            </p>
+          ) : (
+            <ul className="mt-3 divide-y divide-slate-100">
+              {monthLessons.map((lesson) => (
+                <li
+                  className="grid gap-3 py-4 sm:grid-cols-[1fr_auto] sm:items-center"
+                  key={lesson.date + lesson.topic}
+                >
+                  <div>
+                    <p className="font-bold text-slate-900">
+                      {formatLessonDate(lesson.date)} · {lesson.time}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {lesson.duration} · {lesson.group}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-slate-800">
+                      {lesson.topic}
+                    </p>
+                  </div>
+                  {lesson.status === "upcoming" ? (
+                    <button
+                      className="inline-flex shrink-0 items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 sm:w-auto"
+                      type="button"
+                    >
+                      Lesson link
+                    </button>
+                  ) : lesson.hasRecording ? (
+                    <button
+                      className="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-800 transition hover:bg-slate-50 sm:w-auto"
+                      type="button"
+                    >
+                      Watch recording
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
     </StudentShell>

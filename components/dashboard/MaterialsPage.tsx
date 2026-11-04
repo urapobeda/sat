@@ -22,7 +22,7 @@ export function MaterialsPage() {
   ];
 
   return (
-    <StudentShell active="materials" title="Student — Materials">
+    <StudentShell active="materials">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-black text-slate-950">Materials</h1>

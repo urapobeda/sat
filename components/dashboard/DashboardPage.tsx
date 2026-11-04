@@ -58,7 +58,7 @@ export function DashboardPage() {
   const upcomingHomework = homeworkRows.slice(0, 5);
 
   return (
-    <StudentShell active="home" title="Student — Home">
+    <StudentShell active="home">
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         <main className="space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

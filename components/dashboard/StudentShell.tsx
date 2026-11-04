@@ -4,12 +4,10 @@ import {
   BookOpen,
   CalendarDays,
   ClipboardList,
-  Download,
   FileText,
   FolderOpen,
   Home,
   NotebookPen,
-  Play,
   Video
 } from "lucide-react";
 
@@ -64,35 +62,13 @@ const sidebarNav: NavItem[] = [
 
 export function StudentShell({
   active,
-  children,
-  title
+  children
 }: {
   active: NavId;
   children: ReactNode;
-  title: string;
 }) {
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="flex items-center justify-between bg-blue-600 px-5 py-3 text-white sm:px-7">
-        <span className="text-sm font-semibold text-blue-100">{title}</span>
-        <div className="flex items-center gap-3">
-          <button
-            aria-label="Download report"
-            className="rounded-lg p-2 text-blue-100 transition hover:bg-white/10 hover:text-white"
-            type="button"
-          >
-            <Download size={18} />
-          </button>
-          <button
-            className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-3 py-1.5 text-sm font-bold transition hover:bg-white/10"
-            type="button"
-          >
-            <Play size={14} />
-            PLAY
-          </button>
-        </div>
-      </div>
-
       <div className="flex">
         <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white p-5 lg:block">
           <div className="px-1">

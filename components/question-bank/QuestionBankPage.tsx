@@ -193,7 +193,7 @@ export function QuestionBankPage() {
   }
 
   return (
-    <StudentShell active="question-bank" title="Student — Question Bank">
+    <StudentShell active="question-bank">
       <section className="space-y-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>

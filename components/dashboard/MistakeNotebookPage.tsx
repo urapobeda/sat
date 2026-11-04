@@ -25,7 +25,7 @@ export function MistakeNotebookPage() {
   ];
 
   return (
-    <StudentShell active="mistakes" title="Student — Mistake Notebook">
+    <StudentShell active="mistakes">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-black text-slate-950">Mistake Notebook</h1>
