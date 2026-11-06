@@ -4,6 +4,9 @@ import path from "node:path";
 const nextConfig = {
   turbopack: {
     root: path.resolve(".")
+  },
+  devIndicators: {
+    position: "bottom-right"
   }
 };
 
