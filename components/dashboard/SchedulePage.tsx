@@ -111,7 +111,7 @@ export function SchedulePage() {
     <StudentShell active="schedule">
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-black text-slate-950">Schedule</h1>
+          <h1 className="text-3xl font-bold text-slate-950">Schedule</h1>
           <p className="mt-2 text-base text-slate-600">
             Your upcoming and past lessons with your teacher.
           </p>
@@ -123,10 +123,10 @@ export function SchedulePage() {
               className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
               key={stat.label}
             >
-              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                 {stat.label}
               </p>
-              <p className="mt-1 truncate text-xl font-black text-slate-950">
+              <p className="mt-1 truncate text-xl font-bold text-slate-950">
                 {stat.value}
               </p>
             </div>
@@ -135,7 +135,7 @@ export function SchedulePage() {
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-black text-slate-950">
+            <h2 className="text-xl font-bold text-slate-950">
               {new Intl.DateTimeFormat("en-US", {
                 month: "long",
                 year: "numeric"
@@ -143,7 +143,7 @@ export function SchedulePage() {
             </h2>
             <div className="flex items-center gap-2">
               <button
-                className="rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                className="rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                 onClick={goToToday}
                 type="button"
               >
@@ -171,7 +171,7 @@ export function SchedulePage() {
           <div className="mt-6 grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200">
             {WEEKDAY_LABELS.map((label) => (
               <div
-                className="bg-slate-50 py-2.5 text-center text-[11px] font-black uppercase tracking-wide text-slate-500"
+                className="bg-slate-50 py-2.5 text-center text-[11px] font-bold uppercase tracking-wide text-slate-500"
                 key={label}
               >
                 {label}
@@ -193,7 +193,7 @@ export function SchedulePage() {
                 >
                   <span
                     className={[
-                      "inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold",
+                      "inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold",
                       isToday
                         ? "bg-blue-600 text-white"
                         : isCurrentMonth
@@ -208,7 +208,7 @@ export function SchedulePage() {
                     {dayLessons.map((lesson) => (
                       <div
                         className={[
-                          "truncate rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-tight",
+                          "truncate rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-tight",
                           lesson.status === "upcoming"
                             ? "bg-blue-50 text-blue-700"
                             : "bg-slate-100 text-slate-500"
@@ -227,7 +227,7 @@ export function SchedulePage() {
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-          <h2 className="text-lg font-black text-slate-950">
+          <h2 className="text-lg font-bold text-slate-950">
             {new Intl.DateTimeFormat("en-US", {
               month: "long",
               year: "numeric"
@@ -247,7 +247,7 @@ export function SchedulePage() {
                   key={lesson.date + lesson.topic}
                 >
                   <div>
-                    <p className="font-bold text-slate-900">
+                    <p className="font-semibold text-slate-900">
                       {formatLessonDate(lesson.date)} · {lesson.time}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-500">
@@ -259,14 +259,14 @@ export function SchedulePage() {
                   </div>
                   {lesson.status === "upcoming" ? (
                     <button
-                      className="inline-flex shrink-0 items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 sm:w-auto"
+                      className="inline-flex shrink-0 items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
                       type="button"
                     >
                       Lesson link
                     </button>
                   ) : lesson.hasRecording ? (
                     <button
-                      className="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-800 transition hover:bg-slate-50 sm:w-auto"
+                      className="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-800 transition hover:bg-slate-50 sm:w-auto"
                       type="button"
                     >
                       Watch recording

@@ -25,7 +25,7 @@ export function MaterialsPage() {
     <StudentShell active="materials">
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-black text-slate-950">Materials</h1>
+          <h1 className="text-3xl font-bold text-slate-950">Materials</h1>
           <p className="mt-2 text-base text-slate-600">
             Resources shared by your teacher.
           </p>
@@ -37,10 +37,10 @@ export function MaterialsPage() {
               className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
               key={stat.label}
             >
-              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                 {stat.label}
               </p>
-              <p className="mt-1 truncate text-xl font-black text-slate-950">
+              <p className="mt-1 truncate text-xl font-bold text-slate-950">
                 {stat.value}
               </p>
             </div>
@@ -62,7 +62,7 @@ export function MaterialsPage() {
                       <Icon size={19} />
                     </span>
                     <div>
-                      <p className="font-bold text-slate-900">{material.title}</p>
+                      <p className="font-semibold text-slate-900">{material.title}</p>
                       <p className="mt-1.5 text-xs text-slate-500">
                         {material.type} · {material.section} · Uploaded{" "}
                         {material.uploadedDate}
@@ -70,7 +70,7 @@ export function MaterialsPage() {
                     </div>
                   </div>
                   <button
-                    className="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-800 transition hover:bg-slate-50 sm:w-auto"
+                    className="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-800 transition hover:bg-slate-50 sm:w-auto"
                     type="button"
                   >
                     Download

@@ -78,7 +78,7 @@ export function StudentShell({
               <Panda size={24} />
             </span>
             <div>
-              <p className="text-xl font-black text-white">sat/hub</p>
+              <p className="text-xl font-bold text-white">sat/hub</p>
               <p className="text-xs font-semibold text-slate-400">
                 SAT · IELTS · English
               </p>
@@ -92,7 +92,7 @@ export function StudentShell({
               return (
                 <Link
                   className={[
-                    "flex items-center justify-between rounded-xl px-3.5 py-3 text-[15px] font-bold transition",
+                    "flex items-center justify-between rounded-xl px-3.5 py-3 text-[15px] font-semibold transition",
                     isActive
                       ? "bg-blue-600 !text-white shadow-lg shadow-blue-950/30"
                       : "!text-slate-300 hover:bg-white/5 hover:!text-white"
@@ -107,7 +107,7 @@ export function StudentShell({
                   {item.badge ? (
                     <span
                       className={[
-                        "rounded-full px-2 py-0.5 text-xs font-black",
+                        "rounded-full px-2 py-0.5 text-xs font-bold",
                         item.badgeTone === "amber"
                           ? "bg-amber-400/20 text-amber-300"
                           : "bg-white/10 text-slate-300"
@@ -122,11 +122,11 @@ export function StudentShell({
           </nav>
 
           <div className="mt-auto flex items-center gap-3 border-t border-white/10 pt-5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-black text-white">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
               A
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-white">Aliya</p>
+              <p className="truncate text-sm font-semibold text-white">Aliya</p>
               <p className="truncate text-xs text-slate-400">Student</p>
             </div>
             <button

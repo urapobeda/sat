@@ -28,7 +28,7 @@ export function MistakeNotebookPage() {
     <StudentShell active="mistakes">
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-black text-slate-950">Mistake Notebook</h1>
+          <h1 className="text-3xl font-bold text-slate-950">Mistake Notebook</h1>
           <p className="mt-2 text-base text-slate-600">
             {totalMissed} questions are waiting for review across {topicsCount}{" "}
             topics.
@@ -41,10 +41,10 @@ export function MistakeNotebookPage() {
               className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
               key={stat.label}
             >
-              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                 {stat.label}
               </p>
-              <p className="mt-1 truncate text-xl font-black text-slate-950">
+              <p className="mt-1 truncate text-xl font-bold text-slate-950">
                 {stat.value}
               </p>
             </div>
@@ -53,7 +53,7 @@ export function MistakeNotebookPage() {
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-lg font-black text-slate-950">
+            <h2 className="text-lg font-bold text-slate-950">
               Missed by Topic
             </h2>
             <p className="text-xs font-semibold text-slate-400">
@@ -69,8 +69,8 @@ export function MistakeNotebookPage() {
               >
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-slate-900">{topic.topic}</p>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
+                    <p className="font-semibold text-slate-900">{topic.topic}</p>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
                       {topic.sectionLabel}
                     </span>
                   </div>
@@ -86,11 +86,11 @@ export function MistakeNotebookPage() {
                 </div>
 
                 <div className="flex items-center justify-start gap-3 sm:justify-end">
-                  <span className="text-sm font-bold text-slate-500">
+                  <span className="text-sm font-semibold text-slate-500">
                     {topic.accuracy}%
                   </span>
                   <Link
-                    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold !text-white shadow-sm transition hover:bg-blue-700"
+                    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold !text-white shadow-sm transition hover:bg-blue-700"
                     href={getMistakePracticeHref(topic)}
                   >
                     Review {topic.missedCount}

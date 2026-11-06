@@ -27,7 +27,7 @@ export function HomeworkPage() {
     <StudentShell active="homework">
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-black text-slate-950">Homework</h1>
+          <h1 className="text-3xl font-bold text-slate-950">Homework</h1>
           <p className="mt-2 text-base text-slate-600">
             {homeworkRows.length} assignments from your teacher.
           </p>
@@ -39,10 +39,10 @@ export function HomeworkPage() {
               className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
               key={stat.label}
             >
-              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                 {stat.label}
               </p>
-              <p className="mt-1 text-xl font-black text-slate-950">
+              <p className="mt-1 text-xl font-bold text-slate-950">
                 {stat.value}
               </p>
             </div>
