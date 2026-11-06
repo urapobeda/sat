@@ -8,6 +8,7 @@ import {
   FolderOpen,
   Home,
   NotebookPen,
+  Panda,
   Video
 } from "lucide-react";
 
@@ -70,12 +71,17 @@ export function StudentShell({
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="flex">
-        <aside className="hidden w-72 shrink-0 border-r border-slate-200 bg-white p-6 lg:block">
-          <div className="px-1">
-            <p className="text-xl font-black text-slate-950">sat/hub</p>
-            <p className="mt-1 text-sm font-semibold text-slate-400">
-              SAT · IELTS · English
-            </p>
+        <aside className="hidden w-72 shrink-0 bg-slate-900 p-6 lg:block">
+          <div className="flex items-center gap-3 px-1">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-950/40">
+              <Panda size={24} />
+            </span>
+            <div>
+              <p className="text-xl font-black text-white">sat/hub</p>
+              <p className="text-xs font-semibold text-slate-400">
+                SAT · IELTS · English
+              </p>
+            </div>
           </div>
 
           <nav className="mt-8 space-y-1.5">
@@ -87,8 +93,8 @@ export function StudentShell({
                   className={[
                     "flex items-center justify-between rounded-xl px-3.5 py-3 text-[15px] font-bold transition",
                     isActive
-                      ? "bg-blue-600 !text-white"
-                      : "text-slate-700 hover:bg-slate-100"
+                      ? "bg-blue-600 !text-white shadow-lg shadow-blue-950/30"
+                      : "!text-slate-300 hover:bg-white/5 hover:!text-white"
                   ].join(" ")}
                   href={item.href}
                   key={item.id}
@@ -102,8 +108,8 @@ export function StudentShell({
                       className={[
                         "rounded-full px-2 py-0.5 text-xs font-black",
                         item.badgeTone === "amber"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-slate-100 text-slate-600"
+                          ? "bg-amber-400/20 text-amber-300"
+                          : "bg-white/10 text-slate-300"
                       ].join(" ")}
                     >
                       {item.badge}

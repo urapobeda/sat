@@ -1,3 +1,4 @@
+import { Panda } from "lucide-react";
 import Link from "next/link";
 import { HomeworkTable } from "@/components/dashboard/HomeworkTable";
 import { homeworkRows } from "@/components/dashboard/homeworkData";
@@ -59,11 +60,20 @@ export function DashboardPage() {
 
   return (
     <StudentShell active="home">
-      <div className="grid gap-8 xl:grid-cols-[1fr_360px]">
-        <main className="space-y-8">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+      <div className="space-y-8">
+        <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-sky-100 via-blue-50 to-white p-6 shadow-sm sm:p-8">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full bg-blue-200/50 blur-3xl"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-14 bottom-0 h-44 w-44 rounded-full bg-emerald-100/60 blur-3xl"
+          />
+
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-xs font-black tracking-wide text-slate-400">
+              <p className="text-xs font-black tracking-wide text-slate-500">
                 {getDateLine(now)}
               </p>
               <h1 className="mt-2 text-3xl font-black text-slate-950">
@@ -77,10 +87,10 @@ export function DashboardPage() {
             <div className="flex gap-3">
               {topStats.map((stat) => (
                 <div
-                  className="rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-center shadow-sm"
+                  className="rounded-2xl border border-white bg-white/80 px-5 py-3.5 text-center shadow-sm backdrop-blur"
                   key={stat.label}
                 >
-                  <p className="whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                  <p className="whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-slate-500">
                     {stat.label}
                   </p>
                   <p className="mt-1 text-xl font-black text-slate-950">
@@ -91,6 +101,13 @@ export function DashboardPage() {
             </div>
           </div>
 
+          <span className="pointer-events-none absolute -bottom-3 right-6 hidden h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-emerald-100 text-emerald-700 shadow-lg sm:flex">
+            <Panda size={40} />
+          </span>
+        </section>
+
+        <div className="grid gap-8 xl:grid-cols-[1fr_360px]">
+        <main className="space-y-8">
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-black text-slate-950">
@@ -269,6 +286,7 @@ export function DashboardPage() {
             </Link>
           </section>
         </aside>
+        </div>
       </div>
     </StudentShell>
   );
