@@ -26,7 +26,7 @@ export function LessonRecordingsPage() {
 
   return (
     <StudentShell active="recordings">
-      <div className="space-y-8">
+      <div className="mx-auto w-full max-w-7xl space-y-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-950">
             Lesson Recordings

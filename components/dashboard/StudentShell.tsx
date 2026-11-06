@@ -8,10 +8,10 @@ import {
   FolderOpen,
   Home,
   NotebookPen,
-  Panda,
   Settings,
   Video
 } from "lucide-react";
+import { BearIcon } from "@/components/dashboard/BearIcon";
 
 // Draft redesign — student/teacher workflow (homework, schedule, lesson
 // recordings, teacher comments) is not implemented in Supabase yet, so nav
@@ -75,7 +75,7 @@ export function StudentShell({
         <aside className="hidden w-72 shrink-0 flex-col overflow-y-auto bg-slate-900 p-6 lg:sticky lg:top-0 lg:flex lg:h-screen">
           <div className="flex items-center gap-3 px-1">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-950/40">
-              <Panda size={24} />
+              <BearIcon size={24} />
             </span>
             <div>
               <p className="text-xl font-bold text-white">sat/hub</p>
@@ -122,8 +122,8 @@ export function StudentShell({
           </nav>
 
           <div className="mt-auto flex items-center gap-3 border-t border-white/10 pt-5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
-              A
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+              <BearIcon size={20} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white">Aliya</p>
@@ -139,8 +139,8 @@ export function StudentShell({
           </div>
         </aside>
 
-        <div className="flex-1 p-6 sm:p-8 lg:p-10 xl:p-12">
-          <div className="mx-auto w-full max-w-7xl">{children}</div>
+        <div className="flex-1 overflow-hidden p-6 sm:p-8 lg:p-10 xl:p-12">
+          {children}
         </div>
       </div>
     </div>
