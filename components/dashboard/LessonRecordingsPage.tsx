@@ -26,42 +26,42 @@ export function LessonRecordingsPage() {
 
   return (
     <StudentShell active="recordings">
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-black text-slate-950">
+          <h1 className="text-3xl font-black text-slate-950">
             Lesson Recordings
           </h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-2 text-base text-slate-600">
             Rewatch past lessons from your SAT group.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {summaryStats.map((stat) => (
             <div
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+              className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
               key={stat.label}
             >
               <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
                 {stat.label}
               </p>
-              <p className="mt-0.5 truncate text-lg font-black text-slate-950">
+              <p className="mt-1 truncate text-xl font-black text-slate-950">
                 {stat.value}
               </p>
             </div>
           ))}
         </div>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <ul className="divide-y divide-slate-100">
             {recordings.map((recording) => (
               <li
-                className="grid gap-3 py-4 sm:grid-cols-[1fr_auto] sm:items-center"
+                className="grid gap-3 py-5 sm:grid-cols-[1fr_auto] sm:items-center"
                 key={recording.title}
               >
                 <div>
                   <p className="font-bold text-slate-900">{recording.title}</p>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1.5 text-xs text-slate-500">
                     {recording.date} · {recording.group} · {recording.length}
                   </p>
                 </div>

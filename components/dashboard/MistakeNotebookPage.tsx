@@ -26,34 +26,34 @@ export function MistakeNotebookPage() {
 
   return (
     <StudentShell active="mistakes">
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-black text-slate-950">Mistake Notebook</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-3xl font-black text-slate-950">Mistake Notebook</h1>
+          <p className="mt-2 text-base text-slate-600">
             {totalMissed} questions are waiting for review across {topicsCount}{" "}
             topics.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {summaryStats.map((stat) => (
             <div
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+              className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
               key={stat.label}
             >
               <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
                 {stat.label}
               </p>
-              <p className="mt-0.5 truncate text-lg font-black text-slate-950">
+              <p className="mt-1 truncate text-xl font-black text-slate-950">
                 {stat.value}
               </p>
             </div>
           ))}
         </div>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-black text-slate-950">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-lg font-black text-slate-950">
               Missed by Topic
             </h2>
             <p className="text-xs font-semibold text-slate-400">
@@ -64,7 +64,7 @@ export function MistakeNotebookPage() {
           <ul className="divide-y divide-slate-100">
             {mistakeTopics.map((topic) => (
               <li
-                className="grid gap-3 py-4 sm:grid-cols-[1fr_auto] sm:items-center"
+                className="grid gap-3 py-5 sm:grid-cols-[1fr_auto] sm:items-center"
                 key={topic.topic}
               >
                 <div>
@@ -74,10 +74,10 @@ export function MistakeNotebookPage() {
                       {topic.sectionLabel}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1.5 text-xs text-slate-500">
                     {topic.missedCount} missed · last missed {topic.lastMissed}
                   </p>
-                  <div className="mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-100">
+                  <div className="mt-2.5 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-100">
                     <div
                       className={`h-full rounded-full ${getAccuracyColor(topic.accuracy)}`}
                       style={{ width: `${topic.accuracy}%` }}
@@ -90,7 +90,7 @@ export function MistakeNotebookPage() {
                     {topic.accuracy}%
                   </span>
                   <Link
-                    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold !text-white shadow-sm transition hover:bg-blue-700"
+                    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold !text-white shadow-sm transition hover:bg-blue-700"
                     href={getMistakePracticeHref(topic)}
                   >
                     Review {topic.missedCount}

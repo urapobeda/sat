@@ -109,33 +109,33 @@ export function SchedulePage() {
 
   return (
     <StudentShell active="schedule">
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-black text-slate-950">Schedule</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-3xl font-black text-slate-950">Schedule</h1>
+          <p className="mt-2 text-base text-slate-600">
             Your upcoming and past lessons with your teacher.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {summaryStats.map((stat) => (
             <div
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+              className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
               key={stat.label}
             >
               <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
                 {stat.label}
               </p>
-              <p className="mt-0.5 truncate text-lg font-black text-slate-950">
+              <p className="mt-1 truncate text-xl font-black text-slate-950">
                 {stat.value}
               </p>
             </div>
           ))}
         </div>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black text-slate-950">
+            <h2 className="text-xl font-black text-slate-950">
               {new Intl.DateTimeFormat("en-US", {
                 month: "long",
                 year: "numeric"
@@ -143,7 +143,7 @@ export function SchedulePage() {
             </h2>
             <div className="flex items-center gap-2">
               <button
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                className="rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
                 onClick={goToToday}
                 type="button"
               >
@@ -151,7 +151,7 @@ export function SchedulePage() {
               </button>
               <button
                 aria-label="Previous month"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
                 onClick={goToPreviousMonth}
                 type="button"
               >
@@ -159,7 +159,7 @@ export function SchedulePage() {
               </button>
               <button
                 aria-label="Next month"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
                 onClick={goToNextMonth}
                 type="button"
               >
@@ -168,10 +168,10 @@ export function SchedulePage() {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200">
+          <div className="mt-6 grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200">
             {WEEKDAY_LABELS.map((label) => (
               <div
-                className="bg-slate-50 py-2 text-center text-[11px] font-black uppercase tracking-wide text-slate-500"
+                className="bg-slate-50 py-2.5 text-center text-[11px] font-black uppercase tracking-wide text-slate-500"
                 key={label}
               >
                 {label}
@@ -186,7 +186,7 @@ export function SchedulePage() {
               return (
                 <div
                   className={[
-                    "min-h-24 bg-white p-1.5 sm:min-h-28",
+                    "min-h-28 bg-white p-2 sm:min-h-32",
                     isCurrentMonth ? "" : "bg-slate-50/60"
                   ].join(" ")}
                   key={day.toISOString()}
@@ -226,8 +226,8 @@ export function SchedulePage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h2 className="text-base font-black text-slate-950">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <h2 className="text-lg font-black text-slate-950">
             {new Intl.DateTimeFormat("en-US", {
               month: "long",
               year: "numeric"
@@ -236,14 +236,14 @@ export function SchedulePage() {
           </h2>
 
           {monthLessons.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500">
+            <p className="mt-4 text-sm text-slate-500">
               No lessons scheduled this month.
             </p>
           ) : (
-            <ul className="mt-3 divide-y divide-slate-100">
+            <ul className="mt-4 divide-y divide-slate-100">
               {monthLessons.map((lesson) => (
                 <li
-                  className="grid gap-3 py-4 sm:grid-cols-[1fr_auto] sm:items-center"
+                  className="grid gap-3 py-5 sm:grid-cols-[1fr_auto] sm:items-center"
                   key={lesson.date + lesson.topic}
                 >
                   <div>
@@ -253,7 +253,7 @@ export function SchedulePage() {
                     <p className="mt-0.5 text-xs text-slate-500">
                       {lesson.duration} · {lesson.group}
                     </p>
-                    <p className="mt-2 text-sm font-semibold text-slate-800">
+                    <p className="mt-2 text-sm font-semibold leading-6 text-slate-800">
                       {lesson.topic}
                     </p>
                   </div>

@@ -70,22 +70,22 @@ export function StudentShell({
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="flex">
-        <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white p-5 lg:block">
+        <aside className="hidden w-72 shrink-0 border-r border-slate-200 bg-white p-6 lg:block">
           <div className="px-1">
-            <p className="text-lg font-black text-slate-950">sat/hub</p>
-            <p className="text-xs font-semibold text-slate-400">
+            <p className="text-xl font-black text-slate-950">sat/hub</p>
+            <p className="mt-1 text-sm font-semibold text-slate-400">
               SAT · IELTS · English
             </p>
           </div>
 
-          <nav className="mt-6 space-y-1">
+          <nav className="mt-8 space-y-1.5">
             {sidebarNav.map((item) => {
               const isActive = item.id === active;
 
               return (
                 <Link
                   className={[
-                    "flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-bold transition",
+                    "flex items-center justify-between rounded-xl px-3.5 py-3 text-[15px] font-bold transition",
                     isActive
                       ? "bg-blue-600 !text-white"
                       : "text-slate-700 hover:bg-slate-100"
@@ -93,8 +93,8 @@ export function StudentShell({
                   href={item.href}
                   key={item.id}
                 >
-                  <span className="flex items-center gap-3">
-                    <item.icon size={18} />
+                  <span className="flex items-center gap-3.5">
+                    <item.icon size={19} />
                     {item.label}
                   </span>
                   {item.badge ? (
@@ -115,7 +115,9 @@ export function StudentShell({
           </nav>
         </aside>
 
-        <div className="flex-1 p-5 sm:p-7 lg:p-8">{children}</div>
+        <div className="flex-1 p-6 sm:p-8 lg:p-10 xl:p-12">
+          <div className="mx-auto w-full max-w-7xl">{children}</div>
+        </div>
       </div>
     </div>
   );
