@@ -45,7 +45,7 @@ export function SectionHeroCard({
           />
         </div>
         <Link
-          className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow-sm transition hover:bg-white/90"
+          className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-bold !text-slate-900 shadow-sm transition hover:bg-white/90"
           href={href}
         >
           Open

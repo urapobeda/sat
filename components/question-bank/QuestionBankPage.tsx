@@ -56,7 +56,7 @@ const SECTIONS = [
     icon: BookOpen,
     key: "reading-writing" as const,
     title: "Reading & Writing",
-    heroGradient: "from-fuchsia-500 via-pink-500 to-purple-600"
+    heroGradient: "from-violet-500 via-purple-600 to-purple-700"
   },
   {
     icon: SquareRadical,
