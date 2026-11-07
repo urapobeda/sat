@@ -19,6 +19,7 @@ import { ActivityTrendCard } from "@/components/question-bank/ActivityTrendCard"
 import { QuestionAnalyticsRow } from "@/components/question-bank/QuestionAnalyticsRow";
 import { SearchInput } from "@/components/question-bank/SearchInput";
 import { SectionHeroCard } from "@/components/question-bank/SectionHeroCard";
+import { StudyBearIllustration } from "@/components/question-bank/StudyBearIllustration";
 import {
   getCategoriesForSection,
   getMastery,
@@ -219,66 +220,27 @@ export function QuestionBankPage() {
   return (
     <StudentShell active="question-bank">
       <section className="mx-auto w-full max-w-7xl space-y-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="text-blue-600">
-                <BookOpen size={24} />
-              </span>
-              <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                Question Bank
-              </h1>
+        <section className="relative overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-violet-50 via-indigo-50 to-white p-6 shadow-sm sm:p-8">
+          <div className="relative z-10 flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="text-blue-600">
+                  <BookOpen size={24} />
+                </span>
+                <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+                  Question Bank
+                </h1>
+              </div>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600 sm:text-base">
+                Practice questions by section, topic, and difficulty. Mark the
+                important ones, track your progress, and return to the
+                questions you find hardest.
+              </p>
             </div>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-              Explore SAT-style questions by section, topic, difficulty, source,
-              and review history.
-            </p>
-          </div>
 
-          <div className="flex flex-col gap-3 xl:items-end">
-            <DifficultyTabs
-              onChange={setDifficultyFilter}
-              value={difficultyFilter}
-            />
-            <div className="grid gap-3 sm:grid-cols-3">
-              <CompactFilterSelect
-                icon={XCircle}
-                label="Incorrect"
-                onChange={(value) => setAnswerFilter(value as AnswerFilter)}
-                options={[
-                  { label: "All", value: "all" },
-                  { label: "Yes", value: "incorrect" },
-                  { label: "No", value: "not-incorrect" }
-                ]}
-                value={answerFilter}
-              />
-              <CompactFilterSelect
-                icon={FileText}
-                label="Bluebook"
-                onChange={(value) => setBluebookFilter(value as BluebookFilter)}
-                options={[
-                  { label: "All", value: "all" },
-                  { label: "Only", value: "bluebook-only" },
-                  { label: "Exclude", value: "exclude-bluebook" }
-                ]}
-                value={bluebookFilter}
-              />
-              <button
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
-                onClick={resetFilters}
-                type="button"
-              >
-                <SlidersHorizontal size={15} />
-                Reset
-              </button>
-            </div>
+            <StudyBearIllustration />
           </div>
-        </div>
-
-        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
-          <SearchInput onChange={setSearchQuery} value={searchQuery} />
-          <MarkedTabs onChange={setMarkedFilter} value={markedFilter} />
-        </div>
+        </section>
 
           {isLoading ? (
             <QuestionBankSkeleton />
@@ -325,6 +287,58 @@ export function QuestionBankPage() {
               </div>
 
               <ActivityTrendCard />
+
+              <div>
+                <h2 className="mb-3 text-lg font-bold text-slate-950">
+                  Browse Questions
+                </h2>
+
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:grid-cols-[1fr_auto] md:items-center xl:flex-1">
+                    <SearchInput onChange={setSearchQuery} value={searchQuery} />
+                    <MarkedTabs onChange={setMarkedFilter} value={markedFilter} />
+                  </div>
+
+                  <div className="flex flex-col gap-3 xl:items-end">
+                    <DifficultyTabs
+                      onChange={setDifficultyFilter}
+                      value={difficultyFilter}
+                    />
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <CompactFilterSelect
+                        icon={XCircle}
+                        label="Incorrect"
+                        onChange={(value) => setAnswerFilter(value as AnswerFilter)}
+                        options={[
+                          { label: "All", value: "all" },
+                          { label: "Yes", value: "incorrect" },
+                          { label: "No", value: "not-incorrect" }
+                        ]}
+                        value={answerFilter}
+                      />
+                      <CompactFilterSelect
+                        icon={FileText}
+                        label="Bluebook"
+                        onChange={(value) => setBluebookFilter(value as BluebookFilter)}
+                        options={[
+                          { label: "All", value: "all" },
+                          { label: "Only", value: "bluebook-only" },
+                          { label: "Exclude", value: "exclude-bluebook" }
+                        ]}
+                        value={bluebookFilter}
+                      />
+                      <button
+                        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+                        onClick={resetFilters}
+                        type="button"
+                      >
+                        <SlidersHorizontal size={15} />
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {filteredQuestions.length === 0 ? (
                 <StatusCard
