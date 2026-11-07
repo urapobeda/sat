@@ -332,6 +332,68 @@ export async function getQuestionProgressLookup(userId: string) {
   return { answeredIds, correctIds, incorrectIds };
 }
 
+export type WeeklyActivityPoint = {
+  correct: number;
+  weekStart: string;
+  wrong: number;
+};
+
+export async function getWeeklyQuestionActivity(
+  userId: string
+): Promise<WeeklyActivityPoint[]> {
+  const supabase = getSupabaseBrowserClient();
+  const [practiceResult, testResult] = await Promise.all([
+    supabase
+      .from("practice_answers")
+      .select("created_at,is_correct")
+      .eq("user_id", userId)
+      .not("is_correct", "is", null),
+    supabase
+      .from("test_answers")
+      .select("created_at,is_correct")
+      .eq("user_id", userId)
+      .not("is_correct", "is", null)
+  ]);
+
+  if (practiceResult.error || testResult.error) {
+    throw new Error(
+      practiceResult.error?.message ??
+        testResult.error?.message ??
+        "Unable to load activity trend."
+    );
+  }
+
+  const answers = [
+    ...(practiceResult.data ?? []),
+    ...(testResult.data ?? [])
+  ];
+  const byWeek = new Map<string, { correct: number; wrong: number }>();
+
+  answers.forEach((answer) => {
+    const weekStart = getWeekStartIso(new Date(answer.created_at));
+    const current = byWeek.get(weekStart) ?? { correct: 0, wrong: 0 };
+
+    if (answer.is_correct) {
+      current.correct += 1;
+    } else {
+      current.wrong += 1;
+    }
+
+    byWeek.set(weekStart, current);
+  });
+
+  return Array.from(byWeek.entries())
+    .map(([weekStart, counts]) => ({ weekStart, ...counts }))
+    .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+}
+
+function getWeekStartIso(date: Date) {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  result.setDate(result.getDate() - result.getDay());
+  return result.toISOString().slice(0, 10);
+}
+
 export async function getMarkedQuestionIds(userId: string) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase

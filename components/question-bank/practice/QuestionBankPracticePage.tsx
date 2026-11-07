@@ -9,7 +9,7 @@ import {
   Sparkles
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
 import { EmptyState } from "@/components/EmptyState";
@@ -42,6 +42,11 @@ export function QuestionBankPracticePage() {
   const section = parseSection(searchParams.get("section"));
   const difficulty = parseDifficulty(searchParams.get("difficulty"));
   const topic = searchParams.get("topic");
+  const topicsParam = searchParams.get("topics");
+  const topics = useMemo(
+    () => (topicsParam ? topicsParam.split(",").filter(Boolean) : []),
+    [topicsParam]
+  );
   const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -88,7 +93,7 @@ export function QuestionBankPracticePage() {
 
       try {
         const [loadedQuestions, user] = await Promise.all([
-          loadQuestionsForPractice({ difficulty, section, topic }),
+          loadQuestionsForPractice({ difficulty, section, topic, topics }),
           getCurrentUser().catch(() => null)
         ]);
 
@@ -127,7 +132,7 @@ export function QuestionBankPracticePage() {
         const session = await createPracticeSession({
           difficulty: difficulty === "all" ? null : difficulty,
           section: section === "all" ? null : section,
-          topic: loadedQuestions[0]?.topic ?? topic,
+          topic: topics.length > 0 ? null : loadedQuestions[0]?.topic ?? topic,
           total: loadedQuestions.length,
           user_id: user.id
         });
@@ -149,7 +154,7 @@ export function QuestionBankPracticePage() {
     return () => {
       isMounted = false;
     };
-  }, [difficulty, section, topic]);
+  }, [difficulty, section, topic, topics]);
 
   useEffect(() => {
     if (isLoading || isFinished || practiceQuestions.length === 0) {
@@ -469,12 +474,25 @@ function parseDifficulty(value: string | null): DifficultyFilter {
 async function loadQuestionsForPractice({
   difficulty,
   section,
-  topic
+  topic,
+  topics
 }: {
   difficulty: DifficultyFilter;
   section: SectionFilter;
   topic: string | null;
+  topics: string[];
 }) {
+  if (topics.length > 0) {
+    const normalizedTopics = new Set(topics.map((item) => normalizeTopic(item)));
+    const sectionQuestions = await getQuestions({ difficulty, section });
+
+    return sectionQuestions.filter(
+      (question) =>
+        normalizedTopics.has(normalizeTopic(question.topic)) ||
+        normalizedTopics.has(normalizeTopic(getQuestionSubtopic(question)))
+    );
+  }
+
   if (!topic) {
     return getQuestions({ difficulty, section });
   }

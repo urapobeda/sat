@@ -1,56 +1,35 @@
 "use client";
 
-import {
-  ArrowRight,
-  BookOpen,
-  Bookmark,
-  FileText,
-  RotateCcw,
-  Search,
-  SlidersHorizontal,
-  SquareRadical,
-  XCircle,
-  type LucideIcon
-} from "lucide-react";
-import Link from "next/link";
+import { BookOpen, RotateCcw, Search, SquareRadical } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { StudentShell } from "@/components/dashboard/StudentShell";
+import { AccuracyByDifficultyCard } from "@/components/question-bank/AccuracyByDifficultyCard";
+import { AccuracyByTopicCard } from "@/components/question-bank/AccuracyByTopicCard";
 import { ActivityTrendCard } from "@/components/question-bank/ActivityTrendCard";
 import { QuestionAnalyticsRow } from "@/components/question-bank/QuestionAnalyticsRow";
-import { SearchInput } from "@/components/question-bank/SearchInput";
 import { SectionHeroCard } from "@/components/question-bank/SectionHeroCard";
 import { StudyBearIllustration } from "@/components/question-bank/StudyBearIllustration";
 import {
   getCategoriesForSection,
-  getMastery,
   getQuestionCategory,
   getQuestionGroupStats,
-  getQuestionSubtopic,
-  questionMatchesSubtopic,
-  type QuestionBankCategory,
-  type QuestionBankSubtopic,
   type QuestionProgressLookup
 } from "@/lib/questionBankStructure";
-import { normalizeTopic } from "@/lib/questions";
 import {
   getCurrentUser,
   getMarkedQuestionIds,
   getQuestionProgressLookup,
-  getQuestions
+  getQuestions,
+  getWeeklyQuestionActivity,
+  type WeeklyActivityPoint
 } from "@/lib/supabase/queries";
-import type { DifficultyFilter, Question } from "@/types/sat";
-
-type AnswerFilter = "all" | "incorrect" | "not-incorrect";
-type BluebookFilter = "all" | "bluebook-only" | "exclude-bluebook";
-type MarkedFilter = "all" | "marked" | "unmarked";
+import type { Question } from "@/types/sat";
 
 const EMPTY_PROGRESS: QuestionProgressLookup = {
   answeredIds: new Set<string>(),
   correctIds: new Set<string>(),
   incorrectIds: new Set<string>()
 };
-
-const EMPTY_MARKS = new Set<string>();
 
 const SECTIONS = [
   {
@@ -71,16 +50,20 @@ const SECTIONS = [
 // Supabase), so it is shown as a static placeholder.
 const STUDY_STREAK_PLACEHOLDER = 0;
 
+const DIFFICULTIES = [
+  { key: "easy" as const, label: "Easy" },
+  { key: "medium" as const, label: "Medium" },
+  { key: "hard" as const, label: "Hard" }
+];
+
 export function QuestionBankPage() {
-  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>("all");
-  const [answerFilter, setAnswerFilter] = useState<AnswerFilter>("all");
-  const [markedFilter, setMarkedFilter] = useState<MarkedFilter>("all");
-  const [bluebookFilter, setBluebookFilter] = useState<BluebookFilter>("all");
-  const [searchQuery, setSearchQuery] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [progress, setProgress] = useState<QuestionProgressLookup>(EMPTY_PROGRESS);
-  const [markedQuestionIds, setMarkedQuestionIds] = useState<Set<string>>(EMPTY_MARKS);
-  const [hasAnswerHistory, setHasAnswerHistory] = useState(false);
+  const [markedQuestionIds, setMarkedQuestionIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [weeklyActivity, setWeeklyActivity] = useState<WeeklyActivityPoint[]>([]);
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,19 +80,24 @@ export function QuestionBankPage() {
 
       if (!user) {
         setProgress(EMPTY_PROGRESS);
-        setMarkedQuestionIds(EMPTY_MARKS);
-        setHasAnswerHistory(false);
+        setMarkedQuestionIds(new Set());
+        setWeeklyActivity([]);
+        setIsSignedIn(false);
         return;
       }
 
-      const [loadedProgress, loadedMarkedQuestionIds] = await Promise.all([
-        getQuestionProgressLookup(user.id),
-        getMarkedQuestionIds(user.id).catch(() => new Set<string>())
-      ]);
+      setIsSignedIn(true);
+
+      const [loadedProgress, loadedMarkedQuestionIds, loadedWeeklyActivity] =
+        await Promise.all([
+          getQuestionProgressLookup(user.id),
+          getMarkedQuestionIds(user.id).catch(() => new Set<string>()),
+          getWeeklyQuestionActivity(user.id).catch(() => [])
+        ]);
 
       setProgress(loadedProgress);
       setMarkedQuestionIds(loadedMarkedQuestionIds);
-      setHasAnswerHistory(loadedProgress.answeredIds.size > 0);
+      setWeeklyActivity(loadedWeeklyActivity);
     } catch (requestError) {
       console.error("Question Bank load failed", requestError);
       setError(
@@ -130,92 +118,70 @@ export function QuestionBankPage() {
     return () => window.clearTimeout(timeout);
   }, []);
 
-  const filteredQuestions = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    return questions.filter((question) => {
-      const category = getQuestionCategory(question);
-      const subtopic = getQuestionSubtopic(question);
-      const isMarked = markedQuestionIds.has(question.id);
-      const matchesDifficulty =
-        difficultyFilter === "all" || question.difficulty === difficultyFilter;
-      const matchesAnswerStatus =
-        answerFilter === "all" ||
-        (answerFilter === "incorrect"
-          ? progress.incorrectIds.has(question.id)
-          : !progress.incorrectIds.has(question.id));
-      const matchesMarked =
-        markedFilter === "all" ||
-        (markedFilter === "marked" ? isMarked : !isMarked);
-      const matchesBluebook =
-        bluebookFilter === "all" ||
-        (bluebookFilter === "bluebook-only"
-          ? question.isBluebook
-          : !question.isBluebook);
-      const matchesSearch =
-        query.length === 0 ||
-        question.question.toLowerCase().includes(query) ||
-        question.topic.toLowerCase().includes(query) ||
-        category.toLowerCase().includes(query) ||
-        subtopic.toLowerCase().includes(query);
-
-      return (
-        matchesDifficulty &&
-        matchesAnswerStatus &&
-        matchesMarked &&
-        matchesBluebook &&
-        matchesSearch
-      );
-    });
-  }, [
-    answerFilter,
-    bluebookFilter,
-    difficultyFilter,
-    markedFilter,
-    markedQuestionIds,
-    progress.incorrectIds,
-    questions,
-    searchQuery
-  ]);
-
-  const filterEmptyDescription = useMemo(() => {
-    if (answerFilter === "incorrect" && !hasAnswerHistory) {
-      return "Sign in and complete practice or tests to build your incorrect-answer list.";
-    }
-
-    if (markedFilter === "marked" && markedQuestionIds.size === 0) {
-      return "Marked questions will appear here after you save questions for review.";
-    }
-
-    return "Try a different difficulty, review status, Bluebook setting, or search query.";
-  }, [answerFilter, hasAnswerHistory, markedFilter, markedQuestionIds.size]);
-
-  function resetFilters() {
-    setDifficultyFilter("all");
-    setAnswerFilter("all");
-    setMarkedFilter("all");
-    setBluebookFilter("all");
-    setSearchQuery("");
-  }
-
-  const sectionOverviewStats = useMemo(
-    () =>
-      Object.fromEntries(
-        SECTIONS.map((section) => [
-          section.key,
-          getQuestionGroupStats(
-            questions.filter((question) => question.section === section.key),
-            progress
-          )
-        ])
-      ) as Record<(typeof SECTIONS)[number]["key"], ReturnType<typeof getQuestionGroupStats>>,
-    [questions, progress]
-  );
-
   const accuracyPercent =
     progress.answeredIds.size > 0
       ? Math.round((progress.correctIds.size / progress.answeredIds.size) * 100)
       : null;
+
+  const topicAccuracyBySection = useMemo(
+    () =>
+      Object.fromEntries(
+        SECTIONS.map((section) => {
+          const sectionQuestions = questions.filter(
+            (question) => question.section === section.key
+          );
+          const categories = getCategoriesForSection(section.key);
+
+          const rows = categories.map((category) => {
+            const categoryQuestions = sectionQuestions.filter(
+              (question) => getQuestionCategory(question) === category.title
+            );
+            const stats = getQuestionGroupStats(categoryQuestions, progress);
+
+            return {
+              accuracy:
+                stats.answeredQuestions > 0
+                  ? Math.round((stats.correctQuestions / stats.answeredQuestions) * 100)
+                  : null,
+              attempts: stats.answeredQuestions,
+              title: category.title
+            };
+          });
+
+          return [section.key, rows];
+        })
+      ),
+    [questions, progress]
+  );
+
+  const difficultyAccuracyBySection = useMemo(
+    () =>
+      Object.fromEntries(
+        SECTIONS.map((section) => {
+          const sectionQuestions = questions.filter(
+            (question) => question.section === section.key
+          );
+
+          const rows = DIFFICULTIES.map((difficulty) => {
+            const difficultyQuestions = sectionQuestions.filter(
+              (question) => question.difficulty === difficulty.key
+            );
+            const stats = getQuestionGroupStats(difficultyQuestions, progress);
+
+            return {
+              accuracy:
+                stats.answeredQuestions > 0
+                  ? Math.round((stats.correctQuestions / stats.answeredQuestions) * 100)
+                  : null,
+              label: difficulty.label
+            };
+          });
+
+          return [section.key, rows];
+        })
+      ),
+    [questions, progress]
+  );
 
   return (
     <StudentShell active="question-bank">
@@ -242,445 +208,91 @@ export function QuestionBankPage() {
           </div>
         </section>
 
-          {isLoading ? (
-            <QuestionBankSkeleton />
-          ) : error ? (
-            <QuestionBankError
-              message={error}
-              onRetry={() => void loadQuestionBank()}
-            />
-          ) : questions.length === 0 ? (
-            <StatusCard
-              description="Questions will appear here after they are added to Supabase."
-              title="No questions found"
-            />
-          ) : (
-            <>
-              <div className="grid gap-5 sm:grid-cols-2">
-                {SECTIONS.map((section) => {
-                  const stats = sectionOverviewStats[section.key];
+        {isLoading ? (
+          <QuestionBankSkeleton />
+        ) : error ? (
+          <QuestionBankError
+            message={error}
+            onRetry={() => void loadQuestionBank()}
+          />
+        ) : (
+          <>
+            <div className="grid gap-5 sm:grid-cols-2">
+              {SECTIONS.map((section) => {
+                const stats = getQuestionGroupStats(
+                  questions.filter((question) => question.section === section.key),
+                  progress
+                );
 
-                  return (
-                    <SectionHeroCard
-                      answered={stats.answeredQuestions}
-                      gradient={section.heroGradient}
-                      href={`/question-bank/practice?section=${section.key}`}
-                      icon={section.icon}
-                      key={section.key}
-                      title={section.title}
-                      total={stats.totalQuestions}
-                    />
-                  );
-                })}
-              </div>
-
-              <div>
-                <h2 className="mb-3 text-lg font-bold text-slate-950">
-                  Question Analytics
-                </h2>
-                <QuestionAnalyticsRow
-                  accuracyPercent={accuracyPercent}
-                  attempted={progress.answeredIds.size}
-                  saved={markedQuestionIds.size}
-                  streak={STUDY_STREAK_PLACEHOLDER}
-                />
-              </div>
-
-              <ActivityTrendCard />
-
-              <div>
-                <h2 className="mb-3 text-lg font-bold text-slate-950">
-                  Browse Questions
-                </h2>
-
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm md:grid-cols-[1fr_auto] md:items-center xl:flex-1">
-                    <SearchInput onChange={setSearchQuery} value={searchQuery} />
-                    <MarkedTabs onChange={setMarkedFilter} value={markedFilter} />
-                  </div>
-
-                  <div className="flex flex-col gap-3 xl:items-end">
-                    <DifficultyTabs
-                      onChange={setDifficultyFilter}
-                      value={difficultyFilter}
-                    />
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <CompactFilterSelect
-                        icon={XCircle}
-                        label="Incorrect"
-                        onChange={(value) => setAnswerFilter(value as AnswerFilter)}
-                        options={[
-                          { label: "All", value: "all" },
-                          { label: "Yes", value: "incorrect" },
-                          { label: "No", value: "not-incorrect" }
-                        ]}
-                        value={answerFilter}
-                      />
-                      <CompactFilterSelect
-                        icon={FileText}
-                        label="Bluebook"
-                        onChange={(value) => setBluebookFilter(value as BluebookFilter)}
-                        options={[
-                          { label: "All", value: "all" },
-                          { label: "Only", value: "bluebook-only" },
-                          { label: "Exclude", value: "exclude-bluebook" }
-                        ]}
-                        value={bluebookFilter}
-                      />
-                      <button
-                        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
-                        onClick={resetFilters}
-                        type="button"
-                      >
-                        <SlidersHorizontal size={15} />
-                        Reset
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {filteredQuestions.length === 0 ? (
-                <StatusCard
-                  description={filterEmptyDescription}
-                  title="No questions match these filters"
-                />
-              ) : null}
-
-              <div className="grid gap-5 xl:grid-cols-2">
-                {SECTIONS.map((section) => (
-                  <QuestionBankSection
+                return (
+                  <SectionHeroCard
+                    answered={stats.answeredQuestions}
+                    gradient={section.heroGradient}
+                    href={`/question-bank/${section.key}`}
+                    icon={section.icon}
                     key={section.key}
-                    progress={progress}
-                    questions={filteredQuestions.filter(
-                      (question) => question.section === section.key
-                    )}
-                    section={section}
+                    title={section.title}
+                    total={stats.totalQuestions}
+                  />
+                );
+              })}
+            </div>
+
+            <div>
+              <h2 className="mb-3 text-lg font-bold text-slate-950">
+                Question Analytics
+              </h2>
+              <QuestionAnalyticsRow
+                accuracyPercent={accuracyPercent}
+                attempted={progress.answeredIds.size}
+                saved={markedQuestionIds.size}
+                streak={STUDY_STREAK_PLACEHOLDER}
+              />
+            </div>
+
+            <ActivityTrendCard isSignedIn={isSignedIn} weeks={weeklyActivity} />
+
+            <div>
+              <h2 className="mb-3 text-lg font-bold text-slate-950">
+                Deeper Insights
+              </h2>
+              <div className="grid gap-5 sm:grid-cols-2">
+                {SECTIONS.map((section) => (
+                  <AccuracyByTopicCard
+                    key={section.key}
+                    rows={topicAccuracyBySection[section.key] ?? []}
+                    sectionLabel={section.title}
+                  />
+                ))}
+                {SECTIONS.map((section) => (
+                  <AccuracyByDifficultyCard
+                    key={section.key}
+                    rows={difficultyAccuracyBySection[section.key] ?? []}
+                    sectionLabel={section.title}
                   />
                 ))}
               </div>
-            </>
-          )}
+            </div>
+          </>
+        )}
       </section>
     </StudentShell>
   );
 }
 
-function QuestionBankSection({
-  progress,
-  questions,
-  section
-}: {
-  progress: QuestionProgressLookup;
-  questions: Question[];
-  section: (typeof SECTIONS)[number];
-}) {
-  const categories = getCategoriesForSection(section.key);
-
-  return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-bold text-slate-950">{section.title}</h3>
-
-      <div className="space-y-3">
-        {categories.map((category) => (
-          <CategoryCard
-            category={category}
-            key={category.title}
-            progress={progress}
-            questions={questions.filter(
-              (question) => getQuestionCategory(question) === category.title
-            )}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function CategoryCard({
-  category,
-  progress,
-  questions
-}: {
-  category: QuestionBankCategory;
-  progress: QuestionProgressLookup;
-  questions: Question[];
-}) {
-  const stats = getQuestionGroupStats(questions, progress);
-  const percent =
-    stats.totalQuestions > 0
-      ? Math.round((stats.answeredQuestions / stats.totalQuestions) * 100)
-      : 0;
-
-  return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-100 hover:shadow-md">
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
-        <div>
-          <h3 className="font-black text-slate-950">{category.title}</h3>
-          <p className="mt-1 line-clamp-1 text-xs font-medium text-slate-500">
-            {category.description}
-          </p>
-        </div>
-        <QuestionCount
-          answered={stats.answeredQuestions}
-          percent={percent}
-          total={stats.totalQuestions}
-        />
-      </div>
-
-      <div className="mt-4 space-y-1 border-l border-slate-200 pl-4">
-        {category.subtopics.map((subtopic) => (
-          <SubtopicLinkRow
-            category={category}
-            key={subtopic.title}
-            progress={progress}
-            questions={questions.filter((question) =>
-              questionMatchesSubtopic(question, subtopic.title)
-            )}
-            subtopic={subtopic}
-          />
-        ))}
-      </div>
-    </article>
-  );
-}
-
-function SubtopicLinkRow({
-  category,
-  progress,
-  questions,
-  subtopic
-}: {
-  category: QuestionBankCategory;
-  progress: QuestionProgressLookup;
-  questions: Question[];
-  subtopic: QuestionBankSubtopic;
-}) {
-  const stats = getQuestionGroupStats(questions, progress);
-  const mastery = getMastery(stats);
-  const percent =
-    stats.totalQuestions > 0
-      ? Math.round((stats.answeredQuestions / stats.totalQuestions) * 100)
-      : 0;
-  const href = `/question-bank/practice?section=${category.section}&category=${encodeURIComponent(category.title)}&topic=${normalizeTopic(subtopic.title)}`;
-  const content = (
-    <>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-slate-700 transition group-hover:text-blue-700">
-          {subtopic.title}
-        </p>
-        {mastery !== null ? (
-          <p className="mt-1 text-[11px] font-black uppercase tracking-[0.08em] text-blue-600">
-            {mastery}% mastery
-          </p>
-        ) : null}
-      </div>
-      <div className="flex items-center justify-end gap-3">
-        <QuestionCount
-          answered={stats.answeredQuestions}
-          percent={percent}
-          total={stats.totalQuestions}
-        />
-        <div
-          className={[
-            "hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition sm:flex",
-            stats.totalQuestions > 0
-              ? "border-slate-200 bg-white text-blue-600 group-hover:border-blue-600 group-hover:bg-blue-600 group-hover:text-white"
-              : "border-slate-100 bg-slate-50 text-slate-300"
-          ].join(" ")}
-        >
-          <ArrowRight size={14} />
-        </div>
-      </div>
-    </>
-  );
-
-  if (stats.totalQuestions === 0) {
-    return (
-      <div className="grid min-h-10 gap-3 rounded-xl px-3 py-2 opacity-60 sm:grid-cols-[1fr_auto] sm:items-center">
-        {content}
-      </div>
-    );
-  }
-
-  return (
-    <Link
-      className="group grid min-h-10 gap-3 rounded-xl px-3 py-2 transition hover:bg-blue-50/70 sm:grid-cols-[1fr_auto] sm:items-center"
-      href={href}
-    >
-      {content}
-    </Link>
-  );
-}
-
-function QuestionCount({
-  answered,
-  percent,
-  total
-}: {
-  answered: number;
-  percent: number;
-  total: number;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <ProgressMeter percent={percent} />
-      <span className="min-w-14 text-right text-xs font-medium text-slate-600">
-        {answered.toLocaleString()}/{total.toLocaleString()}
-      </span>
-    </div>
-  );
-}
-
-function ProgressMeter({ percent }: { percent: number }) {
-  const clampedPercent = Math.max(0, Math.min(100, percent));
-
-  return (
-    <span className="h-1.5 w-28 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-      <span
-        className="block h-full rounded-full bg-blue-600 transition-all"
-        style={{ width: `${clampedPercent}%` }}
-      />
-    </span>
-  );
-}
-
-function DifficultyTabs({
-  onChange,
-  value
-}: {
-  onChange: (value: DifficultyFilter) => void;
-  value: DifficultyFilter;
-}) {
-  const items: Array<{ label: string; value: DifficultyFilter }> = [
-    { label: "All", value: "all" },
-    { label: "Easy", value: "easy" },
-    { label: "Medium", value: "medium" },
-    { label: "Hard", value: "hard" }
-  ];
-
-  return (
-    <div className="flex w-full flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm xl:w-auto">
-      {items.map((item) => {
-        const isActive = item.value === value;
-
-        return (
-          <button
-            className={[
-              "inline-flex min-h-9 items-center justify-center rounded-lg px-4 text-xs font-black transition",
-              isActive
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
-            ].join(" ")}
-            key={item.value}
-            onClick={() => onChange(item.value)}
-            type="button"
-          >
-            {item.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function MarkedTabs({
-  onChange,
-  value
-}: {
-  onChange: (value: MarkedFilter) => void;
-  value: MarkedFilter;
-}) {
-  const items: Array<{ label: string; value: MarkedFilter }> = [
-    { label: "All", value: "all" },
-    { label: "Marked", value: "marked" },
-    { label: "Not Marked", value: "unmarked" }
-  ];
-
-  return (
-    <div className="flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
-      <Bookmark size={15} className="ml-2 text-slate-500" />
-      {items.map((item) => {
-        const isActive = item.value === value;
-
-        return (
-          <button
-            className={[
-              "inline-flex min-h-9 items-center justify-center rounded-lg px-3 text-xs font-black transition",
-              isActive
-                ? "bg-blue-600 text-white shadow-sm"
-                : "text-slate-600 hover:bg-white hover:text-slate-950"
-            ].join(" ")}
-            key={item.value}
-            onClick={() => onChange(item.value)}
-            type="button"
-          >
-            {item.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function CompactFilterSelect({
-  icon: Icon,
-  label,
-  onChange,
-  options,
-  value
-}: {
-  icon: LucideIcon;
-  label: string;
-  onChange: (value: string) => void;
-  options: Array<{ label: string; value: string }>;
-  value: string;
-}) {
-  return (
-    <label className="grid min-h-10 grid-cols-[auto_1fr] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50/50">
-      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-blue-600">
-        <Icon size={15} />
-      </span>
-      <span className="min-w-0">
-        <span className="sr-only">{label}</span>
-        <select
-          aria-label={label}
-          className="w-full truncate bg-transparent outline-none"
-          onChange={(event) => onChange(event.target.value)}
-          value={value}
-        >
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </span>
-    </label>
-  );
-}
-
 function QuestionBankSkeleton() {
   return (
-    <div className="grid gap-5 xl:grid-cols-2">
-      {[0, 1].map((section) => (
-        <div
-          className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
-          key={section}
-        >
-          <div className="h-16 animate-pulse rounded-2xl bg-slate-100" />
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            {[0, 1, 2, 3].map((item) => (
-              <div className="h-16 animate-pulse rounded-2xl bg-slate-100" key={item} />
-            ))}
-          </div>
-          <div className="mt-5 space-y-3">
-            {[0, 1, 2, 3].map((item) => (
-              <div className="h-24 animate-pulse rounded-2xl bg-slate-100" key={item} />
-            ))}
-          </div>
-        </div>
-      ))}
+    <div className="space-y-5">
+      <div className="grid gap-5 sm:grid-cols-2">
+        {[0, 1].map((item) => (
+          <div
+            className="h-44 animate-pulse rounded-3xl bg-slate-100"
+            key={item}
+          />
+        ))}
+      </div>
+      <div className="h-32 animate-pulse rounded-3xl bg-slate-100" />
+      <div className="h-80 animate-pulse rounded-3xl bg-slate-100" />
     </div>
   );
 }
@@ -716,20 +328,3 @@ function QuestionBankError({
     </div>
   );
 }
-
-function StatusCard({
-  description,
-  title
-}: {
-  description: string;
-  title: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-6 shadow-sm">
-      <p className="font-black text-slate-950">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
-    </div>
-  );
-}
-
-
