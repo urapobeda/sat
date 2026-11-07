@@ -62,6 +62,7 @@ export function QuestionBankPracticePage() {
   const [isTutorOpen, setIsTutorOpen] = useState(false);
   const [reviewQuestion, setReviewQuestion] = useState<Question | null>(null);
   const hasSaved = useRef(false);
+  const questionStartRef = useRef<number>(0);
 
   const currentQuestion = practiceQuestions[currentIndex];
   const selectedAnswer = currentQuestion ? answers[currentQuestion.id] ?? null : null;
@@ -72,6 +73,12 @@ export function QuestionBankPracticePage() {
       : 0;
   const weakTopics = getWeakTopics(practiceQuestions, feedback);
   const displayTopic = practiceQuestions[0]?.topic ?? topic;
+
+  useEffect(() => {
+    if (currentQuestion) {
+      questionStartRef.current = Date.now();
+    }
+  }, [currentQuestion]);
 
   useEffect(() => {
     let isMounted = true;
@@ -178,13 +185,19 @@ export function QuestionBankPracticePage() {
       [currentQuestion.id]: choice
     }));
 
+    const timeSpentSeconds = Math.max(
+      0,
+      Math.round((Date.now() - questionStartRef.current) / 1000)
+    );
+
     try {
       const authHeaders = currentUser ? await getSupabaseAuthHeaders() : {};
       const response = await fetch("/api/practice/answers", {
         body: JSON.stringify({
           questionId: currentQuestion.id,
           selectedAnswer: choice,
-          sessionId
+          sessionId,
+          timeSpentSeconds
         }),
         headers: {
           "Content-Type": "application/json",

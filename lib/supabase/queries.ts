@@ -332,6 +332,36 @@ export async function getQuestionProgressLookup(userId: string) {
   return { answeredIds, correctIds, incorrectIds };
 }
 
+export type PracticeAnswerTiming = {
+  questionId: string;
+  timeSpentSeconds: number;
+};
+
+export async function getPracticeAnswerTimings(
+  userId: string
+): Promise<PracticeAnswerTiming[]> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("practice_answers")
+    .select("question_id,time_spent_seconds")
+    .eq("user_id", userId)
+    .not("time_spent_seconds", "is", null);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? [])
+    .filter(
+      (row): row is { question_id: string; time_spent_seconds: number } =>
+        typeof row.time_spent_seconds === "number"
+    )
+    .map((row) => ({
+      questionId: row.question_id,
+      timeSpentSeconds: row.time_spent_seconds
+    }));
+}
+
 export type WeeklyActivityPoint = {
   correct: number;
   weekStart: string;

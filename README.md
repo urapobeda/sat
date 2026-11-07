@@ -71,6 +71,11 @@ If your Supabase project was created before the Question Bank review/source
 filters were added, also run `supabase/question-bank-filters.sql` once. It adds
 `questions.is_bluebook` and the `question_marks` table.
 
+If your Supabase project was created before per-question timing was added,
+also run `supabase/migrations/add_practice_answer_time_tracking.sql` once. It
+adds `practice_answers.time_spent_seconds`, used by the Question Bank
+Time Share by Difficulty analytics.
+
 For the Past Papers library, run:
 
 ```sql

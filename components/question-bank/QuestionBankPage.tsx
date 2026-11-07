@@ -9,6 +9,7 @@ import { ActivityTrendCard } from "@/components/question-bank/ActivityTrendCard"
 import { QuestionAnalyticsRow } from "@/components/question-bank/QuestionAnalyticsRow";
 import { SectionHeroCard } from "@/components/question-bank/SectionHeroCard";
 import { StudyBearIllustration } from "@/components/question-bank/StudyBearIllustration";
+import { TimeShareByDifficultyCard } from "@/components/question-bank/TimeShareByDifficultyCard";
 import {
   getCategoriesForSection,
   getQuestionCategory,
@@ -18,9 +19,11 @@ import {
 import {
   getCurrentUser,
   getMarkedQuestionIds,
+  getPracticeAnswerTimings,
   getQuestionProgressLookup,
   getQuestions,
   getWeeklyQuestionActivity,
+  type PracticeAnswerTiming,
   type WeeklyActivityPoint
 } from "@/lib/supabase/queries";
 import type { Question } from "@/types/sat";
@@ -63,6 +66,7 @@ export function QuestionBankPage() {
     new Set()
   );
   const [weeklyActivity, setWeeklyActivity] = useState<WeeklyActivityPoint[]>([]);
+  const [timings, setTimings] = useState<PracticeAnswerTiming[]>([]);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,22 +86,29 @@ export function QuestionBankPage() {
         setProgress(EMPTY_PROGRESS);
         setMarkedQuestionIds(new Set());
         setWeeklyActivity([]);
+        setTimings([]);
         setIsSignedIn(false);
         return;
       }
 
       setIsSignedIn(true);
 
-      const [loadedProgress, loadedMarkedQuestionIds, loadedWeeklyActivity] =
-        await Promise.all([
-          getQuestionProgressLookup(user.id),
-          getMarkedQuestionIds(user.id).catch(() => new Set<string>()),
-          getWeeklyQuestionActivity(user.id).catch(() => [])
-        ]);
+      const [
+        loadedProgress,
+        loadedMarkedQuestionIds,
+        loadedWeeklyActivity,
+        loadedTimings
+      ] = await Promise.all([
+        getQuestionProgressLookup(user.id),
+        getMarkedQuestionIds(user.id).catch(() => new Set<string>()),
+        getWeeklyQuestionActivity(user.id).catch(() => []),
+        getPracticeAnswerTimings(user.id).catch(() => [])
+      ]);
 
       setProgress(loadedProgress);
       setMarkedQuestionIds(loadedMarkedQuestionIds);
       setWeeklyActivity(loadedWeeklyActivity);
+      setTimings(loadedTimings);
     } catch (requestError) {
       console.error("Question Bank load failed", requestError);
       setError(
@@ -182,6 +193,38 @@ export function QuestionBankPage() {
       ),
     [questions, progress]
   );
+
+  const timeShareBySection = useMemo(() => {
+    const timeByQuestionId = new Map(
+      timings.map((timing) => [timing.questionId, timing.timeSpentSeconds])
+    );
+
+    return Object.fromEntries(
+      SECTIONS.map((section) => {
+        const sectionQuestions = questions.filter(
+          (question) => question.section === section.key
+        );
+
+        const rows = DIFFICULTIES.map((difficulty) => {
+          const times = sectionQuestions
+            .filter((question) => question.difficulty === difficulty.key)
+            .map((question) => timeByQuestionId.get(question.id))
+            .filter((value): value is number => typeof value === "number");
+
+          return {
+            attempts: times.length,
+            avgSeconds:
+              times.length > 0
+                ? Math.round(times.reduce((sum, value) => sum + value, 0) / times.length)
+                : null,
+            label: difficulty.label
+          };
+        });
+
+        return [section.key, rows];
+      })
+    );
+  }, [questions, timings]);
 
   return (
     <StudentShell active="question-bank">
@@ -268,6 +311,13 @@ export function QuestionBankPage() {
                   <AccuracyByDifficultyCard
                     key={section.key}
                     rows={difficultyAccuracyBySection[section.key] ?? []}
+                    sectionLabel={section.title}
+                  />
+                ))}
+                {SECTIONS.map((section) => (
+                  <TimeShareByDifficultyCard
+                    key={section.key}
+                    rows={timeShareBySection[section.key] ?? []}
                     sectionLabel={section.title}
                   />
                 ))}

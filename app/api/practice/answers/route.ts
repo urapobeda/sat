@@ -7,7 +7,8 @@ import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 const answerSchema = z.object({
   questionId: z.string().uuid(),
   selectedAnswer: z.string().trim().min(1).max(500),
-  sessionId: z.string().uuid().nullable().optional()
+  sessionId: z.string().uuid().nullable().optional(),
+  timeSpentSeconds: z.number().int().min(0).max(3600).nullable().optional()
 });
 
 export async function POST(request: NextRequest) {
@@ -30,6 +31,7 @@ export async function POST(request: NextRequest) {
         questionId: parsed.data.questionId,
         selectedAnswer: parsed.data.selectedAnswer,
         sessionId: parsed.data.sessionId,
+        timeSpentSeconds: parsed.data.timeSpentSeconds ?? null,
         userId
       });
     }
@@ -48,12 +50,14 @@ async function saveVerifiedPracticeAnswer({
   questionId,
   selectedAnswer,
   sessionId,
+  timeSpentSeconds,
   userId
 }: {
   feedback: { correctAnswer: string; isCorrect: boolean };
   questionId: string;
   selectedAnswer: string;
   sessionId: string;
+  timeSpentSeconds: number | null;
   userId: string;
 }) {
   const supabase = getSupabaseAdminClient();
@@ -77,6 +81,7 @@ async function saveVerifiedPracticeAnswer({
         question_id: questionId,
         selected_answer: selectedAnswer,
         session_id: sessionId,
+        time_spent_seconds: timeSpentSeconds,
         user_id: userId
       },
       { onConflict: "session_id,question_id" }

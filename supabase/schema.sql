@@ -49,6 +49,7 @@ create table if not exists public.practice_answers (
   selected_answer text,
   correct_answer text,
   is_correct boolean,
+  time_spent_seconds integer,
   created_at timestamptz default now()
 );
 

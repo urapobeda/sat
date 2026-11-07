@@ -65,6 +65,7 @@ export type PracticeAnswer = {
   question_id: string;
   selected_answer: string | null;
   session_id: string;
+  time_spent_seconds: number | null;
   user_id: string;
 };
 
