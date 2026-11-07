@@ -15,7 +15,10 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { StudentShell } from "@/components/dashboard/StudentShell";
+import { ActivityTrendCard } from "@/components/question-bank/ActivityTrendCard";
+import { QuestionAnalyticsRow } from "@/components/question-bank/QuestionAnalyticsRow";
 import { SearchInput } from "@/components/question-bank/SearchInput";
+import { SectionHeroCard } from "@/components/question-bank/SectionHeroCard";
 import {
   getCategoriesForSection,
   getMastery,
@@ -50,20 +53,22 @@ const EMPTY_MARKS = new Set<string>();
 
 const SECTIONS = [
   {
-    description: "Craft, evidence, grammar, transitions, and expression skills",
     icon: BookOpen,
     key: "reading-writing" as const,
     title: "Reading & Writing",
-    tone: "from-violet-500 to-purple-700"
+    heroGradient: "from-fuchsia-500 via-pink-500 to-purple-600"
   },
   {
-    description: "Algebra, advanced math, data analysis, geometry, and trig",
     icon: SquareRadical,
     key: "math" as const,
     title: "Math",
-    tone: "from-blue-500 to-blue-700"
+    heroGradient: "from-sky-400 via-blue-500 to-blue-700"
   }
 ];
+
+// Study streak is not tracked anywhere yet (no daily-activity table in
+// Supabase), so it is shown as a static placeholder.
+const STUDY_STREAK_PLACEHOLDER = 0;
 
 export function QuestionBankPage() {
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>("all");
@@ -192,6 +197,25 @@ export function QuestionBankPage() {
     setSearchQuery("");
   }
 
+  const sectionOverviewStats = useMemo(
+    () =>
+      Object.fromEntries(
+        SECTIONS.map((section) => [
+          section.key,
+          getQuestionGroupStats(
+            questions.filter((question) => question.section === section.key),
+            progress
+          )
+        ])
+      ) as Record<(typeof SECTIONS)[number]["key"], ReturnType<typeof getQuestionGroupStats>>,
+    [questions, progress]
+  );
+
+  const accuracyPercent =
+    progress.answeredIds.size > 0
+      ? Math.round((progress.correctIds.size / progress.answeredIds.size) * 100)
+      : null;
+
   return (
     <StudentShell active="question-bank">
       <section className="mx-auto w-full max-w-7xl space-y-5">
@@ -270,6 +294,38 @@ export function QuestionBankPage() {
             />
           ) : (
             <>
+              <div className="grid gap-5 sm:grid-cols-2">
+                {SECTIONS.map((section) => {
+                  const stats = sectionOverviewStats[section.key];
+
+                  return (
+                    <SectionHeroCard
+                      answered={stats.answeredQuestions}
+                      gradient={section.heroGradient}
+                      href={`/question-bank/practice?section=${section.key}`}
+                      icon={section.icon}
+                      key={section.key}
+                      title={section.title}
+                      total={stats.totalQuestions}
+                    />
+                  );
+                })}
+              </div>
+
+              <div>
+                <h2 className="mb-3 text-lg font-bold text-slate-950">
+                  Question Analytics
+                </h2>
+                <QuestionAnalyticsRow
+                  accuracyPercent={accuracyPercent}
+                  attempted={progress.answeredIds.size}
+                  saved={markedQuestionIds.size}
+                  streak={STUDY_STREAK_PLACEHOLDER}
+                />
+              </div>
+
+              <ActivityTrendCard />
+
               {filteredQuestions.length === 0 ? (
                 <StatusCard
                   description={filterEmptyDescription}
@@ -305,47 +361,11 @@ function QuestionBankSection({
   questions: Question[];
   section: (typeof SECTIONS)[number];
 }) {
-  const Icon = section.icon;
-  const stats = getQuestionGroupStats(questions, progress);
   const categories = getCategoriesForSection(section.key);
-  const startHref = `/question-bank/practice?section=${section.key}`;
 
   return (
     <div className="space-y-4">
-      <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:shadow-md sm:p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-3">
-            <span
-              className={`hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${section.tone} text-white shadow-lg sm:flex`}
-            >
-              <Icon size={22} />
-            </span>
-            <div className="min-w-0">
-              <h2 className="text-xl font-black text-slate-950">{section.title}</h2>
-              <p className="mt-0.5 text-sm font-medium text-slate-500">
-                {stats.totalQuestions.toLocaleString()} questions
-              </p>
-            </div>
-          </div>
-          <Link
-            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-black !text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
-            href={startHref}
-          >
-            <ArrowRight size={15} />
-            Start
-          </Link>
-        </div>
-
-        <div className="mt-5 flex items-center gap-3">
-          <ProgressMeter percent={stats.totalQuestions > 0 ? Math.round((stats.answeredQuestions / stats.totalQuestions) * 100) : 0} />
-          <span className="whitespace-nowrap text-xs font-bold text-slate-600">
-            {stats.answeredQuestions.toLocaleString()}/{stats.totalQuestions.toLocaleString()}
-          </span>
-          <span className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-            Attempted
-          </span>
-        </div>
-      </article>
+      <h3 className="text-lg font-bold text-slate-950">{section.title}</h3>
 
       <div className="space-y-3">
         {categories.map((category) => (

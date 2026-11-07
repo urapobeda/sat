@@ -1,3 +1,4 @@
+import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { BearIcon } from "@/components/dashboard/BearIcon";
 import { HomeworkTable } from "@/components/dashboard/HomeworkTable";
@@ -60,77 +61,57 @@ export function DashboardPage() {
 
   return (
     <StudentShell active="home">
-      <section className="relative -mx-6 -mt-6 mb-8 overflow-hidden rounded-b-3xl bg-white shadow-sm sm:-mx-8 sm:-mt-8 lg:-mx-10 lg:-mt-10 xl:-mx-12 xl:-mt-12">
-          <div className="relative h-32 w-full sm:h-40 lg:h-44">
-            <svg
-              aria-hidden="true"
-              className="absolute inset-0 h-full w-full"
-              preserveAspectRatio="none"
-              viewBox="0 0 1600 220"
-            >
-              <defs>
-                <linearGradient id="skyGradient" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="#bfe3fb" />
-                  <stop offset="100%" stopColor="#e8f5fe" />
-                </linearGradient>
-              </defs>
-              <rect fill="url(#skyGradient)" height="220" width="1600" />
-              <circle cx="150" cy="45" fill="#ffffff" opacity="0.8" r="22" />
-              <circle cx="195" cy="55" fill="#ffffff" opacity="0.8" r="16" />
-              <circle cx="1420" cy="40" fill="#ffffff" opacity="0.75" r="26" />
-              <circle cx="1465" cy="55" fill="#ffffff" opacity="0.75" r="17" />
-              <path
-                d="M0,160 C 220,100 420,150 650,130 C 900,108 1120,165 1600,120 L1600,220 L0,220 Z"
-                fill="#bfead2"
-                opacity="0.65"
-              />
-              <path
-                d="M0,185 C 260,140 520,195 800,170 C 1080,145 1340,200 1600,165 L1600,220 L0,220 Z"
-                fill="#ffffff"
-              />
-            </svg>
+      <section className="relative -mx-6 -mt-6 mb-8 overflow-hidden rounded-b-3xl bg-gradient-to-br from-sky-100 via-blue-50 to-white shadow-sm sm:-mx-8 sm:-mt-8 lg:-mx-10 lg:-mt-10 xl:-mx-12 xl:-mt-12">
+        <BearIcon
+          className="pointer-events-none absolute left-[26%] top-1/2 hidden -translate-x-1/2 -translate-y-1/2 text-blue-200/80 sm:block lg:left-[32%]"
+          size={180}
+          variant="outline"
+        />
+        <Sparkles
+          className="pointer-events-none absolute left-[18%] top-6 hidden h-5 w-5 text-blue-300 sm:block"
+        />
+        <Sparkles
+          className="pointer-events-none absolute right-28 top-5 hidden h-4 w-4 text-blue-300 sm:block lg:right-40"
+        />
 
-            <BearIcon
-              className="pointer-events-none absolute bottom-0 right-10 text-white/80 sm:right-16"
-              size={96}
-              variant="outline"
-            />
+        <div className="relative flex flex-col gap-6 px-6 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-12 lg:px-10 lg:py-14 xl:px-12">
+          <div className="relative z-10">
+            <p className="text-xs font-bold tracking-wide text-slate-500">
+              {getDateLine(now)}
+            </p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-950">
+              {getGreeting(now.getHours())}, {STUDENT_NAME}! 👋
+            </h1>
+            <p className="mt-2 text-base text-slate-600">
+              One assignment is due today by 11:59 PM.
+            </p>
           </div>
 
-          <div className="relative flex flex-col gap-5 px-6 pb-6 sm:flex-row sm:items-start sm:justify-between sm:px-8 sm:pb-8 lg:px-10 lg:pb-10 xl:px-12 xl:pb-12">
-            <span className="absolute -top-8 right-6 flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-amber-100 text-amber-800 shadow-lg sm:-top-9 sm:right-10 sm:h-20 sm:w-20">
-              <BearIcon size={36} />
-            </span>
-
-            <div>
-              <p className="text-xs font-bold tracking-wide text-slate-500">
-                {getDateLine(now)}
-              </p>
-              <h1 className="mt-2 text-3xl font-bold text-slate-950">
-                {getGreeting(now.getHours())}, {STUDENT_NAME}
-              </h1>
-              <p className="mt-2 text-base text-slate-600">
-                One assignment is due today by 11:59 PM.
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              {topStats.map((stat) => (
-                <div
-                  className="rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-center shadow-sm"
-                  key={stat.label}
-                >
-                  <p className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    {stat.label}
-                  </p>
-                  <p className="mt-1 text-xl font-bold text-slate-950">
-                    {stat.value}
-                  </p>
-                </div>
-              ))}
-            </div>
+          <div className="relative z-10 flex gap-3">
+            {topStats.map((stat) => (
+              <div
+                className="rounded-2xl border border-white bg-white/90 px-5 py-3.5 text-center shadow-sm backdrop-blur"
+                key={stat.label}
+              >
+                <p className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  {stat.label}
+                </p>
+                <p className="mt-1 text-xl font-bold text-slate-950">
+                  {stat.value}
+                </p>
+              </div>
+            ))}
           </div>
-        </section>
+        </div>
+
+        <div className="absolute -top-3 right-6 z-10 sm:-top-4 sm:right-10">
+          <span className="absolute -inset-3 rounded-full bg-blue-300/40 blur-xl" />
+          <span className="relative flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-amber-100 text-amber-800 shadow-lg sm:h-20 sm:w-20">
+            <BearIcon size={36} />
+          </span>
+          <Sparkles className="absolute -left-3 -top-2 h-4 w-4 text-blue-300" />
+        </div>
+      </section>
 
       <div className="mx-auto w-full max-w-7xl space-y-8">
         <div className="grid gap-8 xl:grid-cols-[1fr_360px]">
