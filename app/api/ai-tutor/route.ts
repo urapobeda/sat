@@ -177,7 +177,7 @@ function buildTutorPrompt({
   solution: Awaited<ReturnType<typeof getQuestionSolution>> | null;
 }) {
   const choices = question.choices
-    .map((choice, index) => `${String.fromCharCode(65 + index)}. ${choice}`)
+    .map((choice) => `${choice.label}. ${choice.text || (choice.imageUrl ? "[graph]" : "")}`)
     .join("\n");
   const submittedContext = solution
     ? [

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedUserId } from "@/lib/server/auth";
 import {
-  getQuestionSolution,
-  getReviewQuestions
+  getReviewQuestions,
+  isAnswerCorrect,
+  loadGradingData
 } from "@/lib/server/questionSolutions";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -23,17 +24,21 @@ export async function POST(request: NextRequest) {
 
     const answers = parsed.data.answers;
     const questionIds = Object.keys(answers);
-    const solutions = await Promise.all(
-      questionIds.map(async (questionId) => ({
-        questionId,
-        solution: await getQuestionSolution(questionId)
-      }))
-    );
-    const score = solutions.filter(
-      ({ questionId, solution }) =>
-        answers[questionId] !== null &&
-        normalizeAnswer(answers[questionId] ?? "") === normalizeAnswer(solution.correct_answer)
-    ).length;
+    const gradingById = await loadGradingData(questionIds);
+    const solutions = questionIds.flatMap((questionId) => {
+      const grading = gradingById.get(questionId);
+
+      return grading
+        ? [
+            {
+              isCorrect: isAnswerCorrect(grading, answers[questionId] ?? null),
+              questionId,
+              solution: { correct_answer: grading.correctAnswer }
+            }
+          ]
+        : [];
+    });
+    const score = solutions.filter((solution) => solution.isCorrect).length;
     const total = questionIds.length;
     const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
     const estimatedSatScore = Math.min(1600, Math.max(400, 400 + Math.round(percentage * 12)));
@@ -84,7 +89,7 @@ async function saveVerifiedTestResult({
   estimatedSatScore: number;
   percentage: number;
   score: number;
-  solutions: Array<{ questionId: string; solution: { correct_answer: string } }>;
+  solutions: Array<{ isCorrect: boolean; questionId: string; solution: { correct_answer: string } }>;
   testSessionId: string;
   timeSpentSeconds: number;
   total: number;
@@ -103,16 +108,13 @@ async function saveVerifiedTestResult({
   }
 
   await Promise.all(
-    solutions.map(({ questionId, solution }) =>
+    solutions.map(({ isCorrect, questionId, solution }) =>
       supabase
         .from("test_answers")
         .upsert(
           {
             correct_answer: solution.correct_answer,
-            is_correct:
-              answers[questionId] !== null &&
-              normalizeAnswer(answers[questionId] ?? "") ===
-                normalizeAnswer(solution.correct_answer),
+            is_correct: isCorrect,
             question_id: questionId,
             selected_answer: answers[questionId],
             test_session_id: testSessionId,
@@ -137,6 +139,3 @@ async function saveVerifiedTestResult({
     .eq("user_id", userId);
 }
 
-function normalizeAnswer(value: string) {
-  return value.trim().toLowerCase();
-}

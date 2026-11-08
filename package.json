@@ -11,10 +11,14 @@
     "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/adaptive-routing.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/sat-score-estimator.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/security-boundary.test.ts",
     "questions:extract-pdf": "python scripts/extract-question-bank-pdfs.py",
     "questions:import-supabase": "node scripts/import-questions-supabase.mjs",
-    "questions:sql": "node scripts/generate-questions-sql.mjs"
+    "questions:sql": "node scripts/generate-questions-sql.mjs",
+    "questions:math-extract": "python scripts/extract-math-questions.py",
+    "questions:math-convert": "node scripts/convert-math-questions.mjs",
+    "questions:flashsat-prepare": "node scripts/prepare-flashsat-math.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.107.0",
+    "katex": "^0.16.22",
     "lucide-react": "latest",
     "next": "^16.4.3",
     "openai": "^6.48.0",

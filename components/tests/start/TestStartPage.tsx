@@ -320,7 +320,7 @@ export function TestStartPage() {
                 onClick={() => {
                   const missedQuestion =
                     completionResult?.reviewQuestions.find(
-                      (question) => answers[question.id] !== question.correctAnswer
+                      (question) => !question.isCorrect
                     ) ?? completionResult?.reviewQuestions[0];
                   if (!missedQuestion) {
                     return;

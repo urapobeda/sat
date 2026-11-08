@@ -12,3 +12,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 *.log
+
+# Math import working files (thousands of images; not for git)
+data/math/

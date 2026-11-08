@@ -143,6 +143,112 @@ This creates `supabase/generated-questions.sql`. If you have already run
 `secure_question_solutions.sql`, make sure new imports insert public question
 fields into `questions` and solution fields into `question_solutions`.
 
+## Importing Math From the Question Bank PDF
+
+Math formulas in the College Board PDF are drawn as vector shapes, so plain text
+extraction loses them. The Math import has three steps:
+
+1. **Cut the PDF into pieces** (needs Python with `pip install pdfplumber pypdfium2 pillow`):
+
+   ```bash
+   npm run questions:math-extract -- --pdf path/to/math.pdf
+   ```
+
+   Writes `data/math/math-extract.json` and, per question, `question.png`,
+   `rationale.png` and `fig-N.png` for every graph, diagram or table found in the
+   stem or in an answer choice. Try `--first-page 1 --last-page 60` first.
+
+2. **Turn the pictures into text with LaTeX**: set `GEMINI_API_KEY` in
+   `.env.local`. `GEMINI_MODEL` is optional; the default is `gemini-3.1-flash-lite`.
+   Availability and quotas depend on your Gemini project. Requests are spaced by
+   13 seconds and run one at a time by default; `--delay-ms` and `--concurrency`
+   can adjust these settings.
+
+   ```bash
+   npm run questions:math-convert -- --sample 5   # diverse pilot sample
+   npm run questions:math-convert                 # then everything
+   ```
+
+   Each answer the model reads is checked against the "Correct Answer" printed in
+   the PDF. Passing questions go to `data/math/math-import.json`; the rest, with
+   the reason, to `data/math/math-review.json`. Model answers are cached in
+   `data/math/ai/`, so re-running only processes what is missing (`--force` redoes).
+   A quota or authentication failure stops the run; completed work is retained.
+   `--provider openai` uses `OPENAI_API_KEY` and `OPENAI_VISION_MODEL` or
+   `OPENAI_MODEL`. The run report is saved to `data/math/math-run.json`.
+
+3. **Import**:
+
+   ```bash
+   npm run questions:import-supabase -- data/math/math-import.json
+   ```
+
+Stored format: question text and choices use `\( ... \)` / `\[ ... \]` for math
+(rendered with KaTeX), Markdown pipe tables, and `[[img:N]]` where the N-th stem
+figure goes. A choice can carry `image_url` (graph answer choices). Multiple-choice
+answers are stored as the letter; student-produced responses keep every accepted
+form in `question_solutions.scoring_metadata.accepted_answers`, and numbers are
+compared by value (3/4 = .75 = 0.75).
+
+`data/math/` is in `.gitignore`: it holds thousands of images.
+
+### Exporting original MathML question data
+
+`node scripts/export-flashsat-math.mjs` saves the publicly accessible FlashSAT
+Math bank under `data/math/flashsat/`. Use `--limit 5` for a sample. Re-running
+resumes using the per-question JSON cache. The exporter uses three workers,
+spaces requests, retries temporary failures and stops on access errors.
+
+`math-raw.json` preserves source metadata, HTML/MathML, inline SVG, answer keys
+and rationales. External images are saved under `assets/` with their URL mapping
+in `assets.json`; `report.json` records completion and failures. This raw export
+is separate from `math-import.json` and must be converted and checked before
+using the Supabase importer.
+
+### Preparing FlashSAT for this site's renderer
+
+Run from the repository root (Python and the installed Node dependencies required):
+
+```powershell
+npm run questions:flashsat-prepare
+npm run questions:import-supabase -- data/math/flashsat/prepared/math-import.json --dry-run
+```
+
+Preparation runs locally without AI or API keys. It converts MathML to validated
+LaTeX, rasterizes SVG graphs to PNG for Storage, and extracts embedded PNG
+formulas to files without OCR. The importer uploads those files and replaces
+inline asset references with HTTPS Storage URLs in stems, choices, explanations,
+and table cells. No base64 image bytes are stored in question text. Tables retain
+captions and merged cells; deploy the updated renderer with the imported data.
+Screen-reader-only graph descriptions stay in the raw export rather than becoming
+visible paragraphs. Topics, difficulty, page references, and readable answer keys
+are checked against `data/math/math-extract.json`. All grid-in answer variants
+from the source are retained. Question Bank items are not tagged as Bluebook tests.
+
+Outputs are in `data/math/flashsat/prepared/`: `math-import.json`,
+`math-review.json` (excluded records with reasons), `report.json`, and `assets/`.
+`inline_image_files` maps inline tokens to local PNG files for the importer.
+Use `--limit 5 --out-dir data/math/flashsat/pilot` for a separate pilot. Preparation
+never writes to Supabase.
+
+Before importing, run `supabase/migrations/fix_question_text_identity.sql` once
+in the Supabase SQL Editor. It replaces the old unique index on the entire
+question text with source-ID identity for imports and a compact hash index for
+legacy seeds. This allows long questions and identical stems with different
+choices. It does not delete questions or change their IDs. The API service key
+used by the importer cannot apply SQL migrations.
+
+After applying the migration, checking the report, and previewing the content:
+
+```powershell
+npm run questions:import-supabase -- data/math/flashsat/prepared/math-import.json
+npm run questions:import-supabase -- data/math/flashsat/prepared/math-import.json --verify-only
+```
+
+The importer upserts by `source_question_id` and verifies each saved batch.
+Repeat a failed import with the same command to finish it. Run
+`python scripts/prepare-flashsat-math.test.py` for conversion regression checks.
+
 ## Current Features
 
 - Responsive landing page for SAT preparation

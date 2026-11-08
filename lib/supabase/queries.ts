@@ -839,7 +839,11 @@ export async function clearUserProgress(userId: string) {
 }
 
 function mapQuestionRow(row: PublicQuestionRow): AppQuestion {
-  const choices = row.choices.map((choice: Choice) => choice.text);
+  const choices = (row.choices ?? []).map((choice: Choice, index: number) => ({
+    imageUrl: choice.image_url ?? null,
+    label: choice.label || String.fromCharCode(65 + index),
+    text: choice.text ?? ""
+  }));
 
   return {
     choices,

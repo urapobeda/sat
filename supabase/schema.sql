@@ -13,6 +13,7 @@ create table if not exists public.questions (
   topic text not null,
   difficulty text not null check (difficulty in ('easy', 'medium', 'hard')),
   question text not null,
+  source_question_id text,
   choices jsonb not null check (jsonb_typeof(choices) = 'array'),
   correct_answer text not null,
   explanation text not null,
@@ -20,7 +21,10 @@ create table if not exists public.questions (
   created_at timestamptz default now()
 );
 
-create unique index if not exists questions_question_key on public.questions (question);
+alter table public.questions add column if not exists source_question_id text;
+
+create unique index if not exists questions_source_question_id_key on public.questions (source_question_id);
+create unique index if not exists questions_legacy_question_key on public.questions (md5(question)) where source_question_id is null;
 create index if not exists questions_section_idx on public.questions (section);
 create index if not exists questions_topic_idx on public.questions (topic);
 create index if not exists questions_difficulty_idx on public.questions (difficulty);

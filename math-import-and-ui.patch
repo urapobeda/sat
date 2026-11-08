@@ -1,0 +1,2987 @@
+diff --git a/.gitignore b/.gitignore
+index 2fd1dab..dc2ccfd 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -12,3 +12,6 @@ yarn-debug.log*
+ yarn-error.log*
+ pnpm-debug.log*
+ *.log
++
++# Math import working files (thousands of images; not for git)
++data/math/
+diff --git a/README.md b/README.md
+index 8a377fa..0932cd6 100644
+--- a/README.md
++++ b/README.md
+@@ -143,6 +143,49 @@ This creates `supabase/generated-questions.sql`. If you have already run
+ `secure_question_solutions.sql`, make sure new imports insert public question
+ fields into `questions` and solution fields into `question_solutions`.
+ 
++## Importing Math From the Question Bank PDF
++
++Math formulas in the College Board PDF are drawn as vector shapes, so plain text
++extraction loses them. The Math import has three steps:
++
++1. **Cut the PDF into pieces** (needs Python with `pip install pdfplumber pypdfium2 pillow`):
++
++   ```bash
++   npm run questions:math-extract -- --pdf path/to/math.pdf
++   ```
++
++   Writes `data/math/math-extract.json` and, per question, `question.png`,
++   `rationale.png` and `fig-N.png` for every graph, diagram or table found in the
++   stem or in an answer choice. Try `--first-page 1 --last-page 60` first.
++
++2. **Turn the pictures into text with LaTeX** (needs `OPENAI_API_KEY`, and a
++   vision-capable model in `OPENAI_VISION_MODEL` or `OPENAI_MODEL`):
++
++   ```bash
++   npm run questions:math-convert -- --limit 20   # check the quality first
++   npm run questions:math-convert                 # then everything
++   ```
++
++   Each answer the model reads is checked against the "Correct Answer" printed in
++   the PDF. Passing questions go to `data/math/math-import.json`; the rest, with
++   the reason, to `data/math/math-review.json`. Model answers are cached in
++   `data/math/ai/`, so re-running only processes what is missing (`--force` redoes).
++
++3. **Import**:
++
++   ```bash
++   npm run questions:import-supabase -- data/math/math-import.json
++   ```
++
++Stored format: question text and choices use `\( ... \)` / `\[ ... \]` for math
++(rendered with KaTeX), Markdown pipe tables, and `[[img:N]]` where the N-th stem
++figure goes. A choice can carry `image_url` (graph answer choices). Multiple-choice
++answers are stored as the letter; student-produced responses keep every accepted
++form in `question_solutions.scoring_metadata.accepted_answers`, and numbers are
++compared by value (3/4 = .75 = 0.75).
++
++`data/math/` is in `.gitignore`: it holds thousands of images.
++
+ ## Current Features
+ 
+ - Responsive landing page for SAT preparation
+diff --git a/app/api/ai-tutor/route.ts b/app/api/ai-tutor/route.ts
+index 6c85d0e..18c434c 100644
+--- a/app/api/ai-tutor/route.ts
++++ b/app/api/ai-tutor/route.ts
+@@ -177,7 +177,7 @@ function buildTutorPrompt({
+   solution: Awaited<ReturnType<typeof getQuestionSolution>> | null;
+ }) {
+   const choices = question.choices
+-    .map((choice, index) => `${String.fromCharCode(65 + index)}. ${choice}`)
++    .map((choice) => `${choice.label}. ${choice.text || (choice.imageUrl ? "[graph]" : "")}`)
+     .join("\n");
+   const submittedContext = solution
+     ? [
+diff --git a/app/api/tests/complete/route.ts b/app/api/tests/complete/route.ts
+index 66103b3..b159e05 100644
+--- a/app/api/tests/complete/route.ts
++++ b/app/api/tests/complete/route.ts
+@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
+ import { z } from "zod";
+ import { getAuthenticatedUserId } from "@/lib/server/auth";
+ import {
+-  getQuestionSolution,
+-  getReviewQuestions
++  getReviewQuestions,
++  isAnswerCorrect,
++  loadGradingData
+ } from "@/lib/server/questionSolutions";
+ import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+ 
+@@ -23,17 +24,21 @@ export async function POST(request: NextRequest) {
+ 
+     const answers = parsed.data.answers;
+     const questionIds = Object.keys(answers);
+-    const solutions = await Promise.all(
+-      questionIds.map(async (questionId) => ({
+-        questionId,
+-        solution: await getQuestionSolution(questionId)
+-      }))
+-    );
+-    const score = solutions.filter(
+-      ({ questionId, solution }) =>
+-        answers[questionId] !== null &&
+-        normalizeAnswer(answers[questionId] ?? "") === normalizeAnswer(solution.correct_answer)
+-    ).length;
++    const gradingById = await loadGradingData(questionIds);
++    const solutions = questionIds.flatMap((questionId) => {
++      const grading = gradingById.get(questionId);
++
++      return grading
++        ? [
++            {
++              isCorrect: isAnswerCorrect(grading, answers[questionId] ?? null),
++              questionId,
++              solution: { correct_answer: grading.correctAnswer }
++            }
++          ]
++        : [];
++    });
++    const score = solutions.filter((solution) => solution.isCorrect).length;
+     const total = questionIds.length;
+     const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
+     const estimatedSatScore = Math.min(1600, Math.max(400, 400 + Math.round(percentage * 12)));
+@@ -84,7 +89,7 @@ async function saveVerifiedTestResult({
+   estimatedSatScore: number;
+   percentage: number;
+   score: number;
+-  solutions: Array<{ questionId: string; solution: { correct_answer: string } }>;
++  solutions: Array<{ isCorrect: boolean; questionId: string; solution: { correct_answer: string } }>;
+   testSessionId: string;
+   timeSpentSeconds: number;
+   total: number;
+@@ -103,16 +108,13 @@ async function saveVerifiedTestResult({
+   }
+ 
+   await Promise.all(
+-    solutions.map(({ questionId, solution }) =>
++    solutions.map(({ isCorrect, questionId, solution }) =>
+       supabase
+         .from("test_answers")
+         .upsert(
+           {
+             correct_answer: solution.correct_answer,
+-            is_correct:
+-              answers[questionId] !== null &&
+-              normalizeAnswer(answers[questionId] ?? "") ===
+-                normalizeAnswer(solution.correct_answer),
++            is_correct: isCorrect,
+             question_id: questionId,
+             selected_answer: answers[questionId],
+             test_session_id: testSessionId,
+@@ -137,6 +139,3 @@ async function saveVerifiedTestResult({
+     .eq("user_id", userId);
+ }
+ 
+-function normalizeAnswer(value: string) {
+-  return value.trim().toLowerCase();
+-}
+diff --git a/app/globals.css b/app/globals.css
+index ea8d3a0..68aff9b 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -265,3 +265,29 @@ a {
+   background-color: #10b981 !important;
+   box-shadow: 0 18px 38px rgba(16, 185, 129, 0.28) !important;
+ }
++
++/* Text highlighter in questions (components/quiz/Highlightable.tsx) */
++::highlight(sat-hl-yellow) {
++  background-color: #fde68a;
++  color: #0f172a;
++}
++::highlight(sat-hl-green) {
++  background-color: #bbf7d0;
++  color: #0f172a;
++}
++::highlight(sat-hl-blue) {
++  background-color: #bfdbfe;
++  color: #0f172a;
++}
++::highlight(sat-hl-pink) {
++  background-color: #fbcfe8;
++  color: #0f172a;
++}
++.highlight-swatch-yellow { background-color: #fde68a; }
++.highlight-swatch-green { background-color: #bbf7d0; }
++.highlight-swatch-blue { background-color: #bfdbfe; }
++.highlight-swatch-pink { background-color: #fbcfe8; }
++
++/* KaTeX formulas follow the surrounding text size */
++.math-text .katex { font-size: 1.12em; }
++.math-text .katex-display { margin: 0.25em 0; }
+diff --git a/app/layout.tsx b/app/layout.tsx
+index 04b2e7e..7a564a3 100644
+--- a/app/layout.tsx
++++ b/app/layout.tsx
+@@ -1,5 +1,6 @@
+ import type { Metadata } from "next";
+ import Script from "next/script";
++import "katex/dist/katex.min.css";
+ import "./globals.css";
+ 
+ export const metadata: Metadata = {
+diff --git a/components/quiz/AnswerOption.tsx b/components/quiz/AnswerOption.tsx
+index bef0cc7..1b81126 100644
+--- a/components/quiz/AnswerOption.tsx
++++ b/components/quiz/AnswerOption.tsx
+@@ -1,59 +1,92 @@
++import { MathText } from "@/components/quiz/MathText";
++import type { QuestionChoice } from "@/types/sat";
++
+ type AnswerOptionProps = {
+-  choice: string;
+-  correctAnswer?: string;
+-  index: number;
++  choice: QuestionChoice;
++  correctLabel?: string | null;
+   isDisabled?: boolean;
++  isEliminated?: boolean;
+   isSelected: boolean;
+-  onSelect: (choice: string) => void;
++  onSelect: (label: string) => void;
++  onToggleEliminate?: (label: string) => void;
+   showFeedback?: boolean;
+ };
+ 
+ export function AnswerOption({
+   choice,
+-  correctAnswer,
+-  index,
++  correctLabel,
+   isDisabled = false,
++  isEliminated = false,
+   isSelected,
+   onSelect,
++  onToggleEliminate,
+   showFeedback = false
+ }: AnswerOptionProps) {
+-  const letter = String.fromCharCode(65 + index);
+-  const isCorrect = showFeedback && choice === correctAnswer;
+-  const isIncorrect = showFeedback && isSelected && choice !== correctAnswer;
++  const isCorrect = showFeedback && correctLabel === choice.label;
++  const isIncorrect = showFeedback && isSelected && correctLabel !== choice.label;
+   const optionClass = isCorrect
+-    ? "border-emerald-400 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-100"
++    ? "border-emerald-500 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-500"
+     : isIncorrect
+-      ? "border-rose-300 bg-rose-50 text-rose-950 ring-2 ring-rose-100"
++      ? "border-rose-400 bg-rose-50 text-rose-950 ring-1 ring-rose-400"
+       : isSelected
+-        ? "border-blue-500 bg-blue-50 text-slate-950 ring-2 ring-blue-100"
+-        : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50/70 hover:shadow-sm";
++        ? "border-blue-600 bg-blue-50 text-slate-950 ring-1 ring-blue-600"
++        : "border-slate-300 bg-white text-slate-800 hover:border-slate-500";
+   const letterClass = isCorrect
+-    ? "bg-emerald-600 text-white ring-emerald-600"
++    ? "border-emerald-600 bg-emerald-600 text-white"
+     : isIncorrect
+-      ? "bg-rose-600 text-white ring-rose-600"
++      ? "border-rose-600 bg-rose-600 text-white"
+       : isSelected
+-        ? "bg-blue-600 text-white ring-blue-600"
+-        : "bg-white text-slate-700 ring-slate-300 group-hover:ring-blue-300";
++        ? "border-blue-600 bg-blue-600 text-white"
++        : "border-slate-500 bg-white text-slate-800";
+ 
+   return (
+-    <button
+-      className={[
+-        "group flex min-h-14 w-full items-center gap-4 rounded-xl border px-4 py-3 text-left text-sm font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-default disabled:hover:translate-y-0",
+-        optionClass
+-      ].join(" ")}
+-      disabled={isDisabled}
+-      onClick={() => onSelect(choice)}
+-      type="button"
+-    >
+-      <span
++    <div className="flex items-center gap-3">
++      <button
++        aria-pressed={isSelected}
+         className={[
+-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black ring-1 ring-inset transition",
+-          letterClass
++          "flex min-h-14 w-full min-w-0 items-center gap-4 rounded-xl border px-4 py-3 text-left text-base transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-default",
++          optionClass,
++          isEliminated && !isDisabled ? "opacity-45" : ""
+         ].join(" ")}
++        disabled={isDisabled}
++        onClick={() => onSelect(choice.label)}
++        type="button"
+       >
+-        {letter}
+-      </span>
+-      <span className="leading-6">{choice}</span>
+-    </button>
++        <span
++          className={[
++            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold",
++            letterClass,
++            isEliminated ? "line-through" : ""
++          ].join(" ")}
++        >
++          {choice.label}
++        </span>
++        <span className={["min-w-0 flex-1 leading-7", isEliminated ? "line-through decoration-slate-500" : ""].join(" ")}>
++          {choice.imageUrl ? (
++            // eslint-disable-next-line @next/next/no-img-element -- graph answer choice from Supabase Storage
++            <img alt={`Choice ${choice.label}`} className="block h-auto max-h-64 w-auto max-w-full" src={choice.imageUrl} />
++          ) : null}
++          {choice.text ? <MathText text={choice.text} /> : null}
++        </span>
++      </button>
++
++      {onToggleEliminate ? (
++        <button
++          aria-label={isEliminated ? `Restore choice ${choice.label}` : `Cross out choice ${choice.label}`}
++          aria-pressed={isEliminated}
++          className={[
++            "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors",
++            isEliminated ? "border-slate-800 bg-slate-800 text-white" : "border-slate-400 text-slate-600 hover:border-slate-700"
++          ].join(" ")}
++          disabled={isDisabled}
++          onClick={() => onToggleEliminate(choice.label)}
++          title={isEliminated ? "Restore" : "Cross out"}
++          type="button"
++        >
++          {choice.label}
++          <span aria-hidden="true" className="absolute left-[-3px] right-[-3px] top-1/2 h-[1.5px] -translate-y-1/2 bg-current" />
++        </button>
++      ) : null}
++    </div>
+   );
+ }
+diff --git a/components/quiz/Highlightable.tsx b/components/quiz/Highlightable.tsx
+new file mode 100644
+index 0000000..c56db8f
+--- /dev/null
++++ b/components/quiz/Highlightable.tsx
+@@ -0,0 +1,247 @@
++"use client";
++
++import { Eraser, X } from "lucide-react";
++import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
++
++/**
++ * Lets a student select text and mark it with a color, like the highlighter in Bluebook.
++ *
++ * Uses the CSS Custom Highlight API, so the page's DOM (including KaTeX formulas)
++ * is never modified. Highlights are remembered per `storageKey` for the browser
++ * session, so they are still there when the student goes back to a question.
++ * Browsers without the API simply show the text without the tool.
++ */
++export const HIGHLIGHT_COLORS = [
++  { id: "yellow", label: "Yellow" },
++  { id: "green", label: "Green" },
++  { id: "blue", label: "Blue" },
++  { id: "pink", label: "Pink" }
++] as const;
++
++type ColorId = (typeof HIGHLIGHT_COLORS)[number]["id"];
++type SavedMark = { color: ColorId; end: number; start: number };
++type LiveMark = { color: ColorId; range: Range };
++
++const savedMarks = new Map<string, SavedMark[]>();
++
++type HighlightableProps = {
++  children: ReactNode;
++  className?: string;
++  storageKey: string;
++};
++
++export function Highlightable({ children, className, storageKey }: HighlightableProps) {
++  const containerRef = useRef<HTMLDivElement>(null);
++  const marksRef = useRef<LiveMark[]>([]);
++  const [toolbar, setToolbar] = useState<{ left: number; top: number; target: Range } | null>(null);
++
++  const addedRef = useRef<Set<Range>>(new Set());
++
++  const sync = useCallback(() => {
++    if (!supportsHighlights()) return;
++    for (const color of HIGHLIGHT_COLORS) {
++      const name = `sat-hl-${color.id}`;
++      const highlight = CSS.highlights.get(name) ?? new Highlight();
++      CSS.highlights.set(name, highlight);
++      // drop the ranges this instance added before, then add the current ones
++      for (const range of addedRef.current) highlight.delete(range);
++      for (const mark of marksRef.current) {
++        if (mark.color === color.id) highlight.add(mark.range);
++      }
++    }
++    addedRef.current = new Set(marksRef.current.map((mark) => mark.range));
++  }, []);
++
++  const save = useCallback(() => {
++    const container = containerRef.current;
++    if (!container) return;
++    savedMarks.set(
++      storageKey,
++      marksRef.current.map((mark) => ({ color: mark.color, ...toOffsets(container, mark.range) }))
++    );
++  }, [storageKey]);
++
++  // restore saved highlights once the content (KaTeX included) is in the DOM
++  useEffect(() => {
++    const isSupported = supportsHighlights();
++    const container = containerRef.current;
++    if (!isSupported || !container) return;
++
++    marksRef.current = (savedMarks.get(storageKey) ?? [])
++      .map((mark) => {
++        const range = fromOffsets(container, mark.start, mark.end);
++        return range ? { color: mark.color, range } : null;
++      })
++      .filter((mark): mark is LiveMark => mark !== null);
++    sync();
++
++    return () => {
++      marksRef.current = [];
++      sync();
++    };
++  }, [storageKey, sync]);
++
++  useEffect(() => {
++    if (!toolbar) return;
++    const close = (event: KeyboardEvent) => event.key === "Escape" && setToolbar(null);
++    const dismiss = () => setToolbar(null);
++    window.addEventListener("keydown", close);
++    window.addEventListener("scroll", dismiss, true);
++    return () => {
++      window.removeEventListener("keydown", close);
++      window.removeEventListener("scroll", dismiss, true);
++    };
++  }, [toolbar]);
++
++  function handlePointerUp() {
++    if (!supportsHighlights()) return;
++    // let the browser finish updating the selection
++    window.setTimeout(() => {
++      const container = containerRef.current;
++      const selection = window.getSelection();
++      if (!container || !selection || selection.rangeCount === 0) return;
++      const range = selection.getRangeAt(0);
++
++      if (!range.collapsed && rangeInside(range, container)) {
++        showToolbarFor(range.cloneRange());
++        return;
++      }
++
++      // a tap on existing highlight opens the toolbar for it (recolor / remove)
++      const hit = range.collapsed
++        ? marksRef.current.find((mark) => mark.range.isPointInRange(range.startContainer, range.startOffset))
++        : undefined;
++      if (hit) {
++        showToolbarFor(hit.range);
++      } else {
++        setToolbar(null);
++      }
++    }, 0);
++  }
++
++  function showToolbarFor(range: Range) {
++    const rect = range.getBoundingClientRect();
++    setToolbar({ left: rect.left + rect.width / 2, target: range, top: rect.top });
++  }
++
++  function apply(color: ColorId) {
++    if (!toolbar) return;
++    const target = toolbar.target;
++    const existing = marksRef.current.find((mark) => mark.range === target);
++
++    if (existing) {
++      existing.color = color;
++    } else {
++      removeOverlapping(target);
++      marksRef.current.push({ color, range: target });
++    }
++
++    finish();
++  }
++
++  function erase() {
++    if (!toolbar) return;
++    removeOverlapping(toolbar.target);
++    finish();
++  }
++
++  function removeOverlapping(target: Range) {
++    marksRef.current = marksRef.current.filter((mark) => !rangesOverlap(mark.range, target));
++  }
++
++  function finish() {
++    sync();
++    save();
++    window.getSelection()?.removeAllRanges();
++    setToolbar(null);
++  }
++
++  return (
++    <div className={className} onKeyUp={handlePointerUp} onMouseUp={handlePointerUp} onTouchEnd={handlePointerUp} ref={containerRef}>
++      {children}
++      {toolbar ? (
++        <div
++          aria-label="Highlight"
++          className="fixed z-50 flex -translate-x-1/2 -translate-y-full items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
++          onMouseDown={(event) => event.preventDefault()}
++          role="toolbar"
++          style={{ left: toolbar.left, top: toolbar.top - 8 }}
++        >
++          {HIGHLIGHT_COLORS.map((color) => (
++            <button
++              aria-label={`Highlight ${color.label.toLowerCase()}`}
++              className={`highlight-swatch highlight-swatch-${color.id} h-8 w-8 rounded-md border border-black/10`}
++              key={color.id}
++              onClick={() => apply(color.id)}
++              title={color.label}
++              type="button"
++            />
++          ))}
++          <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-slate-200 dark:bg-slate-700" />
++          <button
++            aria-label="Remove highlight"
++            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
++            onClick={erase}
++            title="Remove"
++            type="button"
++          >
++            <Eraser size={16} />
++          </button>
++          <button
++            aria-label="Close"
++            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
++            onClick={() => setToolbar(null)}
++            type="button"
++          >
++            <X size={16} />
++          </button>
++        </div>
++      ) : null}
++    </div>
++  );
++}
++
++function supportsHighlights() {
++  return typeof window !== "undefined" && typeof CSS !== "undefined" && "highlights" in CSS && typeof Highlight !== "undefined";
++}
++
++function rangeInside(range: Range, container: Node) {
++  return container.contains(range.startContainer) && container.contains(range.endContainer);
++}
++
++function rangesOverlap(a: Range, b: Range) {
++  return a.compareBoundaryPoints(Range.END_TO_START, b) < 0 && a.compareBoundaryPoints(Range.START_TO_END, b) > 0;
++}
++
++/** character offsets of a range inside the container's text, so it can be rebuilt later */
++function toOffsets(container: Node, range: Range) {
++  const before = document.createRange();
++  before.selectNodeContents(container);
++  before.setEnd(range.startContainer, range.startOffset);
++  const start = before.toString().length;
++  return { end: start + range.toString().length, start };
++}
++
++function fromOffsets(container: Node, start: number, end: number) {
++  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
++  const range = document.createRange();
++  let position = 0;
++  let startSet = false;
++  let node = walker.nextNode();
++
++  while (node) {
++    const length = node.textContent?.length ?? 0;
++    if (!startSet && start <= position + length) {
++      range.setStart(node, start - position);
++      startSet = true;
++    }
++    if (startSet && end <= position + length) {
++      range.setEnd(node, end - position);
++      return range;
++    }
++    position += length;
++    node = walker.nextNode();
++  }
++
++  return null;
++}
+diff --git a/components/quiz/MathText.tsx b/components/quiz/MathText.tsx
+new file mode 100644
+index 0000000..a87f12f
+--- /dev/null
++++ b/components/quiz/MathText.tsx
+@@ -0,0 +1,231 @@
++"use client";
++
++import katex from "katex";
++import { Fragment, type ReactNode } from "react";
++
++/**
++ * Renders question text the way the Math import writes it:
++ *   - inline math   \( ... \)      -> KaTeX
++ *   - display math  \[ ... \]      -> KaTeX on its own line
++ *   - Markdown pipe tables          -> <table>
++ *   - *italic*
++ *   - [[img:0]] on its own line     -> the question's figure (stem graphs/diagrams)
++ * Money like "$125" is plain text; $...$ is never treated as math.
++ */
++type MathTextProps = {
++  className?: string;
++  imageAlt?: string;
++  images?: string[];
++  inline?: boolean;
++  text: string;
++};
++
++type Block =
++  | { kind: "paragraph"; text: string }
++  | { kind: "display"; tex: string }
++  | { kind: "table"; rows: string[][]; header: boolean }
++  | { kind: "image"; index: number };
++
++export function MathText({ className, imageAlt = "Figure", images = [], inline = false, text }: MathTextProps) {
++  if (inline) {
++    return <span className={className}>{renderInline(text)}</span>;
++  }
++
++  const blocks = parseBlocks(text ?? "");
++
++  return (
++    <div className={["math-text space-y-3", className].filter(Boolean).join(" ")}>
++      {blocks.map((block, index) => {
++        if (block.kind === "image") {
++          const src = images[block.index];
++          return src ? (
++            // eslint-disable-next-line @next/next/no-img-element -- figures come from Supabase Storage at their natural size
++            <img
++              alt={`${imageAlt} ${block.index + 1}`}
++              className="mx-auto block h-auto max-h-[420px] w-auto max-w-full"
++              key={index}
++              src={src}
++            />
++          ) : null;
++        }
++
++        if (block.kind === "display") {
++          return <div className="overflow-x-auto py-1 text-center" dangerouslySetInnerHTML={{ __html: renderTex(block.tex, true) }} key={index} />;
++        }
++
++        if (block.kind === "table") {
++          return <MathTable header={block.header} key={index} rows={block.rows} />;
++        }
++
++        return (
++          <p className="whitespace-pre-line" key={index}>
++            {renderInline(block.text)}
++          </p>
++        );
++      })}
++    </div>
++  );
++}
++
++function MathTable({ header, rows }: { header: boolean; rows: string[][] }) {
++  const [head, ...body] = header ? rows : [null, ...rows];
++
++  return (
++    <div className="overflow-x-auto">
++      <table className="mx-auto border-collapse text-center">
++        {head ? (
++          <thead>
++            <tr>
++              {head.map((cell, index) => (
++                <th className="border border-current px-4 py-1.5 font-semibold" key={index} scope="col">
++                  {renderInline(cell)}
++                </th>
++              ))}
++            </tr>
++          </thead>
++        ) : null}
++        <tbody>
++          {body.map((row, rowIndex) => (
++            <tr key={rowIndex}>
++              {(row ?? []).map((cell, index) => (
++                <td className="border border-current px-4 py-1.5" key={index}>
++                  {renderInline(cell)}
++                </td>
++              ))}
++            </tr>
++          ))}
++        </tbody>
++      </table>
++    </div>
++  );
++}
++
++function parseBlocks(text: string): Block[] {
++  const blocks: Block[] = [];
++  const lines = text.replace(/\r\n/g, "\n").split("\n");
++  let paragraph: string[] = [];
++
++  const flush = () => {
++    const joined = paragraph.join("\n").trim();
++    if (joined) blocks.push({ kind: "paragraph", text: joined });
++    paragraph = [];
++  };
++
++  for (let i = 0; i < lines.length; i += 1) {
++    const line = lines[i];
++    const trimmed = line.trim();
++
++    const image = trimmed.match(/^\[\[img:(\d+)\]\]$/);
++    if (image) {
++      flush();
++      blocks.push({ kind: "image", index: Number(image[1]) });
++      continue;
++    }
++
++    if (trimmed.startsWith("\\[")) {
++      flush();
++      const tex: string[] = [trimmed.slice(2)];
++      while (!tex[tex.length - 1].includes("\\]") && i + 1 < lines.length) {
++        i += 1;
++        tex.push(lines[i]);
++      }
++      const joined = tex.join("\n");
++      const end = joined.lastIndexOf("\\]");
++      blocks.push({ kind: "display", tex: end >= 0 ? joined.slice(0, end) : joined });
++      const rest = end >= 0 ? joined.slice(end + 2).trim() : "";
++      if (rest) paragraph.push(rest);
++      continue;
++    }
++
++    if (trimmed.startsWith("|")) {
++      flush();
++      const tableLines = [trimmed];
++      while (i + 1 < lines.length && lines[i + 1].trim().startsWith("|")) {
++        i += 1;
++        tableLines.push(lines[i].trim());
++      }
++      const isDivider = (row: string) => /^\|?[\s:|-]+\|?$/.test(row) && row.includes("-");
++      const header = tableLines.length > 1 && isDivider(tableLines[1]);
++      const rows = tableLines.filter((row) => !isDivider(row)).map(splitRow);
++      blocks.push({ kind: "table", rows, header });
++      continue;
++    }
++
++    if (!trimmed) {
++      flush();
++      continue;
++    }
++
++    paragraph.push(line);
++  }
++
++  flush();
++  return blocks;
++}
++
++function splitRow(row: string) {
++  // split on | that is not inside \( ... \) (absolute values like \(|x|\) stay intact)
++  const cells: string[] = [];
++  let depth = 0;
++  let current = "";
++  const body = row.replace(/^\|/, "").replace(/\|$/, "");
++
++  for (let i = 0; i < body.length; i += 1) {
++    if (body.startsWith("\\(", i)) depth += 1;
++    if (body.startsWith("\\)", i)) depth = Math.max(0, depth - 1);
++    if (body[i] === "|" && depth === 0) {
++      cells.push(current.trim());
++      current = "";
++      continue;
++    }
++    current += body[i];
++  }
++
++  cells.push(current.trim());
++  return cells;
++}
++
++function renderInline(text: string): ReactNode[] {
++  const parts: ReactNode[] = [];
++  const pattern = /\\\(([\s\S]+?)\\\)|\\\[([\s\S]+?)\\\]/g;
++  let last = 0;
++  let match: RegExpExecArray | null;
++
++  while ((match = pattern.exec(text ?? "")) !== null) {
++    if (match.index > last) parts.push(...renderEmphasis(text.slice(last, match.index), parts.length));
++    const tex = match[1] ?? match[2];
++    parts.push(<span dangerouslySetInnerHTML={{ __html: renderTex(tex, match[2] !== undefined) }} key={`m${parts.length}`} />);
++    last = pattern.lastIndex;
++  }
++
++  if (last < (text ?? "").length) parts.push(...renderEmphasis(text.slice(last), parts.length));
++  return parts;
++}
++
++function renderEmphasis(text: string, offset: number): ReactNode[] {
++  return text.split(/(\*[^*\n]+\*)/g).map((piece, index) =>
++    /^\*[^*\n]+\*$/.test(piece) ? (
++      <em key={`e${offset}-${index}`}>{piece.slice(1, -1)}</em>
++    ) : (
++      <Fragment key={`t${offset}-${index}`}>{piece}</Fragment>
++    )
++  );
++}
++
++const texCache = new Map<string, string>();
++
++function renderTex(tex: string, displayMode: boolean) {
++  const key = `${displayMode ? "D" : "I"}${tex}`;
++  const cached = texCache.get(key);
++  if (cached) return cached;
++
++  const html = katex.renderToString(tex, {
++    displayMode,
++    output: "htmlAndMathml",
++    strict: "ignore",
++    throwOnError: false,
++    trust: false
++  });
++  texCache.set(key, html);
++  return html;
++}
+diff --git a/components/quiz/QuestionCard.tsx b/components/quiz/QuestionCard.tsx
+index fdd4d65..26a5d11 100644
+--- a/components/quiz/QuestionCard.tsx
++++ b/components/quiz/QuestionCard.tsx
+@@ -1,9 +1,10 @@
+ "use client";
+ 
+-import { Flag, Send } from "lucide-react";
+-import Image from "next/image";
++import { Flag, Info, Send } from "lucide-react";
+ import { useState } from "react";
+ import { AnswerOption } from "@/components/quiz/AnswerOption";
++import { Highlightable } from "@/components/quiz/Highlightable";
++import { MathText } from "@/components/quiz/MathText";
+ import { ProgressBar } from "@/components/quiz/ProgressBar";
+ import { Timer } from "@/components/quiz/Timer";
+ import { TopicBadge } from "@/components/quiz/TopicBadge";
+@@ -12,7 +13,8 @@ import type { Question, QuestionFeedback } from "@/types/sat";
+ type QuestionCardProps = {
+   currentIndex: number;
+   mode?: "practice" | "test";
+-  onSelect: (choice: string) => void;
++  /** multiple-choice: the choice label ("A"-"D"); student-produced response: the typed answer */
++  onSelect: (answer: string) => void;
+   question: Question;
+   feedback?: QuestionFeedback | null;
+   selectedAnswer: string | null;
+@@ -21,6 +23,9 @@ type QuestionCardProps = {
+   totalQuestions: number;
+ };
+ 
++// crossed-out choices are remembered per question while the page is open
++const eliminatedByQuestion = new Map<string, string[]>();
++
+ export function QuestionCard({
+   currentIndex,
+   mode = "practice",
+@@ -36,68 +41,78 @@ export function QuestionCard({
+   const hasChoices = question.choices.length > 0;
+   const isCorrect = feedback?.isCorrect ?? false;
+   const progress = ((currentIndex + 1) / Math.max(totalQuestions, 1)) * 100;
++  const [eliminated, setEliminated] = useState<string[]>(() => eliminatedByQuestion.get(question.id) ?? []);
++  const placesOwnFigures = /\[\[img:\d+\]\]/.test(question.question);
++
++  function updateEliminated(next: string[]) {
++    eliminatedByQuestion.set(question.id, next);
++    setEliminated(next);
++  }
++
++  function selectChoice(label: string) {
++    if (eliminated.includes(label)) updateEliminated(eliminated.filter((item) => item !== label));
++    onSelect(label);
++  }
++
++  function toggleEliminate(label: string) {
++    updateEliminated(eliminated.includes(label) ? eliminated.filter((item) => item !== label) : [...eliminated, label]);
++  }
+ 
+   return (
+-    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
++    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+         <div className="min-w-0 flex-1">
+-          <p className="text-base font-black text-slate-600">
++          <p className="text-sm font-semibold text-slate-600">
+             Question {currentIndex + 1} of {totalQuestions}
+           </p>
+-          <ProgressBar className="mt-4" value={progress} />
++          <ProgressBar className="mt-3" value={progress} />
+         </div>
+ 
+         <div className="flex flex-wrap items-center gap-3">
+           {timerSeconds !== undefined ? <Timer seconds={timerSeconds} /> : null}
+           <button
+-            className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
++            className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+             type="button"
+           >
+-            <Flag size={17} />
++            <Flag size={16} />
+             Report
+           </button>
+         </div>
+       </div>
+ 
+-      <div className="mt-7">
+-        <TopicBadge
+-          difficulty={question.difficulty}
+-          section={question.section}
+-          topic={question.topic}
+-        />
++      <div className="mt-6">
++        <TopicBadge difficulty={question.difficulty} section={question.section} topic={question.topic} />
+       </div>
+ 
+-      {question.imageUrls.length > 0 ? (
+-        <div className="mt-6 grid gap-4">
+-          {question.imageUrls.map((imageUrl, imageIndex) => (
+-            <Image
+-              alt={`Question ${currentIndex + 1} visual ${imageIndex + 1}`}
+-              className="w-full rounded-2xl border border-slate-200 bg-white object-contain shadow-sm"
+-              height={420}
+-              key={`${question.id}-image-${imageUrl}`}
+-              src={imageUrl}
+-              unoptimized
+-              width={1200}
+-            />
+-          ))}
+-        </div>
+-      ) : (
+-        <h2 className="mt-6 text-xl font-black leading-8 text-slate-950 sm:text-2xl sm:leading-9">
+-          {question.question}
+-        </h2>
+-      )}
++      <Highlightable className="mt-6 text-[17px] leading-8 text-slate-950" key={question.id} storageKey={`question-${question.id}`}>
++        {!placesOwnFigures && question.imageUrls.length > 0 ? (
++          <div className="mb-4 grid gap-4">
++            {question.imageUrls.map((imageUrl, imageIndex) => (
++              // eslint-disable-next-line @next/next/no-img-element -- figures come from Supabase Storage at their natural size
++              <img
++                alt={`Question ${currentIndex + 1} figure ${imageIndex + 1}`}
++                className="mx-auto block h-auto max-h-[420px] w-auto max-w-full"
++                key={`${question.id}-image-${imageUrl}`}
++                src={imageUrl}
++              />
++            ))}
++          </div>
++        ) : null}
++        <MathText imageAlt={`Question ${currentIndex + 1} figure`} images={question.imageUrls} text={question.question} />
++      </Highlightable>
+ 
+       {hasChoices ? (
+         <div className="mt-7 grid gap-3">
+-          {question.choices.map((choice, index) => (
++          {question.choices.map((choice) => (
+             <AnswerOption
+               choice={choice}
+-              correctAnswer={feedback?.correctAnswer}
+-              index={index}
++              correctLabel={feedback?.correctLabel}
+               isDisabled={mode === "practice" && hasAnswered}
+-              isSelected={selectedAnswer === choice}
+-              key={`${question.id}-${choice}`}
+-              onSelect={onSelect}
++              isEliminated={eliminated.includes(choice.label)}
++              isSelected={selectedAnswer === choice.label}
++              key={`${question.id}-${choice.label}`}
++              onSelect={selectChoice}
++              onToggleEliminate={toggleEliminate}
+               showFeedback={showFeedback}
+             />
+           ))}
+@@ -116,20 +131,17 @@ export function QuestionCard({
+       {showFeedback && hasAnswered && feedback ? (
+         <div
+           className={[
+-            "mt-6 rounded-2xl border p-5",
+-            isCorrect
+-              ? "border-emerald-100 bg-emerald-50 text-emerald-950"
+-              : "border-rose-100 bg-rose-50 text-rose-950"
++            "mt-6 rounded-xl border p-5",
++            isCorrect ? "border-emerald-200 bg-emerald-50 text-emerald-950" : "border-rose-200 bg-rose-50 text-rose-950"
+           ].join(" ")}
+         >
+-          <p className="text-sm font-black">
+-            {isCorrect ? "Correct" : "Incorrect"}
+-          </p>
++          <p className="text-sm font-semibold">{isCorrect ? "Correct" : "Incorrect"}</p>
+           <p className="mt-2 text-sm leading-6">
+-            Correct answer:{" "}
+-            <span className="font-black">{feedback.correctAnswer}</span>
++            Correct answer: <span className="font-semibold">{feedback.correctAnswer}</span>
+           </p>
+-          <p className="mt-2 text-sm leading-6">{feedback.explanation}</p>
++          <Highlightable className="mt-3 text-[15px] leading-7 text-slate-800" storageKey={`explanation-${question.id}`}>
++            <MathText text={feedback.explanation} />
++          </Highlightable>
+         </div>
+       ) : null}
+     </article>
+@@ -146,11 +158,12 @@ function FreeResponseInput({
+   hasAnswered: boolean;
+   initialAnswer: string;
+   mode: "practice" | "test";
+-  onSelect: (choice: string) => void;
++  onSelect: (answer: string) => void;
+   questionId: string;
+ }) {
+   const [draftAnswer, setDraftAnswer] = useState(initialAnswer);
+   const isLocked = mode === "practice" && hasAnswered;
++  const preview = answerPreview(draftAnswer);
+ 
+   function submitFreeResponse() {
+     const trimmedAnswer = draftAnswer.trim();
+@@ -163,41 +176,75 @@ function FreeResponseInput({
+   }
+ 
+   return (
+-    <div className="mt-7 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+-      <label
+-        className="text-sm font-black uppercase tracking-[0.12em] text-blue-600"
+-        htmlFor={`free-response-${questionId}`}
+-      >
+-        Student-produced response
+-      </label>
+-      <div className="mt-3 flex flex-col gap-3 sm:flex-row">
++    <div className="mt-7 max-w-md">
++      <div className="flex items-center gap-2">
++        <label className="text-sm font-semibold text-slate-700" htmlFor={`free-response-${questionId}`}>
++          Your answer
++        </label>
++        <details className="group relative">
++          <summary className="flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
++            <Info aria-hidden="true" size={16} />
++            <span className="sr-only">How to enter your answer</span>
++          </summary>
++          <div className="absolute left-0 z-20 mt-2 w-80 rounded-xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-lg">
++            <p className="font-semibold text-slate-900">How to enter your answer</p>
++            <ul className="mt-2 list-disc space-y-1 pl-5">
++              <li>If you find more than one correct answer, enter only one.</li>
++              <li>Up to 5 characters for a positive answer, 6 for a negative one (the minus sign counts).</li>
++              <li>A fraction that doesn&apos;t fit: enter its decimal. A long decimal: cut or round it at the 4th digit.</li>
++              <li>A mixed number like 3½: enter 7/2 or 3.5.</li>
++              <li>No symbols such as %, $ or commas.</li>
++            </ul>
++          </div>
++        </details>
++      </div>
++
++      <div className="mt-2 flex gap-3">
+         <input
+-          className="min-h-12 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-base font-bold text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
++          autoComplete="off"
++          className="min-h-12 w-40 rounded-lg border border-slate-400 bg-white px-3 text-lg text-slate-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+           disabled={isLocked}
+           id={`free-response-${questionId}`}
+-          onChange={(event) => setDraftAnswer(event.target.value)}
++          inputMode="decimal"
++          maxLength={6}
++          onChange={(event) => setDraftAnswer(event.target.value.replace(/[^0-9./-]/g, ""))}
+           onKeyDown={(event) => {
+             if (event.key === "Enter") {
+               submitFreeResponse();
+             }
+           }}
+-          placeholder="Type your answer"
++          placeholder="Answer"
+           value={draftAnswer}
+         />
+         <button
+-          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
++          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+           disabled={!draftAnswer.trim() || isLocked}
+           onClick={submitFreeResponse}
+           type="button"
+         >
+-          Submit
+-          <Send size={17} />
++          {mode === "practice" ? "Check" : "Save"}
++          <Send size={16} />
+         </button>
+       </div>
+-      <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">
+-        Enter an exact numeric or short text answer. In practice mode, the
+-        answer locks after submission.
+-      </p>
++
++      {preview ? (
++        <p className="mt-3 flex items-center gap-3 text-sm text-slate-600">
++          Answer preview:
++          <MathText className="text-xl text-slate-950" inline text={preview} />
++        </p>
++      ) : null}
+     </div>
+   );
+ }
++
++/** "-7/2" -> "\(-\frac{7}{2}\)", like the answer preview in Bluebook */
++function answerPreview(value: string) {
++  const text = value.trim();
++
++  if (!text) return "";
++
++  const fraction = text.match(/^(-?)(\d*\.?\d*)\/(\d*\.?\d*)$/);
++  if (fraction) return `\\(${fraction[1]}\\frac{${fraction[2] || "\\square"}}{${fraction[3] || "\\square"}}\\)`;
++
++  return `\\(${text}\\)`;
++}
+diff --git a/components/quiz/ReviewAnswers.tsx b/components/quiz/ReviewAnswers.tsx
+index b9ee4bb..7f76131 100644
+--- a/components/quiz/ReviewAnswers.tsx
++++ b/components/quiz/ReviewAnswers.tsx
+@@ -1,3 +1,4 @@
++import { MathText } from "@/components/quiz/MathText";
+ import type { ReviewQuestion } from "@/types/sat";
+ 
+ type ReviewAnswersProps = {
+@@ -7,55 +8,49 @@ type ReviewAnswersProps = {
+ 
+ export function ReviewAnswers({ answers, questions }: ReviewAnswersProps) {
+   return (
+-    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+-      <h2 className="text-xl font-black text-slate-950">Review Answers</h2>
++    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
++      <h2 className="text-xl font-semibold text-slate-950">Review Answers</h2>
+       <div className="mt-5 space-y-4">
+         {questions.map((question, index) => {
+           const selected = answers[question.id];
+-          const isCorrect = selected === question.correctAnswer;
++          const isCorrect = question.isCorrect ?? selected === question.correctAnswer;
++          const selectedChoice = question.choices.find((choice) => choice.label === selected);
++          const correctChoice = question.choices.find((choice) => choice.label === question.correctLabel);
+ 
+           return (
+-            <div
+-              className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+-              key={question.id}
+-            >
++            <div className="rounded-xl border border-slate-200 p-4" key={question.id}>
+               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+-                <div>
+-                  <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">
++                <div className="min-w-0">
++                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                     Question {index + 1}
+                   </p>
+-                  <h3 className="mt-2 font-black leading-6 text-slate-950">
+-                    {question.question}
+-                  </h3>
++                  <MathText
++                    className="mt-2 leading-7 text-slate-950"
++                    imageAlt={`Question ${index + 1} figure`}
++                    images={question.imageUrls}
++                    text={question.question}
++                  />
+                 </div>
+                 <span
+                   className={[
+-                    "shrink-0 rounded-full px-3 py-1.5 text-xs font-black",
+-                    isCorrect
+-                      ? "bg-emerald-50 text-emerald-700"
+-                      : "bg-rose-50 text-rose-700"
++                    "shrink-0 rounded-full px-3 py-1 text-xs font-semibold",
++                    isCorrect ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+                   ].join(" ")}
+                 >
+                   {isCorrect ? "Correct" : "Review"}
+                 </span>
+               </div>
+               <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+-                <p className="rounded-xl bg-white p-3 text-slate-600">
+-                  Selected:{" "}
+-                  <span className="font-black text-slate-950">
+-                    {selected ?? "No answer"}
+-                  </span>
+-                </p>
+-                <p className="rounded-xl bg-white p-3 text-slate-600">
+-                  Correct:{" "}
+-                  <span className="font-black text-slate-950">
+-                    {question.correctAnswer}
+-                  </span>
+-                </p>
++                <div className="rounded-lg bg-slate-50 p-3 text-slate-600">
++                  Selected: <span className="font-semibold text-slate-950">{selected ?? "No answer"}</span>
++                  {selectedChoice?.text ? <MathText className="mt-1 text-slate-900" text={selectedChoice.text} /> : null}
++                </div>
++                <div className="rounded-lg bg-slate-50 p-3 text-slate-600">
++                  Correct: <span className="font-semibold text-slate-950">{question.correctAnswer}</span>
++                  {correctChoice?.text ? <MathText className="mt-1 text-slate-900" text={correctChoice.text} /> : null}
++                </div>
+               </div>
+-              <p className="mt-3 text-sm leading-6 text-slate-600">
+-                {question.explanation}
+-              </p>
++              <MathText className="mt-3 text-sm leading-6 text-slate-700" text={question.explanation} />
+             </div>
+           );
+         })}
+diff --git a/components/tests/start/TestStartPage.tsx b/components/tests/start/TestStartPage.tsx
+index 9e89238..7dc77c1 100644
+--- a/components/tests/start/TestStartPage.tsx
++++ b/components/tests/start/TestStartPage.tsx
+@@ -320,7 +320,7 @@ export function TestStartPage() {
+                 onClick={() => {
+                   const missedQuestion =
+                     completionResult?.reviewQuestions.find(
+-                      (question) => answers[question.id] !== question.correctAnswer
++                      (question) => !question.isCorrect
+                     ) ?? completionResult?.reviewQuestions[0];
+                   if (!missedQuestion) {
+                     return;
+diff --git a/lib/server/questionSolutions.ts b/lib/server/questionSolutions.ts
+index bb78636..8092929 100644
+--- a/lib/server/questionSolutions.ts
++++ b/lib/server/questionSolutions.ts
+@@ -1,5 +1,5 @@
+ import type { Choice } from "@/types/database";
+-import type { QuestionFeedback, ReviewQuestion } from "@/types/sat";
++import type { QuestionChoice, QuestionFeedback, ReviewQuestion } from "@/types/sat";
+ import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+ 
+ const PUBLIC_QUESTION_COLUMNS =
+@@ -12,17 +12,136 @@ export async function gradeQuestionAnswer({
+   questionId: string;
+   selectedAnswer: string | null;
+ }): Promise<QuestionFeedback> {
+-  const solution = await getQuestionSolution(questionId);
+-  const isCorrect =
+-    selectedAnswer !== null && normalizeAnswer(selectedAnswer) === normalizeAnswer(solution.correct_answer);
++  const grading = (await loadGradingData([questionId])).get(questionId);
++
++  if (!grading) {
++    throw new Error("Question solution is unavailable.");
++  }
+ 
+   return {
+-    correctAnswer: solution.correct_answer,
+-    explanation: solution.explanation,
+-    isCorrect
++    correctAnswer: grading.correctAnswer,
++    correctLabel: grading.correctLabel,
++    explanation: grading.explanation,
++    isCorrect: isAnswerCorrect(grading, selectedAnswer)
+   };
+ }
+ 
++export type GradingData = {
++  acceptedAnswers: string[];
++  choices: Choice[];
++  /** what to show as "Correct answer": the letter, or the main typed answer */
++  correctAnswer: string;
++  correctLabel: string | null;
++  explanation: string;
++  questionType: "multiple-choice" | "student-produced-response";
++  rawCorrectAnswer: string;
++};
++
++export async function loadGradingData(questionIds: string[]) {
++  const result = new Map<string, GradingData>();
++
++  if (questionIds.length === 0) {
++    return result;
++  }
++
++  const supabase = getSupabaseAdminClient();
++  const [{ data: questionRows, error: questionError }, { data: solutionRows, error: solutionError }] =
++    await Promise.all([
++      supabase.from("questions").select("id,choices,question_type").in("id", questionIds),
++      supabase
++        .from("question_solutions")
++        .select("question_id,correct_answer,explanation,scoring_metadata")
++        .in("question_id", questionIds)
++    ]);
++
++  if (questionError || solutionError) {
++    throw new Error("Unable to load grading data.");
++  }
++
++  const questionById = new Map((questionRows ?? []).map((row) => [row.id, row]));
++
++  for (const solution of solutionRows ?? []) {
++    const question = questionById.get(solution.question_id);
++    const choices = ((question?.choices ?? []) as Choice[]).filter(Boolean);
++    const questionType =
++      question?.question_type ?? (choices.length > 0 ? "multiple-choice" : "student-produced-response");
++    const correctLabel = questionType === "multiple-choice" ? findCorrectLabel(choices, solution.correct_answer) : null;
++    const metadata = (solution.scoring_metadata ?? {}) as { accepted_answers?: unknown };
++    const acceptedAnswers = Array.isArray(metadata.accepted_answers)
++      ? metadata.accepted_answers.filter((answer): answer is string => typeof answer === "string")
++      : [];
++
++    result.set(solution.question_id, {
++      acceptedAnswers,
++      choices,
++      correctAnswer: correctLabel ?? solution.correct_answer,
++      correctLabel,
++      explanation: solution.explanation,
++      questionType,
++      rawCorrectAnswer: solution.correct_answer
++    });
++  }
++
++  return result;
++}
++
++/**
++ * Multiple-choice: the student submits a label ("A"-"D"). Older Reading & Writing
++ * rows store the correct choice's text instead of its letter; both work.
++ * Student-produced response: any accepted form counts, and numbers are compared
++ * by value, so 3/4, .75 and 0.75 are the same answer.
++ */
++export function isAnswerCorrect(grading: GradingData, selectedAnswer: string | null) {
++  if (selectedAnswer === null || !selectedAnswer.trim()) {
++    return false;
++  }
++
++  if (grading.questionType === "multiple-choice") {
++    const selectedLabel =
++      grading.choices.find((choice) => normalizeAnswer(choice.label) === normalizeAnswer(selectedAnswer))?.label ??
++      grading.choices.find((choice) => normalizeAnswer(choice.text) === normalizeAnswer(selectedAnswer))?.label ??
++      null;
++
++    return selectedLabel !== null && selectedLabel === grading.correctLabel;
++  }
++
++  const accepted = [grading.rawCorrectAnswer, ...grading.acceptedAnswers];
++  return accepted.some((answer) => sameStudentAnswer(answer, selectedAnswer));
++}
++
++function findCorrectLabel(choices: Choice[], correctAnswer: string) {
++  const normalized = normalizeAnswer(correctAnswer).replace(/\.$/, "");
++
++  return (
++    choices.find((choice) => normalizeAnswer(choice.label) === normalized)?.label ??
++    choices.find((choice) => normalizeAnswer(choice.text) === normalizeAnswer(correctAnswer))?.label ??
++    null
++  );
++}
++
++function sameStudentAnswer(expected: string, given: string) {
++  const left = parseNumber(expected);
++  const right = parseNumber(given);
++
++  if (left !== null && right !== null) {
++    return Math.abs(left - right) < 1e-9;
++  }
++
++  return normalizeAnswer(expected) === normalizeAnswer(given);
++}
++
++function parseNumber(value: string) {
++  const text = value.trim().replace(/\u2212/g, "-").replace(/\s+/g, "");
++  const fraction = text.match(/^(-?\d*\.?\d+)\/(-?\d*\.?\d+)$/);
++
++  if (fraction) {
++    const denominator = Number(fraction[2]);
++    return denominator === 0 ? null : Number(fraction[1]) / denominator;
++  }
++
++  return /^-?\d*\.?\d+$/.test(text) ? Number(text) : null;
++}
++
+ export async function getReviewQuestions(
+   answers: Record<string, string | null>
+ ): Promise<ReviewQuestion[]> {
+@@ -44,6 +163,7 @@ export async function getReviewQuestions(
+         .select("question_id,correct_answer,explanation")
+         .in("question_id", questionIds)
+     ]);
++  const gradingById = await loadGradingData(questionIds);
+ 
+   if (questionError || solutionError) {
+     throw new Error("Unable to load review data.");
+@@ -54,16 +174,20 @@ export async function getReviewQuestions(
+   );
+ 
+   return (questionRows ?? [])
+-    .map((row) => {
++    .map((row): ReviewQuestion | null => {
+       const solution = solutionByQuestionId.get(row.id);
+ 
+       if (!solution) {
+         return null;
+       }
+ 
++      const grading = gradingById.get(row.id);
++
+       return {
+-        choices: (row.choices as Choice[]).map((choice) => choice.text),
+-        correctAnswer: solution.correct_answer,
++        choices: toQuestionChoices(row.choices as Choice[]),
++        correctAnswer: grading?.correctAnswer ?? solution.correct_answer,
++        correctLabel: grading?.correctLabel ?? null,
++        isCorrect: grading ? isAnswerCorrect(grading, answers[row.id] ?? null) : false,
+         difficulty: row.difficulty,
+         explanation: solution.explanation,
+         id: row.id,
+@@ -77,7 +201,7 @@ export async function getReviewQuestions(
+             : "student-produced-response"),
+         section: row.section,
+         topic: row.topic
+-      } satisfies ReviewQuestion;
++      };
+     })
+     .filter((question): question is ReviewQuestion => question !== null)
+     .sort((a, b) => questionIds.indexOf(a.id) - questionIds.indexOf(b.id));
+@@ -95,7 +219,7 @@ export async function getQuestionPublicContext(questionId: string) {
+     throw new Error("Question was not found.");
+   }
+ 
+-  const choices = (data.choices as Choice[]).map((choice) => choice.text);
++  const choices = toQuestionChoices(data.choices as Choice[]);
+ 
+   return {
+     choices,
+@@ -127,6 +251,14 @@ export async function getQuestionSolution(questionId: string) {
+   return data;
+ }
+ 
++export function toQuestionChoices(choices: Choice[]): QuestionChoice[] {
++  return (choices ?? []).map((choice, index) => ({
++    imageUrl: choice.image_url ?? null,
++    label: choice.label || String.fromCharCode(65 + index),
++    text: choice.text ?? ""
++  }));
++}
++
+ function normalizeAnswer(value: string) {
+   return value.trim().toLowerCase();
+ }
+diff --git a/lib/supabase/queries.ts b/lib/supabase/queries.ts
+index fe2eb46..34d7648 100644
+--- a/lib/supabase/queries.ts
++++ b/lib/supabase/queries.ts
+@@ -839,7 +839,11 @@ export async function clearUserProgress(userId: string) {
+ }
+ 
+ function mapQuestionRow(row: PublicQuestionRow): AppQuestion {
+-  const choices = row.choices.map((choice: Choice) => choice.text);
++  const choices = (row.choices ?? []).map((choice: Choice, index: number) => ({
++    imageUrl: choice.image_url ?? null,
++    label: choice.label || String.fromCharCode(65 + index),
++    text: choice.text ?? ""
++  }));
+ 
+   return {
+     choices,
+diff --git a/package-lock.json b/package-lock.json
+index e0febfb..7f423ca 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -9,6 +9,7 @@
+       "version": "0.1.0",
+       "dependencies": {
+         "@supabase/supabase-js": "^2.107.0",
++        "katex": "^0.16.22",
+         "lucide-react": "latest",
+         "next": "^16.4.3",
+         "openai": "^6.48.0",
+@@ -651,9 +652,6 @@
+       "cpu": [
+         "arm"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "LGPL-3.0-or-later",
+       "optional": true,
+       "os": [
+@@ -670,9 +668,6 @@
+       "cpu": [
+         "arm64"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "LGPL-3.0-or-later",
+       "optional": true,
+       "os": [
+@@ -689,9 +684,6 @@
+       "cpu": [
+         "ppc64"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "LGPL-3.0-or-later",
+       "optional": true,
+       "os": [
+@@ -708,9 +700,6 @@
+       "cpu": [
+         "riscv64"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "LGPL-3.0-or-later",
+       "optional": true,
+       "os": [
+@@ -727,9 +716,6 @@
+       "cpu": [
+         "s390x"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "LGPL-3.0-or-later",
+       "optional": true,
+       "os": [
+@@ -746,9 +732,6 @@
+       "cpu": [
+         "x64"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "LGPL-3.0-or-later",
+       "optional": true,
+       "os": [
+@@ -765,9 +748,6 @@
+       "cpu": [
+         "arm64"
+       ],
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "LGPL-3.0-or-later",
+       "optional": true,
+       "os": [
+@@ -784,9 +764,6 @@
+       "cpu": [
+         "x64"
+       ],
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "LGPL-3.0-or-later",
+       "optional": true,
+       "os": [
+@@ -803,9 +780,6 @@
+       "cpu": [
+         "arm"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "Apache-2.0",
+       "optional": true,
+       "os": [
+@@ -828,9 +802,6 @@
+       "cpu": [
+         "arm64"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "Apache-2.0",
+       "optional": true,
+       "os": [
+@@ -853,9 +824,6 @@
+       "cpu": [
+         "ppc64"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "Apache-2.0",
+       "optional": true,
+       "os": [
+@@ -878,9 +846,6 @@
+       "cpu": [
+         "riscv64"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "Apache-2.0",
+       "optional": true,
+       "os": [
+@@ -903,9 +868,6 @@
+       "cpu": [
+         "s390x"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "Apache-2.0",
+       "optional": true,
+       "os": [
+@@ -928,9 +890,6 @@
+       "cpu": [
+         "x64"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "Apache-2.0",
+       "optional": true,
+       "os": [
+@@ -953,9 +912,6 @@
+       "cpu": [
+         "arm64"
+       ],
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "Apache-2.0",
+       "optional": true,
+       "os": [
+@@ -978,9 +934,6 @@
+       "cpu": [
+         "x64"
+       ],
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "Apache-2.0",
+       "optional": true,
+       "os": [
+@@ -1222,9 +1175,6 @@
+       "cpu": [
+         "arm64"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1241,9 +1191,6 @@
+       "cpu": [
+         "arm64"
+       ],
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1260,9 +1207,6 @@
+       "cpu": [
+         "x64"
+       ],
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1279,9 +1223,6 @@
+       "cpu": [
+         "x64"
+       ],
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1604,9 +1545,6 @@
+         "arm64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1624,9 +1562,6 @@
+         "arm64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1644,9 +1579,6 @@
+         "x64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -1664,9 +1596,6 @@
+         "x64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -2217,9 +2146,6 @@
+         "arm64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -2234,9 +2160,6 @@
+         "arm64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -2251,9 +2174,6 @@
+         "loong64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -2268,9 +2188,6 @@
+         "loong64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -2285,9 +2202,6 @@
+         "ppc64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -2302,9 +2216,6 @@
+         "riscv64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -2319,9 +2230,6 @@
+         "riscv64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -2336,9 +2244,6 @@
+         "s390x"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -2353,9 +2258,6 @@
+         "x64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -2370,9 +2272,6 @@
+         "x64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MIT",
+       "optional": true,
+       "os": [
+@@ -2977,6 +2876,15 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/commander": {
++      "version": "8.3.0",
++      "resolved": "https://registry.npmjs.org/commander/-/commander-8.3.0.tgz",
++      "integrity": "sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww==",
++      "license": "MIT",
++      "engines": {
++        "node": ">= 12"
++      }
++    },
+     "node_modules/concat-map": {
+       "version": "0.0.1",
+       "resolved": "https://registry.npmjs.org/concat-map/-/concat-map-0.0.1.tgz",
+@@ -4855,6 +4763,22 @@
+         "node": ">=4.0"
+       }
+     },
++    "node_modules/katex": {
++      "version": "0.16.22",
++      "resolved": "https://registry.npmjs.org/katex/-/katex-0.16.22.tgz",
++      "integrity": "sha512-XCHRdUw4lf3SKBaJe4EvgqIuWwkPSo9XoeO8GjQW94Bp7TWv9hNhzZjZ+OH9yf1UmLygb7DIT5GSFQiyt16zYg==",
++      "funding": [
++        "https://opencollective.com/katex",
++        "https://github.com/sponsors/katex"
++      ],
++      "license": "MIT",
++      "dependencies": {
++        "commander": "^8.3.0"
++      },
++      "bin": {
++        "katex": "cli.js"
++      }
++    },
+     "node_modules/keyv": {
+       "version": "4.5.4",
+       "resolved": "https://registry.npmjs.org/keyv/-/keyv-4.5.4.tgz",
+@@ -5042,9 +4966,6 @@
+         "arm64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MPL-2.0",
+       "optional": true,
+       "os": [
+@@ -5066,9 +4987,6 @@
+         "arm64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MPL-2.0",
+       "optional": true,
+       "os": [
+@@ -5090,9 +5008,6 @@
+         "x64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "glibc"
+-      ],
+       "license": "MPL-2.0",
+       "optional": true,
+       "os": [
+@@ -5114,9 +5029,6 @@
+         "x64"
+       ],
+       "dev": true,
+-      "libc": [
+-        "musl"
+-      ],
+       "license": "MPL-2.0",
+       "optional": true,
+       "os": [
+diff --git a/package.json b/package.json
+index 0035247..66fd728 100644
+--- a/package.json
++++ b/package.json
+@@ -11,10 +11,13 @@
+     "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/adaptive-routing.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/sat-score-estimator.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/security-boundary.test.ts",
+     "questions:extract-pdf": "python scripts/extract-question-bank-pdfs.py",
+     "questions:import-supabase": "node scripts/import-questions-supabase.mjs",
+-    "questions:sql": "node scripts/generate-questions-sql.mjs"
++    "questions:sql": "node scripts/generate-questions-sql.mjs",
++    "questions:math-extract": "python scripts/extract-math-questions.py",
++    "questions:math-convert": "node scripts/convert-math-questions.mjs"
+   },
+   "dependencies": {
+     "@supabase/supabase-js": "^2.107.0",
++    "katex": "^0.16.22",
+     "lucide-react": "latest",
+     "next": "^16.4.3",
+     "openai": "^6.48.0",
+diff --git a/scripts/convert-math-questions.mjs b/scripts/convert-math-questions.mjs
+new file mode 100644
+index 0000000..7100027
+--- /dev/null
++++ b/scripts/convert-math-questions.mjs
+@@ -0,0 +1,378 @@
++/**
++ * Step 2 of the Math import: turn the cropped question pictures into text with LaTeX.
++ *
++ * Reads data/math/math-extract.json (from extract-math-questions.py), sends each
++ * question's pictures to an OpenAI vision model, checks the answer the model read
++ * against the "Correct Answer" printed in the PDF, and writes:
++ *
++ *   data/math/math-import.json   questions that passed the checks, ready for
++ *                                npm run questions:import-supabase -- data/math/math-import.json
++ *   data/math/math-review.json   questions that need a human look, with the reason
++ *   data/math/ai/<id>.json       the raw model answer per question (cache: re-runs skip these)
++ *
++ * Usage:
++ *   node scripts/convert-math-questions.mjs --limit 20          # try 20 questions first
++ *   node scripts/convert-math-questions.mjs                     # everything
++ *   node scripts/convert-math-questions.mjs --concurrency 6
++ *   node scripts/convert-math-questions.mjs --only 3f5a3602,ac472881
++ *
++ * Needs OPENAI_API_KEY in .env.local. Model: --model, else OPENAI_VISION_MODEL,
++ * else OPENAI_MODEL. Use a model that accepts images.
++ */
++import OpenAI from "openai";
++import { existsSync, readFileSync } from "node:fs";
++import { mkdir, readFile, writeFile } from "node:fs/promises";
++import path from "node:path";
++import process from "node:process";
++
++loadEnvLocal();
++
++const args = parseArgs(process.argv.slice(2));
++const dataDir = args.dir ?? "data/math";
++const extractPath = path.join(dataDir, "math-extract.json");
++const cacheDir = path.join(dataDir, "ai");
++const model = args.model ?? process.env.OPENAI_VISION_MODEL ?? process.env.OPENAI_MODEL;
++const concurrency = Number(args.concurrency ?? 4);
++
++if (!process.env.OPENAI_API_KEY) {
++  throw new Error("OPENAI_API_KEY is missing in .env.local.");
++}
++
++if (!model) {
++  throw new Error("Set OPENAI_VISION_MODEL (or OPENAI_MODEL) in .env.local, or pass --model.");
++}
++
++const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
++
++const INSTRUCTIONS = `You transcribe SAT Math questions from images into structured text. Do not solve, reword, shorten, or correct anything: copy the question, the answer choices and the rationale exactly as printed, only changing how math is written.
++
++Math formatting:
++- Write every mathematical expression in LaTeX: inline as \\( ... \\), stand-alone lines as \\[ ... \\]. Examples: \\(f(x) = 2(x-3)^2 + 5\\), \\(\\frac{3}{4}\\), \\(\\sqrt{2}\\), \\(x^{\\circ}\\), \\(\\overline{AB}\\), \\(\\angle ABC\\).
++- A system of equations is one \\[ \\begin{aligned} ... \\\\ ... \\end{aligned} \\] block.
++- Numbers, variables and coordinates that are printed in the math font go inside \\( \\) too: "Substituting \\(440\\) for \\(x\\)". Ordinary numbers in words (e.g. "3 hours", "in 2015") stay plain.
++- Money stays plain text with a dollar sign, never LaTeX: "$125", "$3.50". Never use $...$ as math delimiters.
++- Plain words stay plain text. Use Markdown only for tables and for *italic* words that are italic in the image.
++
++Tables: write every table (in the question, a choice, or the rationale) as a Markdown pipe table, with LaTeX inside cells where needed. A table is never kept as a picture.
++
++Figures: you get the whole question image plus separate crops labelled F1, F2, ... with where each crop was found ("stem" or choice "A"-"D"). For each crop decide:
++- kind "graph" or "diagram" (coordinate grids, plots, geometric figures, number lines, histograms, scatterplots, bar charts): keep = true. In the stem, put the placeholder [[F1]] (with that crop's id) on its own line exactly where the figure appears. In a choice, set that choice's figure_id and leave text empty unless the choice also has words.
++- kind "table": keep = false; write the table as Markdown instead.
++- kind "formula" or "other" (a crop that is really just an equation, a system of equations, or text): keep = false; write it as LaTeX/text instead.
++If a choice is a graph that was not given as a crop, describe nothing: set confidence "low" and explain in notes.
++
++Fields:
++- stem: the question text, including any lines above or below the figure.
++- choices: for multiple-choice, exactly four items A, B, C, D in order. For a student-produced-response question (no choices), an empty list.
++- correct_answer: the letter for multiple-choice; the main answer for student-produced-response, written the way a student would type it (e.g. 403, 3/17, .75, -2).
++- accepted_answers: for student-produced-response, every answer form the image says is correct (the "Correct Answer" line and any "Note that ... are examples of ways to enter a correct answer"). Empty for multiple-choice.
++- explanation: the rationale, every paragraph, in order, separated by a blank line. Leave out the word "Rationale".
++- confidence: "high" when everything was clearly readable; "medium" or "low" otherwise, and say why in notes.`;
++
++const RESPONSE_FORMAT = {
++  type: "json_schema",
++  name: "sat_math_question",
++  strict: true,
++  schema: {
++    type: "object",
++    additionalProperties: false,
++    required: ["stem", "choices", "correct_answer", "accepted_answers", "explanation", "figures", "confidence", "notes"],
++    properties: {
++      stem: { type: "string" },
++      choices: {
++        type: "array",
++        items: {
++          type: "object",
++          additionalProperties: false,
++          required: ["label", "text", "figure_id"],
++          properties: {
++            label: { type: "string", enum: ["A", "B", "C", "D"] },
++            text: { type: "string" },
++            figure_id: { anyOf: [{ type: "string" }, { type: "null" }] }
++          }
++        }
++      },
++      correct_answer: { type: "string" },
++      accepted_answers: { type: "array", items: { type: "string" } },
++      explanation: { type: "string" },
++      figures: {
++        type: "array",
++        items: {
++          type: "object",
++          additionalProperties: false,
++          required: ["id", "keep", "kind"],
++          properties: {
++            id: { type: "string" },
++            keep: { type: "boolean" },
++            kind: { type: "string", enum: ["graph", "diagram", "table", "formula", "other"] }
++          }
++        }
++      },
++      confidence: { type: "string", enum: ["high", "medium", "low"] },
++      notes: { type: "string" }
++    }
++  }
++};
++
++const extracted = JSON.parse(await readFile(extractPath, "utf8"));
++const only = args.only ? new Set(String(args.only).split(",")) : null;
++let queue = extracted.filter((item) => !only || only.has(item.source_question_id));
++
++if (args.limit) {
++  queue = queue.slice(0, Number(args.limit));
++}
++
++await mkdir(cacheDir, { recursive: true });
++console.log(`Converting ${queue.length} questions with ${model} (${concurrency} at a time)...`);
++
++let done = 0;
++let usage = { input: 0, output: 0 };
++const results = new Array(queue.length);
++
++await runPool(queue, concurrency, async (item, index) => {
++  try {
++    const ai = await convertWithCache(item);
++    results[index] = buildRecord(item, ai);
++  } catch (error) {
++    results[index] = { item, problems: [`AI request failed: ${error.message}`] };
++  }
++
++  done += 1;
++  if (done % 10 === 0 || done === queue.length) {
++    console.log(`  ${done}/${queue.length}`);
++  }
++});
++
++const ready = results.filter((result) => result.record && result.problems.length === 0).map((result) => result.record);
++const review = results
++  .filter((result) => result.problems.length > 0)
++  .map((result) => ({
++    source_question_id: result.item.source_question_id,
++    pages: `${result.item.source_page_start}-${result.item.source_page_end}`,
++    problems: result.problems,
++    question_image: result.item.question_image,
++    ai_cache: path.join(cacheDir, `${result.item.source_question_id}.json`)
++  }));
++
++// keep earlier successful conversions when this run covered only part of the bank
++const importPath = path.join(dataDir, "math-import.json");
++const previous = existsSync(importPath) && (args.limit || only) ? JSON.parse(readFileSync(importPath, "utf8")) : [];
++const merged = new Map(previous.map((record) => [record.source_question_id, record]));
++for (const result of results) merged.delete(result.item.source_question_id);
++for (const record of ready) merged.set(record.source_question_id, record);
++
++await writeFile(importPath, JSON.stringify([...merged.values()], null, 2));
++await writeFile(path.join(dataDir, "math-review.json"), JSON.stringify(review, null, 2));
++
++console.log(`\nReady to import: ${ready.length} (file now has ${merged.size}) -> ${importPath}`);
++console.log(`Need review:     ${review.length} -> ${path.join(dataDir, "math-review.json")}`);
++if (usage.input) {
++  console.log(`Tokens this run: ${usage.input} in, ${usage.output} out`);
++}
++
++async function convertWithCache(item) {
++  const cachePath = path.join(cacheDir, `${item.source_question_id}.json`);
++
++  if (existsSync(cachePath) && !args.force) {
++    return JSON.parse(await readFile(cachePath, "utf8"));
++  }
++
++  const ai = await withRetries(() => askModel(item));
++  await writeFile(cachePath, JSON.stringify(ai, null, 2));
++  return ai;
++}
++
++async function askModel(item) {
++  const content = [
++    {
++      type: "input_text",
++      text: `Question ${item.source_question_id}. Type: ${item.question_type}. Image 1 is the question (stem and choices).`
++    },
++    await imagePart(item.question_image)
++  ];
++
++  for (const figure of item.figures) {
++    content.push({ type: "input_text", text: `Crop ${figure.id} — found in: ${figure.location === "stem" ? "stem" : `choice ${figure.location}`}` });
++    content.push(await imagePart(figure.file));
++  }
++
++  content.push({ type: "input_text", text: "Last image: the rationale." });
++  content.push(await imagePart(item.rationale_image));
++
++  const response = await openai.responses.create({
++    model,
++    instructions: INSTRUCTIONS,
++    input: [{ role: "user", content }],
++    text: { format: RESPONSE_FORMAT },
++    store: false
++  });
++
++  usage.input += response.usage?.input_tokens ?? 0;
++  usage.output += response.usage?.output_tokens ?? 0;
++
++  return JSON.parse(response.output_text);
++}
++
++async function imagePart(filePath) {
++  const buffer = await readFile(filePath);
++  return { type: "input_image", detail: "high", image_url: `data:image/png;base64,${buffer.toString("base64")}` };
++}
++
++function buildRecord(item, ai) {
++  const problems = [];
++  const figuresById = new Map(item.figures.map((figure) => [figure.id, figure]));
++  const kept = new Set(ai.figures.filter((figure) => figure.keep && figuresById.has(figure.id)).map((figure) => figure.id));
++
++  // --- answer checks against the PDF text layer ---
++  const pdfAnswers = splitAnswers(item.pdf_correct_answer);
++  const examples = item.pdf_entry_examples ?? [];
++
++  if (item.question_type === "multiple-choice") {
++    if (ai.choices.length !== 4) problems.push(`expected 4 choices, got ${ai.choices.length}`);
++    const letter = ai.correct_answer.trim().toUpperCase().replace(/\.$/, "");
++    if (/^[A-D]$/.test(pdfAnswers[0] ?? "") && letter !== pdfAnswers[0]) {
++      problems.push(`answer mismatch: PDF says ${pdfAnswers[0]}, AI read ${ai.correct_answer}`);
++    }
++    for (const choice of ai.choices) {
++      if (!choice.text.trim() && !(choice.figure_id && kept.has(choice.figure_id))) {
++        problems.push(`choice ${choice.label} is empty`);
++      }
++    }
++  } else {
++    if (ai.choices.length > 0) problems.push("AI found choices in a student-produced-response question");
++    const fromPdf = [...pdfAnswers, ...examples];
++    const aiAnswers = [ai.correct_answer, ...ai.accepted_answers];
++    if (fromPdf.length === 0) {
++      problems.push("PDF text has no readable answer; check the AI answer by hand");
++    } else if (!aiAnswers.some((answer) => fromPdf.some((pdfAnswer) => sameAnswer(answer, pdfAnswer)))) {
++      problems.push(`answer mismatch: PDF says ${fromPdf.join(" / ")}, AI read ${aiAnswers.join(" / ")}`);
++    }
++  }
++
++  if (ai.confidence === "low") problems.push(`AI confidence low: ${ai.notes}`);
++  if (/\$[^$\s][^$]*\$/.test(ai.stem.replace(/\$\d[\d,.]*/g, ""))) problems.push("stem uses $...$ math; expected \\( \\)");
++
++  // --- stem figures: [[F2]] -> [[img:0]] in the order they appear ---
++  const stemFigureIds = [];
++  let question = ai.stem.replace(/\[\[(F\d+)\]\]/g, (match, id) => {
++    if (!kept.has(id) || figuresById.get(id).location !== "stem") return "";
++    if (!stemFigureIds.includes(id)) stemFigureIds.push(id);
++    return `[[img:${stemFigureIds.indexOf(id)}]]`;
++  });
++
++  // kept stem figures the model forgot to place go on top
++  const unplaced = [...kept].filter((id) => figuresById.get(id).location === "stem" && !stemFigureIds.includes(id));
++  for (const id of unplaced) {
++    stemFigureIds.push(id);
++    question = `[[img:${stemFigureIds.length - 1}]]\n\n${question}`;
++  }
++
++  const choices = ai.choices.map((choice) => {
++    const figure = choice.figure_id && kept.has(choice.figure_id) ? figuresById.get(choice.figure_id) : null;
++    return { label: choice.label, text: choice.text.trim(), ...(figure ? { image_file: figure.file } : {}) };
++  });
++
++  const accepted =
++    item.question_type === "multiple-choice"
++      ? []
++      : unique([...pdfAnswers, ...examples, ai.correct_answer, ...ai.accepted_answers].map((answer) => answer.trim()).filter(Boolean));
++
++  const record = {
++    source_question_id: item.source_question_id,
++    source_name: item.source_name,
++    section: "math",
++    category: item.category,
++    topic: item.topic,
++    difficulty: item.difficulty,
++    is_bluebook: true,
++    question_type: item.question_type,
++    question: question.trim(),
++    choices,
++    correct_answer:
++      item.question_type === "multiple-choice"
++        ? ai.correct_answer.trim().toUpperCase().replace(/\.$/, "")
++        : accepted.some((answer) => sameAnswer(answer, ai.correct_answer))
++          ? ai.correct_answer.trim() // the form the rationale uses, e.g. 3/17 rather than .1764
++          : accepted[0] ?? ai.correct_answer,
++    explanation: ai.explanation.trim(),
++    image_files: stemFigureIds.map((id) => figuresById.get(id).file),
++    scoring_metadata: accepted.length ? { accepted_answers: accepted } : null,
++    source_page_start: item.source_page_start,
++    source_page_end: item.source_page_end
++  };
++
++  return { item, record, problems };
++}
++
++function splitAnswers(raw) {
++  return String(raw ?? "")
++    .split(/,\s*|\s+or\s+/)
++    .map((answer) => answer.trim().toUpperCase())
++    .filter(Boolean);
++}
++
++function sameAnswer(a, b) {
++  const left = toNumber(a);
++  const right = toNumber(b);
++  if (left !== null && right !== null) return Math.abs(left - right) < 1e-9;
++  return a.trim().toLowerCase() === b.trim().toLowerCase();
++}
++
++function toNumber(value) {
++  const text = String(value).trim().replace(/−/g, "-");
++  const fraction = text.match(/^(-?\d*\.?\d+)\s*\/\s*(-?\d*\.?\d+)$/);
++  if (fraction) return Number(fraction[1]) / Number(fraction[2]);
++  return /^-?\d*\.?\d+$/.test(text) ? Number(text) : null;
++}
++
++function unique(values) {
++  return [...new Set(values)];
++}
++
++async function runPool(items, size, worker) {
++  let next = 0;
++  const runners = Array.from({ length: Math.min(size, items.length) }, async () => {
++    while (next < items.length) {
++      const index = next++;
++      await worker(items[index], index);
++    }
++  });
++  await Promise.all(runners);
++}
++
++async function withRetries(task, attempts = 4) {
++  for (let attempt = 1; ; attempt += 1) {
++    try {
++      return await task();
++    } catch (error) {
++      const retryable = error.status === 429 || error.status >= 500 || error instanceof SyntaxError;
++      if (!retryable || attempt >= attempts) throw error;
++      await new Promise((resolve) => setTimeout(resolve, 2000 * 2 ** attempt));
++    }
++  }
++}
++
++function parseArgs(argv) {
++  const parsed = {};
++  for (let i = 0; i < argv.length; i += 1) {
++    const key = argv[i].replace(/^--/, "");
++    const value = argv[i + 1] && !argv[i + 1].startsWith("--") ? argv[++i] : true;
++    parsed[key] = value;
++  }
++  return parsed;
++}
++
++function loadEnvLocal() {
++  try {
++    readFileSync(path.join(process.cwd(), ".env.local"), "utf8")
++      .split(/\r?\n/)
++      .map((line) => line.trim())
++      .filter((line) => line && !line.startsWith("#") && line.includes("="))
++      .forEach((line) => {
++        const [key, ...rest] = line.split("=");
++        process.env[key] ??= rest.join("=").replace(/^['"]|['"]$/g, "");
++      });
++  } catch {
++    // variables may already be exported by the shell
++  }
++}
+diff --git a/scripts/extract-math-questions.py b/scripts/extract-math-questions.py
+new file mode 100644
+index 0000000..c307cbe
+--- /dev/null
++++ b/scripts/extract-math-questions.py
+@@ -0,0 +1,550 @@
++"""
++Step 1 of the Math import: cut the College Board Question Bank PDF into pieces.
++
++For every question it writes:
++  - question.png   the whole question (stem + answer choices), for the AI step
++  - rationale.png  the official rationale, for the AI step
++  - fig-N.png      every graph / diagram / table found in the stem or in a choice,
++                   cropped on its own so the site can show it as a picture
++
++and one JSON record with the metadata that the PDF text layer gives reliably
++(ID, domain, skill, difficulty, correct answer, where each figure belongs).
++
++Formulas in this PDF are drawn as vector outlines, so the text layer has gaps
++where the math was. That is why step 2 (convert-math-questions.mjs) reads the
++pictures with an AI model and writes the math back as LaTeX.
++
++Usage:
++  python scripts/extract-math-questions.py --pdf path/to/math.pdf
++  python scripts/extract-math-questions.py --pdf math.pdf --first-page 1 --last-page 60
++"""
++
++from __future__ import annotations
++
++import argparse
++import json
++import re
++import sys
++from dataclasses import dataclass, field
++from pathlib import Path
++
++try:
++    import pdfplumber
++    import pypdfium2 as pdfium
++    from PIL import Image
++except ModuleNotFoundError as error:
++    raise SystemExit(
++        f"Missing dependency: {error.name}. Run: pip install pdfplumber pypdfium2 pillow"
++    )
++
++LEFT_LABEL_MAX_X = 22  # section labels ("Question", "Answer", "A.") sit at x ~ 18
++PAGE_LEFT = 14
++PAGE_RIGHT = 598
++FIGURE_GAP = 3  # pt; vector pieces closer than this belong to one drawing
++FIGURE_PAD = 4  # pt of white space kept around a cropped figure
++CHOICE_LABELS = ["A.", "B.", "C.", "D."]
++
++
++@dataclass
++class Mark:
++    page: int  # 0-based page index
++    top: float
++    bottom: float
++
++
++@dataclass
++class Record:
++    start_page: int
++    pages: list[int] = field(default_factory=list)
++    text: str = ""
++    labels: dict[str, Mark] = field(default_factory=dict)
++    page_bottoms: dict[int, float] = field(default_factory=dict)
++    header: dict[str, str] = field(default_factory=dict)
++
++
++def parse_args() -> argparse.Namespace:
++    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
++    parser.add_argument("--pdf", required=True, help="Math Question Bank PDF")
++    parser.add_argument("--out", default="data/math", help="Output folder (default: data/math)")
++    parser.add_argument("--first-page", type=int, default=1)
++    parser.add_argument("--last-page", type=int, default=None)
++    parser.add_argument("--dpi", type=int, default=200, help="Render resolution for crops")
++    return parser.parse_args()
++
++
++def main() -> None:
++    args = parse_args()
++    out_dir = Path(args.out)
++    asset_dir = out_dir / "assets"
++    asset_dir.mkdir(parents=True, exist_ok=True)
++
++    plumber = pdfplumber.open(args.pdf)
++    renderer = pdfium.PdfDocument(args.pdf)
++    last_page = min(args.last_page or len(plumber.pages), len(plumber.pages))
++    first_index = max(args.first_page, 1) - 1
++
++    records = collect_records(plumber, first_index, last_page)
++    print(f"Found {len(records)} questions on pages {first_index + 1}-{last_page}", file=sys.stderr)
++
++    page_cache: dict[int, Image.Image] = {}
++    results = []
++    problems = []
++
++    for number, record in enumerate(records, start=1):
++        try:
++            item = build_item(record, plumber, renderer, page_cache, asset_dir, args.dpi)
++        except Exception as error:  # keep going; report at the end
++            problems.append({"page": record.start_page + 1, "error": str(error)})
++            continue
++
++        results.append(item)
++        trim_cache(page_cache, record.pages)
++
++        if number % 50 == 0:
++            print(f"  {number}/{len(records)}", file=sys.stderr)
++
++    output_path = out_dir / "math-extract.json"
++    output_path.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
++    print_report(results, problems, output_path)
++
++
++def collect_records(plumber, first_index: int, last_page: int) -> list[Record]:
++    records: list[Record] = []
++    current: Record | None = None
++
++    for index in range(first_index, last_page):
++        page = plumber.pages[index]
++        words = page.extract_words(keep_blank_chars=False, use_text_flow=True)
++        page_text = page.extract_text() or ""
++
++        if page_text.startswith("Question ID:"):
++            current = Record(start_page=index)
++            records.append(current)
++
++        if current is None:
++            page.close()
++            continue  # pages before the first question
++
++        if not current.pages:
++            current.header = parse_header(words)
++
++        current.pages.append(index)
++        current.text += page_text + "\n"
++        current.page_bottoms[index] = content_bottom(page)
++        find_labels(words, index, current.labels)
++        page.close()  # pdfplumber keeps every parsed page in memory otherwise
++
++        if (index + 1) % 200 == 0:
++            print(f"  scanned {index + 1} pages", file=sys.stderr)
++
++    return records
++
++
++def parse_header(words: list[dict]) -> dict[str, str]:
++    """Read the Assessment/Test/Domain/Skill/Difficulty table by column positions."""
++    titles = {w["text"]: w for w in words if w["text"] in ("Domain", "Skill", "Difficulty") and w["top"] < 90}
++    if len(titles) < 3:
++        return {}
++    row_top = titles["Domain"]["bottom"] + 4
++    row_words = [w for w in words if row_top <= w["top"] < row_top + 45]
++    columns = {}
++    edges = [("domain", titles["Domain"]["x0"] - 2, titles["Skill"]["x0"] - 2),
++             ("skill", titles["Skill"]["x0"] - 2, titles["Difficulty"]["x0"] - 2),
++             ("difficulty", titles["Difficulty"]["x0"] - 2, 10_000)]
++    for name, left, right in edges:
++        cell = sorted((w for w in row_words if left <= w["x0"] < right), key=lambda w: (round(w["top"]), w["x0"]))
++        columns[name] = " ".join(w["text"] for w in cell)
++    return columns
++
++
++def find_labels(words: list[dict], page_index: int, labels: dict[str, Mark]) -> None:
++    left = [w for w in words if w["x0"] < LEFT_LABEL_MAX_X]
++
++    for i, word in enumerate(left):
++        text = word["text"]
++        mark = Mark(page_index, word["top"], word["bottom"])
++
++        if text == "Question" and "question_id" not in labels:
++            labels["question_id"] = mark
++        elif text == "Question" and "question" not in labels:
++            labels["question"] = mark
++        elif text == "Answer" and "question" in labels and "answer" not in labels and "correct" not in labels:
++            labels["answer"] = mark
++        elif text in CHOICE_LABELS and "answer" in labels and "correct" not in labels and text not in labels:
++            labels[text] = mark
++        elif text == "Correct" and "question" in labels and "correct" not in labels:
++            labels["correct"] = mark
++        elif text == "Rationale" and "question" in labels and "rationale" not in labels:
++            labels["rationale"] = mark
++
++
++def content_bottom(page) -> float:
++    bottoms = [c["bottom"] for c in page.chars]
++    bottoms += [o["bottom"] for o in page.curves + page.lines + page.rects]
++    return max(bottoms) if bottoms else page.height
++
++
++def build_item(record, plumber, renderer, page_cache, asset_dir: Path, dpi: int) -> dict:
++    meta = parse_metadata(record.text, record.header)
++    labels = record.labels
++    if "correct" not in labels and "rationale" in labels:
++        # some older items have no "Correct Answer:" line; the answer is only in the rationale
++        labels["correct"] = labels["rationale"]
++
++    missing = [name for name in ("question", "rationale") if name not in labels]
++
++    if missing:
++        raise ValueError(f"{meta['source_question_id']}: missing labels {missing}")
++
++    question_dir = asset_dir / meta["source_question_id"]
++    question_dir.mkdir(parents=True, exist_ok=True)
++
++    q_start = labels["question"]
++    q_end = labels["correct"]
++    r_start = labels["rationale"]
++    r_end = Mark(record.pages[-1], record.page_bottoms[record.pages[-1]], record.page_bottoms[record.pages[-1]])
++
++    # 1) whole question (stem + choices) and rationale, for the AI step
++    question_png = question_dir / "question.png"
++    stack_region(record, renderer, page_cache, dpi, q_start.top - 2, q_start.page, q_end.top - 4, q_end.page).save(question_png)
++    rationale_png = question_dir / "rationale.png"
++    stack_region(record, renderer, page_cache, dpi, r_start.bottom + 2, r_start.page, r_end.top + 4, r_end.page).save(rationale_png)
++
++    # 2) figures anywhere between "Question" and "Correct Answer", then decide
++    #    whether each one belongs to the stem or to a choice A-D
++    figures = []
++
++    for page_index in pages_between(record.pages, q_start.page, q_end.page):
++        top = q_start.bottom if page_index == q_start.page else 0
++        bottom = q_end.top if page_index == q_end.page else record.page_bottoms[page_index] + 1
++        page = plumber.pages[page_index]
++
++        boxes = find_figures(page, top, bottom)
++        page.close()
++
++        for box in boxes:
++            path = question_dir / f"fig-{len(figures) + 1}.png"
++            crop_box(renderer, page_cache, page_index, box, dpi).save(path)
++            figures.append(
++                {
++                    "id": f"F{len(figures) + 1}",
++                    "location": figure_location(labels, page_index, box),
++                    "file": path.as_posix(),
++                    "width_pt": round(box[2] - box[0], 1),
++                    "height_pt": round(box[3] - box[1], 1),
++                }
++            )
++
++    # choices come in order, so when exactly one drawing was found per choice,
++    # assign them A, B, C, D top to bottom (robust to labels above or below the drawing)
++    choice_figures = [f for f in figures if f["location"] != "stem"]
++    if len(choice_figures) == len(CHOICE_LABELS):
++        for figure, label in zip(choice_figures, CHOICE_LABELS):
++            figure["location"] = label[0]
++
++    has_choices = all(label in labels for label in CHOICE_LABELS)
++    meta.update(
++        {
++            "question_type": "multiple-choice" if has_choices else "student-produced-response",
++            "question_image": question_png.as_posix(),
++            "rationale_image": rationale_png.as_posix(),
++            "figures": figures,
++            "source_page_start": record.pages[0] + 1,
++            "source_page_end": record.pages[-1] + 1,
++        }
++    )
++    return meta
++
++
++def figure_location(labels: dict[str, Mark], page_index: int, box: list[float]) -> str:
++    """'stem', or 'A'-'D' when the drawing sits next to that choice label."""
++    answer = labels.get("answer")
++
++    if answer is None or (page_index, box[3]) <= (answer.page, answer.top + 2):
++        return "stem"
++
++    choice_marks = [(label[0], labels[label]) for label in CHOICE_LABELS if label in labels]
++
++    # the label lies inside the drawing's vertical span (a table next to "A."),
++    # or on the baseline just under it (a graph choice with "A." at its bottom-left)
++    for letter, mark in choice_marks:
++        if mark.page == page_index and box[1] - 8 <= mark.top <= box[3] + 24:
++            return letter
++
++    # otherwise: the closest label above the drawing
++    above = [(letter, mark) for letter, mark in choice_marks if (mark.page, mark.top) <= (page_index, box[1] + 2)]
++    return above[-1][0] if above else "stem"
++
++
++def pages_between(pages: list[int], first: int, last: int) -> list[int]:
++    return [p for p in pages if first <= p <= last]
++
++
++def find_figures(page, top: float, bottom: float) -> list[list[float]]:
++    pieces = [
++        [o["x0"], o["top"], o["x1"], o["bottom"]]
++        for o in page.curves + page.lines + page.rects
++        if o["top"] >= top - 1 and o["bottom"] <= bottom + 1
++    ]
++    clusters = []
++    for cluster in merge_boxes(pieces):
++        clusters.extend(split_stacked(cluster, pieces))
++    big, small = [], []
++
++    for box in clusters:
++        width, height = box[2] - box[0], box[3] - box[1]
++        # inline formulas are short; drawings and tables are tall, or wide and fairly tall
++        if (height >= 45 and width >= 30) or (height >= 28 and width >= 120):
++            big.append(box)
++        else:
++            small.append(box)
++
++    # this PDF reports glyph boxes about 1pt tall, so rebuild word height from font size
++    words = [
++        [w["x0"], w["top"] - 1, w["x1"], w["top"] + max(w["bottom"] - w["top"], w.get("size", 9) * 0.9, 8)]
++        for w in page.extract_words(extra_attrs=["size"])
++        if w["top"] >= top - 1 and w["top"] <= bottom and w["x0"] > LEFT_LABEL_MAX_X
++    ]
++    figures = [absorb_labels(box, small, words, [other for other in big if other is not box]) for box in big]
++    return sorted(merge_overlapping(figures), key=lambda b: (b[1], b[0]))
++
++
++def split_stacked(cluster: list[float], pieces: list[list[float]]) -> list[list[float]]:
++    """
++    Two drawings stacked almost touching (e.g. graph choices A and B) merge into
++    one cluster. Split a tall cluster wherever no vector piece covers a horizontal
++    strip of it.
++    """
++    if cluster[3] - cluster[1] < 150:
++        return [cluster]
++
++    members = sorted((p for p in pieces if inside(p, cluster)), key=lambda p: p[1])
++    groups: list[list[list[float]]] = []
++    reach = None
++
++    for piece in members:
++        if reach is None or piece[1] > reach + 1.5:
++            groups.append([])
++        groups[-1].append(piece)
++        reach = piece[3] if reach is None or piece[1] > reach + 1.5 else max(reach, piece[3])
++
++    if len(groups) == 1:
++        return [cluster]
++
++    return [[min(p[0] for p in g), min(p[1] for p in g), max(p[2] for p in g), max(p[3] for p in g)] for g in groups]
++
++
++def merge_overlapping(boxes: list[list[float]]) -> list[list[float]]:
++    """Merge boxes that really overlap (no gap allowed), keeping neighbours apart."""
++    result: list[list[float]] = []
++    for box in sorted(boxes, key=lambda b: b[1]):
++        for other in result:
++            if box[0] < other[2] and box[2] > other[0] and box[1] < other[3] and box[3] > other[1]:
++                other[:] = [min(other[0], box[0]), min(other[1], box[1]), max(other[2], box[2]), max(other[3], box[3])]
++                break
++        else:
++            result.append(box[:])
++    return result
++
++
++def absorb_labels(
++    box: list[float], small: list[list[float]], words: list[list[float]], others: list[list[float]]
++) -> list[float]:
++    """
++    Grow a drawing's box to take in its axis titles, tick labels and notes,
++    but never a line of the surrounding paragraph. An item is taken only when
++    everything on its text line fits within the drawing's width.
++    """
++    grown = box[:]
++    items = small + words
++
++    for _ in range(4):
++        changed = False
++        reach = [grown[0] - 22, grown[1] - 16, grown[2] + 22, grown[3] + 16]
++
++        for item in items:
++            if inside(item, grown) or not overlaps(item, reach, 0):
++                continue
++
++            # a label between two drawings belongs to the nearer one
++            if any(distance(item, other) < distance(item, box) for other in others):
++                continue
++
++            line = [other for other in items if other[1] < item[3] - 2 and other[3] > item[1] + 2]
++            if all(reach[0] <= other[0] and other[2] <= reach[2] for other in line):
++                grown = [min(grown[0], item[0]), min(grown[1], item[1]), max(grown[2], item[2]), max(grown[3], item[3])]
++                changed = True
++
++        if not changed:
++            break
++
++    return grown
++
++
++def distance(item: list[float], box: list[float]) -> float:
++    dx = max(box[0] - item[2], item[0] - box[2], 0)
++    dy = max(box[1] - item[3], item[1] - box[3], 0)
++    return (dx * dx + dy * dy) ** 0.5
++
++
++def inside(item: list[float], box: list[float]) -> bool:
++    return box[0] <= item[0] and item[2] <= box[2] and box[1] <= item[1] and item[3] <= box[3]
++
++
++def merge_boxes(boxes: list[list[float]]) -> list[list[float]]:
++    boxes = sorted((b[:] for b in boxes), key=lambda b: b[1])
++    merged = True
++
++    while merged:
++        merged = False
++        result: list[list[float]] = []
++
++        for box in boxes:
++            for other in result:
++                if overlaps(box, other, FIGURE_GAP):
++                    other[0] = min(other[0], box[0])
++                    other[1] = min(other[1], box[1])
++                    other[2] = max(other[2], box[2])
++                    other[3] = max(other[3], box[3])
++                    merged = True
++                    break
++            else:
++                result.append(box)
++
++        boxes = result
++
++    return boxes
++
++
++def overlaps(a: list[float], b: list[float], gap: float) -> bool:
++    return a[0] <= b[2] + gap and a[2] >= b[0] - gap and a[1] <= b[3] + gap and a[3] >= b[1] - gap
++
++
++def render_page(renderer, page_cache: dict, page_index: int, dpi: int) -> Image.Image:
++    if page_index not in page_cache:
++        page = renderer[page_index]
++        page_cache[page_index] = page.render(scale=dpi / 72).to_pil().convert("RGB")
++    return page_cache[page_index]
++
++
++def trim_cache(page_cache: dict, keep: list[int]) -> None:
++    for page_index in list(page_cache):
++        if page_index < min(keep):
++            del page_cache[page_index]
++
++
++def crop_box(renderer, page_cache, page_index: int, box: list[float], dpi: int) -> Image.Image:
++    image = render_page(renderer, page_cache, page_index, dpi)
++    scale = dpi / 72
++    left = max(PAGE_LEFT, box[0] - FIGURE_PAD) * scale
++    top = max(0, box[1] - FIGURE_PAD) * scale
++    right = min(PAGE_RIGHT, box[2] + FIGURE_PAD) * scale
++    bottom = min(image.height / scale, box[3] + 1.5) * scale  # keep the next text line out
++    return image.crop((int(left), int(top), int(right), int(bottom)))
++
++
++def stack_region(record, renderer, page_cache, dpi, top, top_page, bottom, bottom_page) -> Image.Image:
++    scale = dpi / 72
++    parts = []
++
++    for page_index in pages_between(record.pages, top_page, bottom_page):
++        image = render_page(renderer, page_cache, page_index, dpi)
++        part_top = top if page_index == top_page else 20
++        part_bottom = bottom if page_index == bottom_page else record.page_bottoms[page_index] + 4
++
++        if part_bottom - part_top < 4:
++            continue
++
++        parts.append(image.crop((int(PAGE_LEFT * scale), int(max(0, part_top) * scale), int(PAGE_RIGHT * scale), int(part_bottom * scale))))
++
++    if not parts:
++        return Image.new("RGB", (int((PAGE_RIGHT - PAGE_LEFT) * scale), 10), "white")
++
++    width = max(p.width for p in parts)
++    height = sum(p.height for p in parts)
++    sheet = Image.new("RGB", (width, height), "white")
++    y = 0
++
++    for part in parts:
++        sheet.paste(part, (0, y))
++        y += part.height
++
++    return sheet
++
++
++def parse_metadata(text: str, header: dict[str, str]) -> dict:
++    question_id = first(r"Question ID:\s*([A-Za-z0-9]+)", text)
++    domain = header.get("domain", "")
++    skill = header.get("skill", "")
++    difficulty = header.get("difficulty", "").strip().lower()
++    if difficulty not in ("easy", "medium", "hard"):
++        difficulty = "medium"
++
++    correct_raw = first(r"Correct Answer:\s*([^\n]*)", text).strip()
++    # "Note that 3/2 and 1.5 are examples of ways to enter a correct answer."
++    examples = first(r"Note that (.+?) (?:is an example|are examples) of ways? to enter a correct answer", " ".join(text.split()))
++    entry_examples = [e.strip() for e in re.split(r",\s*(?:and\s+)?|\s+and\s+", examples) if e.strip()] if examples else []
++
++    return {
++        "source_question_id": question_id,
++        "source_name": "College Board SAT Suite Question Bank — Math",
++        "section": "math",
++        "category": domain,
++        "topic": normalize_skill(skill),
++        "difficulty": difficulty,
++        "pdf_correct_answer": correct_raw,
++        "pdf_entry_examples": entry_examples,
++        "is_bluebook": True,
++    }
++
++
++def normalize_skill(skill: str) -> str:
++    """Use the topic names the site already knows (see README 'Supported Question Bank topics')."""
++    known = {
++        "linear equations in one variable": "Linear Equations in One Variable",
++        "linear functions": "Linear Functions",
++        "linear equations in two variables": "Linear Equations in Two Variables",
++        "systems of two linear equations in two variables": "Systems of Two Linear Equations in Two Variables",
++        "linear inequalities in one or two variables": "Linear Inequalities in One or Two Variables",
++        "equivalent expressions": "Equivalent Expressions",
++        "nonlinear equations in one variable and systems of equations in two variables": "Nonlinear Equations in One Variable",
++        "nonlinear functions": "Nonlinear Functions",
++        "ratios, rates, proportional relationships, and units": "Ratios, Rates, Proportional Relationships, and Units",
++        "percentages": "Percentages",
++        "one-variable data: distributions and measures of center and spread": "One-Variable Data: Distributions and Measures of Center and Spread",
++        "two-variable data: models and scatterplots": "Two-Variable Data: Models and Scatterplots",
++        "probability and conditional probability": "Probability and Conditional Probability",
++        "inference from sample statistics and margin of error": "Inference from Sample Statistics and Margin of Error",
++        "evaluating statistical claims: observational studies and experiments": "Evaluating Statistical Claims: Observational Studies and Experiments",
++        "area and volume": "Area and Volume",
++        "lines, angles, and triangles": "Lines, Angles, and Triangles",
++        "right triangles and trigonometry": "Right Triangles and Trigonometry",
++        "circles": "Circles",
++    }
++    return known.get(skill.lower().strip(), skill.strip() or "Uncategorized")
++
++
++def first(pattern: str, text: str, flags: int = 0) -> str:
++    match = re.search(pattern, text, flags)
++    return match.group(1) if match else ""
++
++
++def print_report(results: list[dict], problems: list[dict], output_path: Path) -> None:
++    from collections import Counter
++
++    print(f"\nWrote {len(results)} questions to {output_path}")
++    print("Types:", dict(Counter(r["question_type"] for r in results)))
++    print("Difficulty:", dict(Counter(r["difficulty"] for r in results)))
++    print("Figures by location:", dict(Counter(f["location"] for r in results for f in r["figures"])))
++    no_topic = [r["source_question_id"] for r in results if r["topic"] == "Uncategorized"]
++    no_answer = [r["source_question_id"] for r in results if not r["pdf_correct_answer"] and not r["pdf_entry_examples"]]
++    print(f"Missing topic: {len(no_topic)} {no_topic[:10]}")
++    print(f"Correct answer not readable from text (AI will read it, flagged for review): {len(no_answer)}")
++    if problems:
++        print(f"Skipped {len(problems)} questions:")
++        for problem in problems[:20]:
++            print("  ", problem)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/scripts/import-questions-supabase.mjs b/scripts/import-questions-supabase.mjs
+index c39ffda..b1e3434 100644
+--- a/scripts/import-questions-supabase.mjs
++++ b/scripts/import-questions-supabase.mjs
+@@ -41,7 +41,8 @@ for (let index = 0; index < questions.length; index += batchSize) {
+ 
+   for (const question of batch) {
+     const imageUrls = await uploadQuestionImages(question);
+-    rows.push(toQuestionRow(question, imageUrls));
++    const choices = await uploadChoiceImages(question);
++    rows.push(toQuestionRow({ ...question, choices }, imageUrls));
+   }
+ 
+   const { data: insertedQuestions, error: questionError } = await supabase
+@@ -69,7 +70,9 @@ for (let index = 0; index < questions.length; index += batchSize) {
+     return {
+       correct_answer: question.correct_answer,
+       explanation: question.explanation,
+-      question_id: questionId
++      question_id: questionId,
++      // e.g. { accepted_answers: ["3/17", ".1764"] } for student-produced responses
++      scoring_metadata: question.scoring_metadata ?? null
+     };
+   });
+ 
+@@ -113,30 +116,46 @@ async function uploadQuestionImages(question) {
+   const urls = [];
+ 
+   for (const filePath of question.image_files) {
+-    const normalizedFilePath = path.isAbsolute(filePath)
+-      ? filePath
+-      : path.join(process.cwd(), filePath);
+-    const buffer = await readFile(normalizedFilePath);
+-    const storagePath = `questions/${question.source_question_id}/${path.basename(filePath)}`;
+-    const { error } = await supabase.storage
+-      .from(bucketName)
+-      .upload(storagePath, buffer, {
+-        contentType: "image/png",
+-        upsert: true
+-      });
++    urls.push(await uploadFile(question, filePath));
++  }
+ 
+-    if (error) {
+-      throw new Error(`Image upload failed for ${filePath}: ${error.message}`);
+-    }
++  return urls;
++}
+ 
+-    const {
+-      data: { publicUrl }
+-    } = supabase.storage.from(bucketName).getPublicUrl(storagePath);
++// A choice can be a graph: { label, text, image_file } -> { label, text, image_url }
++async function uploadChoiceImages(question) {
++  const choices = [];
+ 
+-    urls.push(publicUrl);
++  for (const choice of question.choices ?? []) {
++    const { image_file: imageFile, ...rest } = choice;
++    choices.push(imageFile ? { ...rest, image_url: await uploadFile(question, imageFile) } : rest);
+   }
+ 
+-  return urls;
++  return choices;
++}
++
++async function uploadFile(question, filePath) {
++  const normalizedFilePath = path.isAbsolute(filePath)
++    ? filePath
++    : path.join(process.cwd(), filePath);
++  const buffer = await readFile(normalizedFilePath);
++  const storagePath = `questions/${question.source_question_id}/${path.basename(filePath)}`;
++  const { error } = await supabase.storage
++    .from(bucketName)
++    .upload(storagePath, buffer, {
++      contentType: "image/png",
++      upsert: true
++    });
++
++  if (error) {
++    throw new Error(`Image upload failed for ${filePath}: ${error.message}`);
++  }
++
++  const {
++    data: { publicUrl }
++  } = supabase.storage.from(bucketName).getPublicUrl(storagePath);
++
++  return publicUrl;
+ }
+ 
+ function toQuestionRow(question, imageUrls) {
+diff --git a/types/database.ts b/types/database.ts
+index fb33ec3..a636d42 100644
+--- a/types/database.ts
++++ b/types/database.ts
+@@ -1,6 +1,7 @@
+ export type Choice = {
+   label: string;
+   text: string;
++  image_url?: string | null;
+ };
+ 
+ export type Profile = {
+diff --git a/types/sat.ts b/types/sat.ts
+index a49d87e..e1d4f7d 100644
+--- a/types/sat.ts
++++ b/types/sat.ts
+@@ -2,8 +2,16 @@ export type SatSection = "math" | "reading-writing";
+ 
+ export type QuestionDifficulty = "easy" | "medium" | "hard";
+ 
++export type QuestionChoice = {
++  /** "A"-"D"; this is the value a student submits for a multiple-choice question */
++  label: string;
++  /** text with LaTeX in \( \) and Markdown tables; may be empty when the choice is a graph */
++  text: string;
++  imageUrl: string | null;
++};
++
+ export type Question = {
+-  choices: string[];
++  choices: QuestionChoice[];
+   difficulty: QuestionDifficulty;
+   id: string;
+   imageUrls: string[];
+@@ -16,12 +24,17 @@ export type Question = {
+ 
+ export type QuestionFeedback = {
+   correctAnswer: string;
++  /** label of the correct choice for multiple-choice questions */
++  correctLabel: string | null;
+   explanation: string;
+   isCorrect: boolean;
+ };
+ 
+ export type ReviewQuestion = Question & {
+   correctAnswer: string;
++  correctLabel: string | null;
++  /** graded on the server (numbers compared by value, any accepted form counts) */
++  isCorrect?: boolean;
+   explanation: string;
+ };
+ 

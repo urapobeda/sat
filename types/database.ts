@@ -1,6 +1,7 @@
 export type Choice = {
   label: string;
   text: string;
+  image_url?: string | null;
 };
 
 export type Profile = {

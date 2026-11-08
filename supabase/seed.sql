@@ -67,7 +67,7 @@ $$::jsonb) as seed(
   correct_answer text,
   explanation text
 )
-on conflict (question) do update
+on conflict (md5(question)) where source_question_id is null do update
 set
   section = excluded.section,
   topic = excluded.topic,

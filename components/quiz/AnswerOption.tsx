@@ -1,59 +1,92 @@
+import { MathText } from "@/components/quiz/MathText";
+import type { QuestionChoice } from "@/types/sat";
+
 type AnswerOptionProps = {
-  choice: string;
-  correctAnswer?: string;
-  index: number;
+  choice: QuestionChoice;
+  correctLabel?: string | null;
   isDisabled?: boolean;
+  isEliminated?: boolean;
   isSelected: boolean;
-  onSelect: (choice: string) => void;
+  onSelect: (label: string) => void;
+  onToggleEliminate?: (label: string) => void;
   showFeedback?: boolean;
 };
 
 export function AnswerOption({
   choice,
-  correctAnswer,
-  index,
+  correctLabel,
   isDisabled = false,
+  isEliminated = false,
   isSelected,
   onSelect,
+  onToggleEliminate,
   showFeedback = false
 }: AnswerOptionProps) {
-  const letter = String.fromCharCode(65 + index);
-  const isCorrect = showFeedback && choice === correctAnswer;
-  const isIncorrect = showFeedback && isSelected && choice !== correctAnswer;
+  const isCorrect = showFeedback && correctLabel === choice.label;
+  const isIncorrect = showFeedback && isSelected && correctLabel !== choice.label;
   const optionClass = isCorrect
-    ? "border-emerald-400 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-100"
+    ? "border-emerald-500 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-500"
     : isIncorrect
-      ? "border-rose-300 bg-rose-50 text-rose-950 ring-2 ring-rose-100"
+      ? "border-rose-400 bg-rose-50 text-rose-950 ring-1 ring-rose-400"
       : isSelected
-        ? "border-blue-500 bg-blue-50 text-slate-950 ring-2 ring-blue-100"
-        : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-blue-400 hover:bg-blue-50/70 hover:shadow-sm";
+        ? "border-blue-600 bg-blue-50 text-slate-950 ring-1 ring-blue-600"
+        : "border-slate-300 bg-white text-slate-800 hover:border-slate-500";
   const letterClass = isCorrect
-    ? "bg-emerald-600 text-white ring-emerald-600"
+    ? "border-emerald-600 bg-emerald-600 text-white"
     : isIncorrect
-      ? "bg-rose-600 text-white ring-rose-600"
+      ? "border-rose-600 bg-rose-600 text-white"
       : isSelected
-        ? "bg-blue-600 text-white ring-blue-600"
-        : "bg-white text-slate-700 ring-slate-300 group-hover:ring-blue-300";
+        ? "border-blue-600 bg-blue-600 text-white"
+        : "border-slate-500 bg-white text-slate-800";
 
   return (
-    <button
-      className={[
-        "group flex min-h-14 w-full items-center gap-4 rounded-xl border px-4 py-3 text-left text-sm font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-default disabled:hover:translate-y-0",
-        optionClass
-      ].join(" ")}
-      disabled={isDisabled}
-      onClick={() => onSelect(choice)}
-      type="button"
-    >
-      <span
+    <div className="flex items-center gap-3">
+      <button
+        aria-pressed={isSelected}
         className={[
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black ring-1 ring-inset transition",
-          letterClass
+          "flex min-h-14 w-full min-w-0 items-center gap-4 rounded-xl border px-4 py-3 text-left text-base transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-default",
+          optionClass,
+          isEliminated && !isDisabled ? "opacity-45" : ""
         ].join(" ")}
+        disabled={isDisabled}
+        onClick={() => onSelect(choice.label)}
+        type="button"
       >
-        {letter}
-      </span>
-      <span className="leading-6">{choice}</span>
-    </button>
+        <span
+          className={[
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold",
+            letterClass,
+            isEliminated ? "line-through" : ""
+          ].join(" ")}
+        >
+          {choice.label}
+        </span>
+        <span className={["min-w-0 flex-1 leading-7", isEliminated ? "line-through decoration-slate-500" : ""].join(" ")}>
+          {choice.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- graph answer choice from Supabase Storage
+            <img alt={`Choice ${choice.label}`} className="block h-auto max-h-64 w-auto max-w-full" src={choice.imageUrl} />
+          ) : null}
+          {choice.text ? <MathText text={choice.text} /> : null}
+        </span>
+      </button>
+
+      {onToggleEliminate ? (
+        <button
+          aria-label={isEliminated ? `Restore choice ${choice.label}` : `Cross out choice ${choice.label}`}
+          aria-pressed={isEliminated}
+          className={[
+            "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors",
+            isEliminated ? "border-slate-800 bg-slate-800 text-white" : "border-slate-400 text-slate-600 hover:border-slate-700"
+          ].join(" ")}
+          disabled={isDisabled}
+          onClick={() => onToggleEliminate(choice.label)}
+          title={isEliminated ? "Restore" : "Cross out"}
+          type="button"
+        >
+          {choice.label}
+          <span aria-hidden="true" className="absolute left-[-3px] right-[-3px] top-1/2 h-[1.5px] -translate-y-1/2 bg-current" />
+        </button>
+      ) : null}
+    </div>
   );
 }
