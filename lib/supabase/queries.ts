@@ -4,6 +4,7 @@ import {
   getSupabaseConfigDiagnostics
 } from "@/lib/supabase/client";
 import { normalizeTopic } from "@/lib/questions";
+import { loadQuestionPages } from "@/lib/supabase/questionPagination";
 import type {
   Choice,
   PracticeAnswer,
@@ -222,24 +223,24 @@ export async function getQuestions(filters: QuestionFilters = {}) {
   return filters.limit ? questions.slice(0, filters.limit) : questions;
 
   function requestQuestions(columns: string) {
-    let query = supabase
-      .from("questions")
-      .select(columns)
-      .order("created_at");
+    return loadQuestionPages<PublicQuestionRow>(async (from, to, withCount) => {
+      let query = supabase
+        .from("questions")
+        .select(columns, withCount ? { count: "exact" } : undefined)
+        .order("created_at")
+        .order("id");
 
-    if (filters.section && filters.section !== "all") {
-      query = query.eq("section", filters.section);
-    }
+      if (filters.section && filters.section !== "all") {
+        query = query.eq("section", filters.section);
+      }
 
-    if (filters.difficulty && filters.difficulty !== "all") {
-      query = query.eq("difficulty", filters.difficulty);
-    }
+      if (filters.difficulty && filters.difficulty !== "all") {
+        query = query.eq("difficulty", filters.difficulty);
+      }
 
-    if (filters.limit && !filters.topic) {
-      query = query.limit(filters.limit);
-    }
-
-    return query;
+      const response = await query.range(from, to);
+      return { ...response, data: response.data as unknown as PublicQuestionRow[] | null };
+    }, filters.topic ? undefined : filters.limit);
   }
 }
 
