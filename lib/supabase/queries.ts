@@ -15,7 +15,7 @@ import type {
   TestAnswer,
   TestSession
 } from "@/types/database";
-import type { DifficultyFilter, Question as AppQuestion, SectionFilter } from "@/types/sat";
+import type { DifficultyFilter, Question as AppQuestion, QuestionSummary, SectionFilter } from "@/types/sat";
 import { formatSATDateForDatabase, getNextSATDate } from "@/lib/satDates";
 
 type QuestionFilters = {
@@ -186,6 +186,65 @@ export async function updateStudyPlan(
   }
 
   return data;
+}
+
+const PUBLIC_CACHE_TTL = 5 * 60 * 1000;
+let catalogRequest: Promise<QuestionSummary[]> | null = null;
+let catalogExpiresAt = 0;
+const detailCache = new Map<string, { question: AppQuestion; expiresAt: number }>();
+const detailRequests = new Map<string, Promise<AppQuestion>>();
+
+/** Reuse only public metadata across client-side navigation, never user progress. */
+export function getQuestionCatalog(): Promise<QuestionSummary[]> {
+  if (catalogRequest && Date.now() < catalogExpiresAt) return catalogRequest;
+  catalogExpiresAt = Date.now() + PUBLIC_CACHE_TTL;
+  catalogRequest = (async () => {
+    const supabase = getSupabaseBrowserClient();
+    const result = await loadQuestionPages<QuestionSummary>(async (from, to, withCount) => {
+      const response = await supabase.from("questions")
+        .select("id,section,topic,difficulty", withCount ? { count: "exact" } : undefined)
+        .order("created_at").order("id").range(from, to);
+      return { ...response, data: response.data as QuestionSummary[] | null };
+    });
+    if (result.error) throw new Error(result.error.message);
+    return result.data ?? [];
+  })().catch((error) => {
+    catalogRequest = null;
+    throw createSupabaseRequestError(error);
+  });
+  return catalogRequest;
+}
+
+/** Fetch just the next few practice questions, deduplicating in-flight requests. */
+export async function getQuestionDetails(ids: string[]): Promise<AppQuestion[]> {
+  const uniqueIds = [...new Set(ids)];
+  if (uniqueIds.length > 50) throw new Error("Load at most 50 question details at a time.");
+  const missing = uniqueIds.filter((id) => {
+    const cached = detailCache.get(id);
+    return (!cached || cached.expiresAt <= Date.now()) && !detailRequests.has(id);
+  });
+  if (missing.length) {
+    const request = (async () => {
+      const supabase = getSupabaseBrowserClient();
+      let result: { data: PublicQuestionRow[] | null; error: { message: string } | null } =
+        await supabase.from("questions").select(PUBLIC_QUESTION_COLUMNS).in("id", missing);
+      if (result.error && isMissingColumnError(result.error.message)) {
+        result = await supabase.from("questions").select(LEGACY_QUESTION_COLUMNS).in("id", missing);
+      }
+      if (result.error) throw new Error(result.error.message);
+      return (result.data as unknown as PublicQuestionRow[]).map(mapQuestionRow);
+    })();
+    for (const id of missing) {
+      detailRequests.set(id, request.then((questions) => {
+        const question = questions.find((q) => q.id === id);
+        if (!question) throw new Error("A practice question is no longer available. Please reload the page.");
+        detailCache.set(id, { question, expiresAt: Date.now() + PUBLIC_CACHE_TTL });
+        if (detailCache.size > 300) detailCache.delete(detailCache.keys().next().value!);
+        return question;
+      }).finally(() => detailRequests.delete(id)));
+    }
+  }
+  return Promise.all(ids.map((id) => detailRequests.get(id) ?? Promise.resolve(detailCache.get(id)!.question)));
 }
 
 export async function getQuestions(filters: QuestionFilters = {}) {
@@ -440,7 +499,7 @@ export async function getMarkedQuestionIds(userId: string) {
 }
 
 export async function getQuestionStats() {
-  const questions = await getQuestions();
+  const questions = await getQuestionCatalog();
   const math = questions.filter((question) => question.section === "math").length;
   const readingWriting = questions.filter(
     (question) => question.section === "reading-writing"
@@ -454,7 +513,7 @@ export async function getQuestionStats() {
 }
 
 export async function getTopics() {
-  const questions = await getQuestions();
+  const questions = await getQuestionCatalog();
   const topicMap = new Map<
     string,
     { questions: number; section: AppQuestion["section"]; topic: string }

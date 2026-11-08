@@ -18,9 +18,9 @@ import { normalizeTopic } from "@/lib/questions";
 import {
   getCurrentUser,
   getQuestionProgressLookup,
-  getQuestions
+  getQuestionCatalog
 } from "@/lib/supabase/queries";
-import type { DifficultyFilter, Question } from "@/types/sat";
+import type { DifficultyFilter, QuestionSummary } from "@/types/sat";
 
 const SECTION_TITLES: Record<"math" | "reading-writing", string> = {
   math: "Math",
@@ -39,7 +39,7 @@ export function SectionPracticeSetupPage({ section }: { section: string }) {
   const sectionTitle = SECTION_TITLES[sectionKey];
 
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>("all");
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<QuestionSummary[]>([]);
   const [progress, setProgress] = useState<QuestionProgressLookup>(EMPTY_PROGRESS);
   const [selectedTopics, setSelectedTopics] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -53,16 +53,17 @@ export function SectionPracticeSetupPage({ section }: { section: string }) {
       setError(null);
 
       try {
-        const [loadedQuestions, user] = await Promise.all([
-          getQuestions({ section: sectionKey }),
-          getCurrentUser().catch(() => null)
-        ]);
+        const userRequest = getCurrentUser().catch(() => null);
+        const loadedQuestions = (await getQuestionCatalog()).filter((q) => q.section === sectionKey);
 
         if (!isMounted) {
           return;
         }
 
         setQuestions(loadedQuestions);
+        setIsLoading(false);
+        const user = await userRequest;
+        if (!isMounted) return;
 
         if (!user) {
           setProgress(EMPTY_PROGRESS);

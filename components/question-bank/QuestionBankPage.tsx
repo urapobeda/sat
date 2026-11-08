@@ -21,12 +21,12 @@ import {
   getMarkedQuestionIds,
   getPracticeAnswerTimings,
   getQuestionProgressLookup,
-  getQuestions,
+  getQuestionCatalog,
   getWeeklyQuestionActivity,
   type PracticeAnswerTiming,
   type WeeklyActivityPoint
 } from "@/lib/supabase/queries";
-import type { Question } from "@/types/sat";
+import type { QuestionSummary } from "@/types/sat";
 
 const EMPTY_PROGRESS: QuestionProgressLookup = {
   answeredIds: new Set<string>(),
@@ -60,7 +60,7 @@ const DIFFICULTIES = [
 ];
 
 export function QuestionBankPage() {
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<QuestionSummary[]>([]);
   const [progress, setProgress] = useState<QuestionProgressLookup>(EMPTY_PROGRESS);
   const [markedQuestionIds, setMarkedQuestionIds] = useState<Set<string>>(
     new Set()
@@ -76,11 +76,11 @@ export function QuestionBankPage() {
     setError(null);
 
     try {
-      const [loadedQuestions, user] = await Promise.all([
-        getQuestions(),
-        getCurrentUser().catch(() => null)
-      ]);
+      const userRequest = getCurrentUser().catch(() => null);
+      const loadedQuestions = await getQuestionCatalog();
       setQuestions(loadedQuestions);
+      setIsLoading(false);
+      const user = await userRequest;
 
       if (!user) {
         setProgress(EMPTY_PROGRESS);

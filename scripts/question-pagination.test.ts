@@ -21,6 +21,24 @@ const capped = await loadQuestionPages(async (from, to, withCount) => ({
 }));
 assert.deepEqual(capped.data, bank);
 
+let active = 0;
+let peak = 0;
+const parallel = await loadQuestionPages(async (from, to, withCount) => {
+  active += 1;
+  peak = Math.max(peak, active);
+  await new Promise((resolve) => setTimeout(resolve, from % 3));
+  active -= 1;
+  return { data: bank.slice(from, to + 1), error: null, count: withCount ? bank.length : null };
+});
+assert.equal(peak, 4, "later pages load with bounded parallelism");
+assert.deepEqual(parallel.data, bank, "parallel responses preserve question order");
+
+const changingCap = await loadQuestionPages(async (from, to, withCount) => ({
+  data: bank.slice(from, Math.min(to + 1, from + (from === 0 ? 500 : 100))),
+  error: null, count: withCount ? bank.length : null
+}));
+assert.deepEqual(changingCap.data, bank, "a reduced server cap never skips questions");
+
 const limited = await loadQuestionPages(async (from, to, withCount) => ({
   data: bank.slice(from, Math.min(to + 1, from + 100)), error: null, count: withCount ? bank.length : null
 }), 625);

@@ -26,13 +26,15 @@ import {
 import {
   createPracticeSession,
   getCurrentUser,
-  getQuestions
+  getQuestionCatalog,
+  getQuestionDetails
 } from "@/lib/supabase/queries";
 import { getSupabaseAuthHeaders } from "@/lib/supabase/authHeaders";
 import type { User } from "@supabase/supabase-js";
 import type {
   DifficultyFilter,
   Question,
+  QuestionSummary,
   QuestionFeedback,
   SectionFilter
 } from "@/types/sat";
@@ -47,7 +49,8 @@ export function QuestionBankPracticePage() {
     () => (topicsParam ? topicsParam.split(",").filter(Boolean) : []),
     [topicsParam]
   );
-  const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
+  const [practiceQuestions, setPracticeQuestions] = useState<QuestionSummary[]>([]);
+  const [questionDetails, setQuestionDetails] = useState<Record<string, Question>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<Record<string, QuestionFeedback>>({});
@@ -64,7 +67,7 @@ export function QuestionBankPracticePage() {
   const hasSaved = useRef(false);
   const questionStartRef = useRef<number>(0);
 
-  const currentQuestion = practiceQuestions[currentIndex];
+  const currentQuestion = questionDetails[practiceQuestions[currentIndex]?.id];
   const selectedAnswer = currentQuestion ? answers[currentQuestion.id] ?? null : null;
   const score = Object.values(feedback).filter((item) => item.isCorrect).length;
   const percentage =
@@ -88,6 +91,7 @@ export function QuestionBankPracticePage() {
       setError(null);
       setPersistenceMessage(null);
       setPracticeQuestions([]);
+      setQuestionDetails({});
       setAnswers({});
       setFeedback({});
       setCurrentIndex(0);
@@ -100,7 +104,10 @@ export function QuestionBankPracticePage() {
 
       try {
         const [loadedQuestions, user] = await Promise.all([
-          loadQuestionsForPractice({ difficulty, section, topic, topics }),
+          loadQuestionsForPractice({ difficulty, section, topic, topics }).then(async (catalog) => {
+            const firstQuestions = await getQuestionDetails(catalog.slice(0, 5).map((q) => q.id));
+            return { catalog, firstQuestions };
+          }),
           getCurrentUser().catch(() => null)
         ]);
 
@@ -108,7 +115,8 @@ export function QuestionBankPracticePage() {
           return;
         }
 
-        setPracticeQuestions(loadedQuestions);
+        setPracticeQuestions(loadedQuestions.catalog);
+        setQuestionDetails(Object.fromEntries(loadedQuestions.firstQuestions.map((q) => [q.id, q])));
         setCurrentUser(user);
 
         if (!user) {
@@ -116,8 +124,8 @@ export function QuestionBankPracticePage() {
           return;
         }
 
-        if (loadedQuestions.length > 0) {
-          await createSession(user, loadedQuestions);
+        if (loadedQuestions.catalog.length > 0) {
+          await createSession(user, loadedQuestions.catalog);
         }
       } catch (requestError) {
         if (isMounted) {
@@ -134,7 +142,7 @@ export function QuestionBankPracticePage() {
       }
     }
 
-    async function createSession(user: User, loadedQuestions: Question[]) {
+    async function createSession(user: User, loadedQuestions: QuestionSummary[]) {
       try {
         const session = await createPracticeSession({
           difficulty: difficulty === "all" ? null : difficulty,
@@ -162,6 +170,23 @@ export function QuestionBankPracticePage() {
       isMounted = false;
     };
   }, [difficulty, section, topic, topics]);
+
+  // Keep the next questions ready while the student works on the current one.
+  useEffect(() => {
+    let active = true;
+    const currentId = practiceQuestions[currentIndex]?.id;
+    const batchStart = Math.floor(currentIndex / 5) * 5;
+    const missing = practiceQuestions.slice(batchStart, batchStart + 10)
+      .filter((q) => !questionDetails[q.id]).map((q) => q.id);
+    if (!missing.length) return;
+    const needsCurrent = currentId && !questionDetails[currentId];
+    void getQuestionDetails(missing).then((loaded) => {
+      if (active) setQuestionDetails((previous) => ({ ...previous, ...Object.fromEntries(loaded.map((q) => [q.id, q])) }));
+    }).catch((error) => {
+      if (active && needsCurrent) setError(error instanceof Error ? error.message : "Unable to load this question.");
+    });
+    return () => { active = false; };
+  }, [practiceQuestions, currentIndex, questionDetails]);
 
   useEffect(() => {
     if (isLoading || isFinished || practiceQuestions.length === 0) {
@@ -318,7 +343,7 @@ export function QuestionBankPracticePage() {
         </div>
       </section>
 
-      {isLoading ? (
+      {isLoading || (!error && !isFinished && practiceQuestions.length > 0 && !currentQuestion) ? (
         <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-3 text-sm font-black text-blue-600">
             <Loader2 className="animate-spin" size={20} />
@@ -375,7 +400,7 @@ export function QuestionBankPracticePage() {
                       practiceQuestions.find(
                         (question) => feedback[question.id]?.isCorrect === false
                       ) ?? practiceQuestions[0];
-                    setReviewQuestion(missedQuestion);
+                    setReviewQuestion(questionDetails[missedQuestion.id] ?? null);
                   }}
                   type="button"
                 >
@@ -495,9 +520,11 @@ async function loadQuestionsForPractice({
   topic: string | null;
   topics: string[];
 }) {
+  const sectionQuestions = (await getQuestionCatalog()).filter((q) =>
+    (section === "all" || q.section === section) &&
+    (difficulty === "all" || q.difficulty === difficulty));
   if (topics.length > 0) {
     const normalizedTopics = new Set(topics.map((item) => normalizeTopic(item)));
-    const sectionQuestions = await getQuestions({ difficulty, section });
 
     return sectionQuestions.filter(
       (question) =>
@@ -507,17 +534,16 @@ async function loadQuestionsForPractice({
   }
 
   if (!topic) {
-    return getQuestions({ difficulty, section });
+    return sectionQuestions;
   }
 
-  const loadedQuestions = await getQuestions({ difficulty, section, topic });
+  const loadedQuestions = sectionQuestions.filter((q) => normalizeTopic(q.topic) === normalizeTopic(topic));
 
   if (loadedQuestions.length > 0) {
     return loadedQuestions;
   }
 
   const normalizedTopic = normalizeTopic(topic);
-  const sectionQuestions = await getQuestions({ difficulty, section });
 
   return sectionQuestions.filter(
     (question) =>

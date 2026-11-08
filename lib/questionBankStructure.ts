@@ -133,11 +133,11 @@ export const QUESTION_BANK_CATEGORIES: QuestionBankCategory[] = [
   }
 ];
 
-export function getQuestionCategory(question: Question) {
+export function getQuestionCategory(question: Pick<Question, "section" | "topic">) {
   return getCategoryForTopic(question.section, question.topic).title;
 }
 
-export function getQuestionSubtopic(question: Question) {
+export function getQuestionSubtopic(question: Pick<Question, "section" | "topic">) {
   return getSubtopicForTopic(question.section, question.topic).title;
 }
 
@@ -232,12 +232,12 @@ export function getSubtopicForTopic(
   return getCategoryForTopic(section, topic).subtopics[0];
 }
 
-export function questionMatchesSubtopic(question: Question, subtopicTitle: string) {
+export function questionMatchesSubtopic(question: Pick<Question, "section" | "topic">, subtopicTitle: string) {
   return getQuestionSubtopic(question) === subtopicTitle;
 }
 
 export function getQuestionGroupStats(
-  questions: Question[],
+  questions: Pick<Question, "id">[],
   progress: QuestionProgressLookup
 ): QuestionGroupStats {
   const totalQuestions = questions.length;

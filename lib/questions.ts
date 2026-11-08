@@ -97,7 +97,7 @@ export function getUniqueTopicCount(questions: Question[], section?: SectionFilt
 }
 
 export function getWeakTopics(
-  questions: Question[],
+  questions: Pick<Question, "id" | "topic">[],
   feedback: Record<string, { isCorrect: boolean }>
 ) {
   const misses = new Map<string, number>();

@@ -22,6 +22,9 @@ export type Question = {
   topic: string;
 };
 
+/** Public catalog data for counts, filters and progress; no question bodies. */
+export type QuestionSummary = Pick<Question, "id" | "section" | "topic" | "difficulty">;
+
 export type QuestionFeedback = {
   correctAnswer: string;
   /** label of the correct choice for multiple-choice questions */
