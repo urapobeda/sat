@@ -34,7 +34,7 @@ export function SectionHeroCard({
         <h2 className="text-xl font-bold">{title}</h2>
         <div className="mt-4 flex items-baseline justify-between gap-2">
           <p className="text-sm font-semibold text-white/90">
-            {answered.toLocaleString()} of {total.toLocaleString()} solved
+            {answered.toLocaleString("en-US")} of {total.toLocaleString("en-US")} solved
           </p>
           <span className="text-sm font-bold">{percent}%</span>
         </div>

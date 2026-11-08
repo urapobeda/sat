@@ -18,7 +18,9 @@ import { normalizeTopic } from "@/lib/questions";
 import {
   getCurrentUser,
   getQuestionProgressLookup,
-  getQuestionCatalog
+  getQuestionCatalog,
+  getQuestionDetails,
+  primeQuestionCatalog
 } from "@/lib/supabase/queries";
 import type { DifficultyFilter, QuestionSummary } from "@/types/sat";
 
@@ -33,27 +35,28 @@ const EMPTY_PROGRESS: QuestionProgressLookup = {
   incorrectIds: new Set<string>()
 };
 
-export function SectionPracticeSetupPage({ section }: { section: string }) {
+export function SectionPracticeSetupPage({ section, initialCatalog = null }: { section: string; initialCatalog?: QuestionSummary[] | null }) {
   const router = useRouter();
   const sectionKey = section === "math" ? "math" : "reading-writing";
   const sectionTitle = SECTION_TITLES[sectionKey];
 
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>("all");
-  const [questions, setQuestions] = useState<QuestionSummary[]>([]);
+  const [questions, setQuestions] = useState<QuestionSummary[]>(() => (initialCatalog ?? []).filter((q) => q.section === sectionKey));
   const [progress, setProgress] = useState<QuestionProgressLookup>(EMPTY_PROGRESS);
   const [selectedTopics, setSelectedTopics] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(initialCatalog === null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
     async function load() {
-      setIsLoading(true);
+      setIsLoading(initialCatalog === null);
       setError(null);
 
       try {
         const userRequest = getCurrentUser().catch(() => null);
+        if (initialCatalog) primeQuestionCatalog(initialCatalog);
         const loadedQuestions = (await getQuestionCatalog()).filter((q) => q.section === sectionKey);
 
         if (!isMounted) {
@@ -95,7 +98,7 @@ export function SectionPracticeSetupPage({ section }: { section: string }) {
     return () => {
       isMounted = false;
     };
-  }, [sectionKey]);
+  }, [sectionKey, initialCatalog]);
 
   const difficultyQuestions = useMemo(
     () =>
@@ -107,22 +110,20 @@ export function SectionPracticeSetupPage({ section }: { section: string }) {
   );
 
   const categories = getCategoriesForSection(sectionKey);
-  const sectionStats = getQuestionGroupStats(difficultyQuestions, progress);
   const selectedCount = selectedTopics.size;
 
-  const selectedStats = useMemo(() => {
+  const selectedQuestions = useMemo(() => {
     if (selectedCount === 0) {
-      return sectionStats;
+      return difficultyQuestions;
     }
 
-    const selectedQuestions = difficultyQuestions.filter((question) =>
+    return difficultyQuestions.filter((question) =>
       Array.from(selectedTopics).some((topicTitle) =>
         questionMatchesSubtopic(question, topicTitle)
       )
     );
-
-    return getQuestionGroupStats(selectedQuestions, progress);
-  }, [difficultyQuestions, progress, sectionStats, selectedCount, selectedTopics]);
+  }, [difficultyQuestions, selectedCount, selectedTopics]);
+  const selectedStats = getQuestionGroupStats(selectedQuestions, progress);
 
   function toggleTopic(topicTitle: string) {
     setSelectedTopics((current) => {
@@ -138,7 +139,7 @@ export function SectionPracticeSetupPage({ section }: { section: string }) {
     });
   }
 
-  function startPractice() {
+  const practiceHref = useMemo(() => {
     const params = new URLSearchParams();
     params.set("section", sectionKey);
 
@@ -155,7 +156,22 @@ export function SectionPracticeSetupPage({ section }: { section: string }) {
       );
     }
 
-    router.push(`/question-bank/practice?${params.toString()}`);
+    return `/question-bank/practice?${params.toString()}`;
+  }, [sectionKey, difficultyFilter, selectedCount, selectedTopics]);
+
+  useEffect(() => {
+    if (isLoading || !selectedQuestions.length) return;
+    const timer = window.setTimeout(() => {
+      router.prefetch(practiceHref);
+      void getQuestionDetails(selectedQuestions.slice(0, 5).map((q) => q.id)).catch(() => {
+        // Practice retries through its normal loader if speculative loading fails.
+      });
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [isLoading, selectedQuestions, practiceHref, router]);
+
+  function startPractice() {
+    router.push(practiceHref);
   }
 
   return (
@@ -185,7 +201,7 @@ export function SectionPracticeSetupPage({ section }: { section: string }) {
             </p>
             <p className="mt-1 text-sm text-slate-500">
               {selectedCount > 0
-                ? `${selectedStats.totalQuestions.toLocaleString()} questions in the selected topics.`
+                ? `${selectedStats.totalQuestions.toLocaleString("en-US")} questions in the selected topics.`
                 : `Start practicing all ${categories.length} skills in ${sectionTitle}.`}
             </p>
           </div>
@@ -256,8 +272,8 @@ export function SectionPracticeSetupPage({ section }: { section: string }) {
                         <span className="hidden items-center gap-2 sm:flex">
                           <ProgressMeter percent={percent} />
                           <span className="min-w-14 text-right text-xs font-medium text-slate-500">
-                            {stats.answeredQuestions.toLocaleString()}/
-                            {stats.totalQuestions.toLocaleString()}
+                            {stats.answeredQuestions.toLocaleString("en-US")}/
+                            {stats.totalQuestions.toLocaleString("en-US")}
                           </span>
                         </span>
                         <span className="text-right text-xs font-bold text-slate-600">

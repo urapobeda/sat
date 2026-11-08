@@ -194,6 +194,13 @@ let catalogExpiresAt = 0;
 const detailCache = new Map<string, { question: AppQuestion; expiresAt: number }>();
 const detailRequests = new Map<string, Promise<AppQuestion>>();
 
+/** Hydrate the public cache from server-rendered data without another API call. */
+export function primeQuestionCatalog(catalog: QuestionSummary[]) {
+  if (catalogRequest && Date.now() < catalogExpiresAt) return;
+  catalogExpiresAt = Date.now() + PUBLIC_CACHE_TTL;
+  catalogRequest = Promise.resolve(catalog);
+}
+
 /** Reuse only public metadata across client-side navigation, never user progress. */
 export function getQuestionCatalog(): Promise<QuestionSummary[]> {
   if (catalogRequest && Date.now() < catalogExpiresAt) return catalogRequest;

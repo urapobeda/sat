@@ -249,6 +249,15 @@ The importer upserts by `source_question_id` and verifies each saved batch.
 Repeat a failed import with the same command to finish it. Run
 `python scripts/prepare-flashsat-math.test.py` for conversion regression checks.
 
+## Question Bank loading
+
+The bank and section setup pages prerender their public catalog and revalidate
+every five minutes. Only public IDs, sections, topics and difficulty are embedded;
+student progress is fetched separately in the browser. If prerendering cannot
+reach Supabase, the browser catalog loader remains available as a fallback.
+Section setup preloads the practice route and its first five matching questions.
+No database migration is required for these loading optimizations.
+
 ## Current Features
 
 - Responsive landing page for SAT preparation

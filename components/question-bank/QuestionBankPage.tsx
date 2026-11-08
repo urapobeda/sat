@@ -1,7 +1,7 @@
 "use client";
 
 import { BookOpen, RotateCcw, Search, SquareRadical } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { StudentShell } from "@/components/dashboard/StudentShell";
 import { AccuracyByDifficultyCard } from "@/components/question-bank/AccuracyByDifficultyCard";
 import { AccuracyByTopicCard } from "@/components/question-bank/AccuracyByTopicCard";
@@ -22,6 +22,7 @@ import {
   getPracticeAnswerTimings,
   getQuestionProgressLookup,
   getQuestionCatalog,
+  primeQuestionCatalog,
   getWeeklyQuestionActivity,
   type PracticeAnswerTiming,
   type WeeklyActivityPoint
@@ -59,8 +60,8 @@ const DIFFICULTIES = [
   { key: "hard" as const, label: "Hard" }
 ];
 
-export function QuestionBankPage() {
-  const [questions, setQuestions] = useState<QuestionSummary[]>([]);
+export function QuestionBankPage({ initialCatalog = null }: { initialCatalog?: QuestionSummary[] | null }) {
+  const [questions, setQuestions] = useState<QuestionSummary[]>(initialCatalog ?? []);
   const [progress, setProgress] = useState<QuestionProgressLookup>(EMPTY_PROGRESS);
   const [markedQuestionIds, setMarkedQuestionIds] = useState<Set<string>>(
     new Set()
@@ -68,15 +69,16 @@ export function QuestionBankPage() {
   const [weeklyActivity, setWeeklyActivity] = useState<WeeklyActivityPoint[]>([]);
   const [timings, setTimings] = useState<PracticeAnswerTiming[]>([]);
   const [isSignedIn, setIsSignedIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(initialCatalog === null);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadQuestionBank() {
-    setIsLoading(true);
+  const loadQuestionBank = useCallback(async () => {
+    setIsLoading(initialCatalog === null);
     setError(null);
 
     try {
       const userRequest = getCurrentUser().catch(() => null);
+      if (initialCatalog) primeQuestionCatalog(initialCatalog);
       const loadedQuestions = await getQuestionCatalog();
       setQuestions(loadedQuestions);
       setIsLoading(false);
@@ -119,7 +121,7 @@ export function QuestionBankPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [initialCatalog]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -127,7 +129,7 @@ export function QuestionBankPage() {
     }, 0);
 
     return () => window.clearTimeout(timeout);
-  }, []);
+  }, [loadQuestionBank]);
 
   const accuracyPercent =
     progress.answeredIds.size > 0
