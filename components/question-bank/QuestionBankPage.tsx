@@ -10,10 +10,13 @@ import { QuestionAnalyticsRow } from "@/components/question-bank/QuestionAnalyti
 import { SectionHeroCard } from "@/components/question-bank/SectionHeroCard";
 import { StudyBearIllustration } from "@/components/question-bank/StudyBearIllustration";
 import { TimeShareByDifficultyCard } from "@/components/question-bank/TimeShareByDifficultyCard";
+import { TimeByTopicCard } from "@/components/question-bank/TimeByTopicCard";
+import { getQuestionTimingSummaries, summarizeQuestionTimings } from "@/lib/practiceTiming";
 import {
   getCategoriesForSection,
   getQuestionCategory,
   getQuestionGroupStats,
+  questionMatchesSubtopic,
   type QuestionProgressLookup
 } from "@/lib/questionBankStructure";
 import {
@@ -196,11 +199,8 @@ export function QuestionBankPage({ initialCatalog = null }: { initialCatalog?: Q
     [questions, progress]
   );
 
+  const timingSummaries = useMemo(() => getQuestionTimingSummaries(timings), [timings]);
   const timeShareBySection = useMemo(() => {
-    const timeByQuestionId = new Map(
-      timings.map((timing) => [timing.questionId, timing.timeSpentSeconds])
-    );
-
     return Object.fromEntries(
       SECTIONS.map((section) => {
         const sectionQuestions = questions.filter(
@@ -208,17 +208,8 @@ export function QuestionBankPage({ initialCatalog = null }: { initialCatalog?: Q
         );
 
         const rows = DIFFICULTIES.map((difficulty) => {
-          const times = sectionQuestions
-            .filter((question) => question.difficulty === difficulty.key)
-            .map((question) => timeByQuestionId.get(question.id))
-            .filter((value): value is number => typeof value === "number");
-
           return {
-            attempts: times.length,
-            avgSeconds:
-              times.length > 0
-                ? Math.round(times.reduce((sum, value) => sum + value, 0) / times.length)
-                : null,
+            ...summarizeQuestionTimings(sectionQuestions.filter((q) => q.difficulty === difficulty.key), timingSummaries),
             label: difficulty.label
           };
         });
@@ -226,7 +217,15 @@ export function QuestionBankPage({ initialCatalog = null }: { initialCatalog?: Q
         return [section.key, rows];
       })
     );
-  }, [questions, timings]);
+  }, [questions, timingSummaries]);
+
+  const timeByTopic = useMemo(() => Object.fromEntries(SECTIONS.map((section) => {
+    const sectionQuestions = questions.filter((q) => q.section === section.key);
+    return [section.key, getCategoriesForSection(section.key).flatMap((category) => category.subtopics.map((topic) => ({
+      label: topic.title,
+      ...summarizeQuestionTimings(sectionQuestions.filter((q) => questionMatchesSubtopic(q, topic.title)), timingSummaries)
+    })))];
+  })), [questions, timingSummaries]);
 
   return (
     <StudentShell active="question-bank">
@@ -322,6 +321,9 @@ export function QuestionBankPage({ initialCatalog = null }: { initialCatalog?: Q
                     rows={timeShareBySection[section.key] ?? []}
                     sectionLabel={section.title}
                   />
+                ))}
+                {SECTIONS.map((section) => (
+                  <TimeByTopicCard key={`timing-${section.key}`} rows={timeByTopic[section.key] ?? []} sectionLabel={section.title} />
                 ))}
               </div>
             </div>

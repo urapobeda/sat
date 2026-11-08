@@ -26,6 +26,9 @@ export type Question = {
 export type QuestionSummary = Pick<Question, "id" | "section" | "topic" | "difficulty">;
 
 export type QuestionFeedback = {
+  /** Confirmed persistence status; guests receive false. */
+  answerSaved?: boolean;
+  timingRecorded?: boolean;
   correctAnswer: string;
   /** label of the correct choice for multiple-choice questions */
   correctLabel: string | null;

@@ -258,6 +258,18 @@ reach Supabase, the browser catalog loader remains available as a fallback.
 Section setup preloads the practice route and its first five matching questions.
 No database migration is required for these loading optimizations.
 
+## Per-question practice timing
+
+Apply `supabase/migrations/add_practice_answer_time_tracking.sql` once if
+`practice_answers.time_spent_seconds` is missing. Each question starts its own
+timer when displayed; loading and grading latency are excluded. Returning to
+a submitted question keeps its frozen time. Restart starts fresh timers.
+The server records timing only for answers it grades as correct. Wrong answers
+still count toward accuracy, with no timing value. Until the column exists,
+answers can still be saved and the UI reports that timing was not saved.
+Signed-in students get averages by topic and difficulty in Question Bank;
+all correct attempts contribute to the averages, including repeated questions.
+
 ## Current Features
 
 - Responsive landing page for SAT preparation

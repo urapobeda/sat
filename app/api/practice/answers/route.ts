@@ -3,12 +3,13 @@ import { z } from "zod";
 import { getAuthenticatedUserId } from "@/lib/server/auth";
 import { gradeQuestionAnswer } from "@/lib/server/questionSolutions";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { countedAnswerSeconds } from "@/lib/practiceTiming";
 
 const answerSchema = z.object({
   questionId: z.string().uuid(),
   selectedAnswer: z.string().trim().min(1).max(500),
   sessionId: z.string().uuid().nullable().optional(),
-  timeSpentSeconds: z.number().int().min(0).max(3600).nullable().optional()
+  timeSpentSeconds: z.number().int().min(0).max(86400).nullable().optional()
 });
 
 export async function POST(request: NextRequest) {
@@ -25,18 +26,23 @@ export async function POST(request: NextRequest) {
       selectedAnswer: parsed.data.selectedAnswer
     });
 
+    let persistence = { answerSaved: false, timingRecorded: false };
     if (userId && parsed.data.sessionId) {
-      await saveVerifiedPracticeAnswer({
-        feedback,
-        questionId: parsed.data.questionId,
-        selectedAnswer: parsed.data.selectedAnswer,
-        sessionId: parsed.data.sessionId,
-        timeSpentSeconds: parsed.data.timeSpentSeconds ?? null,
-        userId
-      });
+      try {
+        persistence = await saveVerifiedPracticeAnswer({
+          feedback,
+          questionId: parsed.data.questionId,
+          selectedAnswer: parsed.data.selectedAnswer,
+          sessionId: parsed.data.sessionId,
+          timeSpentSeconds: parsed.data.timeSpentSeconds ?? null,
+          userId
+        });
+      } catch (error) {
+        console.error("Practice answer persistence failed:", error instanceof Error ? error.message : "Request failed");
+      }
     }
 
-    return NextResponse.json(feedback);
+    return NextResponse.json({ ...feedback, ...persistence });
   } catch {
     return NextResponse.json(
       { error: "Unable to verify this answer right now." },
@@ -61,29 +67,35 @@ async function saveVerifiedPracticeAnswer({
   userId: string;
 }) {
   const supabase = getSupabaseAdminClient();
-  const { data: session } = await supabase
+  const { data: session, error: sessionError } = await supabase
     .from("practice_sessions")
     .select("id,user_id")
     .eq("id", sessionId)
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (!session) {
-    return;
-  }
+  if (sessionError) throw new Error(sessionError.message);
+  if (!session) return { answerSaved: false, timingRecorded: false };
 
-  await supabase
-    .from("practice_answers")
-    .upsert(
-      {
-        correct_answer: feedback.correctAnswer,
-        is_correct: feedback.isCorrect,
-        question_id: questionId,
-        selected_answer: selectedAnswer,
-        session_id: sessionId,
-        time_spent_seconds: timeSpentSeconds,
-        user_id: userId
-      },
-      { onConflict: "session_id,question_id" }
-    );
+  const countedSeconds = countedAnswerSeconds(feedback.isCorrect, timeSpentSeconds);
+  const row = {
+    correct_answer: feedback.correctAnswer,
+    is_correct: feedback.isCorrect,
+    question_id: questionId,
+    selected_answer: selectedAnswer,
+    session_id: sessionId,
+    time_spent_seconds: countedSeconds,
+    user_id: userId
+  };
+  const { error } = await supabase.from("practice_answers").upsert(row, { onConflict: "session_id,question_id" });
+  if (error && /time_spent_seconds/.test(error.message) && /column|schema cache/i.test(error.message)) {
+    // Keep grading and answer history working until the timing migration is applied.
+    const legacyRow = { ...row };
+    delete (legacyRow as Partial<typeof row>).time_spent_seconds;
+    const retry = await supabase.from("practice_answers").upsert(legacyRow, { onConflict: "session_id,question_id" });
+    if (retry.error) throw new Error(retry.error.message);
+    return { answerSaved: true, timingRecorded: false };
+  }
+  if (error) throw new Error(error.message);
+  return { answerSaved: true, timingRecorded: countedSeconds !== null };
 }

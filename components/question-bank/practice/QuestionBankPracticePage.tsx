@@ -30,6 +30,7 @@ import {
   getQuestionDetails
 } from "@/lib/supabase/queries";
 import { getSupabaseAuthHeaders } from "@/lib/supabase/authHeaders";
+import { QuestionStopwatch } from "@/lib/practiceTiming";
 import type { User } from "@supabase/supabase-js";
 import type {
   DifficultyFilter,
@@ -65,9 +66,15 @@ export function QuestionBankPracticePage() {
   const [isTutorOpen, setIsTutorOpen] = useState(false);
   const [reviewQuestion, setReviewQuestion] = useState<Question | null>(null);
   const hasSaved = useRef(false);
-  const questionStartRef = useRef<number>(0);
+  const questionClocks = useRef(new Map<string, QuestionStopwatch>());
+  const submissionPending = useRef(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [timerRun, setTimerRun] = useState(0);
+  const [submittedSeconds, setSubmittedSeconds] = useState<Record<string, number>>({});
+  const [questionTick, setQuestionTick] = useState<{ id: string | null; seconds: number }>({ id: null, seconds: 0 });
 
   const currentQuestion = questionDetails[practiceQuestions[currentIndex]?.id];
+  const questionSeconds = currentQuestion ? submittedSeconds[currentQuestion.id] ?? (questionTick.id === currentQuestion.id ? questionTick.seconds : 0) : 0;
   const selectedAnswer = currentQuestion ? answers[currentQuestion.id] ?? null : null;
   const score = Object.values(feedback).filter((item) => item.isCorrect).length;
   const percentage =
@@ -78,10 +85,21 @@ export function QuestionBankPracticePage() {
   const displayTopic = practiceQuestions[0]?.topic ?? topic;
 
   useEffect(() => {
-    if (currentQuestion) {
-      questionStartRef.current = Date.now();
-    }
-  }, [currentQuestion]);
+    if (!currentQuestion || isLoading || isFinished) return;
+    const id = currentQuestion.id;
+    const clock = questionClocks.current.get(id) ?? new QuestionStopwatch();
+    questionClocks.current.set(id, clock);
+    const update = () => {
+      const seconds = clock.seconds(performance.now());
+      setQuestionTick((previous) => previous.id === id && previous.seconds === seconds ? previous : { id, seconds });
+    };
+    clock.start(performance.now());
+    const interval = window.setInterval(update, 250);
+    return () => {
+      window.clearInterval(interval);
+      clock.pause(performance.now());
+    };
+  }, [currentQuestion, isLoading, isFinished, timerRun]);
 
   useEffect(() => {
     let isMounted = true;
@@ -100,6 +118,12 @@ export function QuestionBankPracticePage() {
       setSessionId(null);
       setIsTutorOpen(false);
       setReviewQuestion(null);
+      questionClocks.current.clear();
+      setTimerRun((run) => run + 1);
+      setSubmittedSeconds({});
+      setQuestionTick({ id: null, seconds: 0 });
+      setIsChecking(false);
+      submissionPending.current = false;
       hasSaved.current = false;
 
       try {
@@ -201,19 +225,21 @@ export function QuestionBankPracticePage() {
   }, [isFinished, isLoading, practiceQuestions.length]);
 
   async function handleSelect(choice: string) {
-    if (!currentQuestion || answers[currentQuestion.id]) {
+    if (!currentQuestion || answers[currentQuestion.id] || submissionPending.current) {
       return;
     }
+    const question = currentQuestion;
+    submissionPending.current = true;
+    setIsChecking(true);
+    const clock = questionClocks.current.get(question.id) ?? new QuestionStopwatch();
+    questionClocks.current.set(question.id, clock);
+    const timeSpentSeconds = clock.submit(performance.now());
+    setSubmittedSeconds((previous) => ({ ...previous, [question.id]: timeSpentSeconds }));
 
     setAnswers((currentAnswers) => ({
       ...currentAnswers,
       [currentQuestion.id]: choice
     }));
-
-    const timeSpentSeconds = Math.max(
-      0,
-      Math.round((Date.now() - questionStartRef.current) / 1000)
-    );
 
     try {
       const authHeaders = currentUser ? await getSupabaseAuthHeaders() : {};
@@ -240,8 +266,19 @@ export function QuestionBankPracticePage() {
         ...currentFeedback,
         [currentQuestion.id]: verifiedFeedback
       }));
+      if (currentUser && !verifiedFeedback.answerSaved) {
+        setPersistenceMessage("Answer checked, but your result could not be saved.");
+      } else if (currentUser && verifiedFeedback.isCorrect && !verifiedFeedback.timingRecorded) {
+        setPersistenceMessage("Answer saved, but its timing could not be saved.");
+      }
     } catch {
-      setPersistenceMessage("Answer selected, but feedback could not be verified.");
+      clock.retry(performance.now(), true);
+      setAnswers((previous) => { const next = { ...previous }; delete next[question.id]; return next; });
+      setSubmittedSeconds((previous) => { const next = { ...previous }; delete next[question.id]; return next; });
+      setPersistenceMessage("The answer could not be checked. Please try again; your question timer has resumed.");
+    } finally {
+      submissionPending.current = false;
+      setIsChecking(false);
     }
   }
 
@@ -251,11 +288,17 @@ export function QuestionBankPracticePage() {
       return;
     }
 
-    setCurrentIndex((index) => Math.min(index + 1, practiceQuestions.length - 1));
+    showQuestionAt(Math.min(currentIndex + 1, practiceQuestions.length - 1));
   }
 
   function handlePrevious() {
-    setCurrentIndex((index) => Math.max(index - 1, 0));
+    showQuestionAt(Math.max(currentIndex - 1, 0));
+  }
+
+  function showQuestionAt(index: number) {
+    const id = practiceQuestions[index]?.id ?? null;
+    setQuestionTick({ id, seconds: id ? questionClocks.current.get(id)?.seconds(performance.now()) ?? 0 : 0 });
+    setCurrentIndex(index);
   }
 
   async function finishPractice() {
@@ -293,14 +336,20 @@ export function QuestionBankPracticePage() {
     setCurrentIndex(0);
     setIsFinished(false);
     setElapsedSeconds(0);
-      hasSaved.current = false;
-      setIsTutorOpen(false);
-      setReviewQuestion(null);
+    questionClocks.current.clear();
+    setTimerRun((run) => run + 1);
+    setSubmittedSeconds({});
+    setQuestionTick({ id: null, seconds: 0 });
+    hasSaved.current = false;
+    setIsTutorOpen(false);
+    setReviewQuestion(null);
+    setSessionId(null);
 
     if (!currentUser || practiceQuestions.length === 0) {
       return;
     }
 
+    setIsLoading(true);
     try {
       const session = await createPracticeSession({
         difficulty: difficulty === "all" ? null : difficulty,
@@ -312,6 +361,8 @@ export function QuestionBankPracticePage() {
       setSessionId(session.id);
     } catch {
       setPersistenceMessage("Practice restarted, but the new session was not saved.");
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -334,7 +385,7 @@ export function QuestionBankPracticePage() {
           explanations.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Timer seconds={elapsedSeconds} />
+          <Timer label="Session" seconds={elapsedSeconds} />
           {persistenceMessage ? (
             <p className="inline-flex rounded-2xl border border-blue-100 bg-white/80 px-4 py-2 text-sm font-bold text-slate-600">
               {persistenceMessage}
@@ -448,12 +499,21 @@ export function QuestionBankPracticePage() {
               selectedAnswer={selectedAnswer}
               showFeedback={Boolean(currentQuestion && feedback[currentQuestion.id])}
               totalQuestions={practiceQuestions.length}
+              timerSeconds={questionSeconds}
             />
+
+            {feedback[currentQuestion.id] ? (
+              <p className="text-sm text-slate-600">
+                {feedback[currentQuestion.id].isCorrect
+                  ? `Correct answer time: ${formatTime(questionSeconds)}${feedback[currentQuestion.id].timingRecorded ? " · saved to your timing statistics." : "."}`
+                  : "Time not counted: incorrect answers are excluded from timing statistics."}
+              </p>
+            ) : null}
 
             <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
               <button
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-5 py-3 text-sm font-black text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-400"
-                disabled={currentIndex === 0}
+                disabled={currentIndex === 0 || isChecking}
                 onClick={handlePrevious}
                 type="button"
               >
@@ -464,6 +524,7 @@ export function QuestionBankPracticePage() {
               <button
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                 onClick={restartPractice}
+                disabled={isChecking}
                 type="button"
               >
                 <RotateCcw size={17} />
@@ -472,7 +533,7 @@ export function QuestionBankPracticePage() {
 
               <button
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none sm:justify-self-end"
-                disabled={!selectedAnswer || isSavingResult}
+                disabled={!selectedAnswer || !feedback[currentQuestion.id] || isChecking || isSavingResult}
                 onClick={handleNext}
                 type="button"
               >

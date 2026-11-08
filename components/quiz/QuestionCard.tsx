@@ -84,7 +84,7 @@ export function QuestionCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {timerSeconds !== undefined ? <Timer seconds={timerSeconds} /> : null}
+          {timerSeconds !== undefined ? <Timer label="Question" seconds={timerSeconds} /> : null}
           <button
             aria-pressed={highlightEnabled}
             className={`inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition disabled:opacity-50 ${highlightEnabled ? "border-amber-400 bg-amber-100 text-slate-900" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}

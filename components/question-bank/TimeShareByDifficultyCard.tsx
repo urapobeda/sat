@@ -4,12 +4,14 @@ import { LockedProCard } from "@/components/question-bank/LockedProCard";
 export type DifficultyTimeRow = {
   attempts: number;
   avgSeconds: number | null;
+  totalSeconds: number;
   label: string;
 };
 
 function formatSeconds(seconds: number) {
-  const minutes = Math.floor(seconds / 60);
-  const remainder = Math.round(seconds % 60);
+  const rounded = Math.round(seconds);
+  const minutes = Math.floor(rounded / 60);
+  const remainder = rounded % 60;
 
   return minutes > 0 ? `${minutes}m ${remainder}s` : `${remainder}s`;
 }
@@ -22,16 +24,17 @@ export function TimeShareByDifficultyCard({
   sectionLabel: string;
 }) {
   const hasData = rows.some((row) => row.avgSeconds !== null);
-  const overall = rows.find((row) => row.label === "Medium") ?? rows[0];
+  const totalAttempts = rows.reduce((sum, row) => sum + row.attempts, 0);
+  const overallAverage = totalAttempts ? rows.reduce((sum, row) => sum + row.totalSeconds, 0) / totalAttempts : null;
 
   return (
     <LockedProCard
-      subtitle="Average time per question, by difficulty"
+      subtitle="Average correct-answer time by difficulty"
       title={sectionLabel}
     >
       {!hasData ? (
         <p className="text-sm text-slate-500">
-          Answer some {sectionLabel} questions in Practice to see your pace
+          Solve {sectionLabel} questions correctly in Practice to see your pace
           here.
         </p>
       ) : (
@@ -40,9 +43,9 @@ export function TimeShareByDifficultyCard({
             <div className="absolute inset-0 rounded-full border-[10px] border-slate-300 border-r-transparent border-b-transparent" />
             <div className="text-center">
               <p className="text-lg font-bold text-slate-900">
-                {overall?.avgSeconds === null || overall?.avgSeconds === undefined
+                {overallAverage === null
                   ? "—"
-                  : formatSeconds(overall.avgSeconds)}
+                  : formatSeconds(overallAverage)}
               </p>
             </div>
           </div>
@@ -62,7 +65,7 @@ export function TimeShareByDifficultyCard({
                     {row.avgSeconds === null ? "—" : formatSeconds(row.avgSeconds)}
                   </span>
                   <span className="text-xs text-slate-400">
-                    {row.attempts} timed
+                    {row.attempts} correct
                   </span>
                 </span>
               </div>

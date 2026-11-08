@@ -408,11 +408,16 @@ export async function getPracticeAnswerTimings(
   userId: string
 ): Promise<PracticeAnswerTiming[]> {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from("practice_answers")
-    .select("question_id,time_spent_seconds")
-    .eq("user_id", userId)
-    .not("time_spent_seconds", "is", null);
+  type TimingRow = { id: string; question_id: string; time_spent_seconds: number | null };
+  const { data, error } = await loadQuestionPages<TimingRow>(async (from, to, withCount) => {
+    const response = await supabase.from("practice_answers")
+      .select("id,question_id,time_spent_seconds", withCount ? { count: "exact" } : undefined)
+      .eq("user_id", userId)
+      .eq("is_correct", true)
+      .not("time_spent_seconds", "is", null)
+      .order("created_at").order("id").range(from, to);
+    return response;
+  });
 
   if (error) {
     throw new Error(error.message);
@@ -420,8 +425,8 @@ export async function getPracticeAnswerTimings(
 
   return (data ?? [])
     .filter(
-      (row): row is { question_id: string; time_spent_seconds: number } =>
-        typeof row.time_spent_seconds === "number"
+      (row): row is TimingRow & { time_spent_seconds: number } =>
+        typeof row.time_spent_seconds === "number" && row.time_spent_seconds >= 0
     )
     .map((row) => ({
       questionId: row.question_id,
