@@ -9,6 +9,8 @@ import {
   getQuestionPublicContext,
   getQuestionSolution
 } from "@/lib/server/questionSolutions";
+import { getAuthenticatedUserId } from "@/lib/server/auth";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getOpenAIClient, getOpenAIModel } from "@/lib/openai";
 
 const tutorRequestSchema = z.object({
@@ -50,11 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     const question = await getQuestionPublicContext(parsedRequest.data.questionId);
-    const canRevealSolution =
-      parsedRequest.data.contextType === "test-review" ||
-      parsedRequest.data.contextType === "past-paper-review" ||
-      Boolean(parsedRequest.data.selectedAnswer);
-    const solution = canRevealSolution
+    const solution = await hasVerifiedAnswer(request, parsedRequest.data.questionId)
       ? await getQuestionSolution(parsedRequest.data.questionId)
       : null;
     const openai = getOpenAIClient();
@@ -115,13 +113,27 @@ export async function POST(request: NextRequest) {
       return jsonError("Please send valid JSON.", 400, sessionId);
     }
 
-    const message =
-      error instanceof Error && error.message.includes("OPENAI_")
-        ? error.message
-        : "AI Tutor is unavailable right now. Please try again.";
-
-    return jsonError(message, 500, sessionId);
+    return jsonError("AI Tutor is unavailable right now. Please try again.", 500, sessionId);
   }
+}
+
+async function hasVerifiedAnswer(request: NextRequest, questionId: string) {
+  if (!request.headers.has("authorization")) return false;
+  const userId = await getAuthenticatedUserId(request);
+  if (!userId) return false;
+
+  const supabase = getSupabaseAdminClient();
+  const results = await Promise.all(
+    (["practice_answers", "test_answers"] as const).map((table) =>
+      supabase.from(table).select("question_id")
+        .eq("question_id", questionId)
+        .eq("user_id", userId)
+        .not("selected_answer", "is", null)
+        .not("is_correct", "is", null)
+        .limit(1)
+    )
+  );
+  return results.some(({ data, error }) => !error && Boolean(data?.length));
 }
 
 function consumeSessionUsage(sessionId: string, questionId: string) {

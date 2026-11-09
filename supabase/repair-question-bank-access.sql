@@ -42,18 +42,12 @@ begin
       from public.questions
       where correct_answer is not null
         and explanation is not null
-      on conflict (question_id) do update
-      set
-        correct_answer = excluded.correct_answer,
-        explanation = excluded.explanation,
-        updated_at = now()
+      on conflict (question_id) do nothing
     ';
   end if;
 end $$;
 
-drop index if exists questions_source_question_id_key;
-
-create unique index questions_source_question_id_key
+create unique index if not exists questions_source_question_id_key
 on public.questions (source_question_id);
 
 create index if not exists questions_section_idx
@@ -81,7 +75,11 @@ alter table public.questions enable row level security;
 alter table public.question_solutions enable row level security;
 
 grant usage on schema public to anon, authenticated, service_role;
-grant select on public.questions to anon, authenticated;
+revoke select on public.questions from public, anon, authenticated;
+grant select (id, section, topic, difficulty, question, choices, is_bluebook,
+  source_question_id, source_name, category, source_page_start, source_page_end,
+  image_urls, question_type, created_at) on public.questions to anon, authenticated;
+revoke all on public.question_solutions from public, anon, authenticated;
 grant all on public.questions to service_role;
 grant all on public.question_solutions to service_role;
 

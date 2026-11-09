@@ -9,14 +9,17 @@ import {
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const completeTestSchema = z.object({
-  answers: z.record(z.string().uuid(), z.string().trim().max(500).nullable()),
+  answers: z.record(z.string().uuid(), z.string().trim().min(1).max(500).nullable()).refine((answers) => {
+    const count = Object.keys(answers).length;
+    return count > 0 && count <= 98;
+  }),
   testSessionId: z.string().uuid().nullable().optional(),
   timeSpentSeconds: z.number().int().min(0).max(24 * 60 * 60)
 });
 
 export async function POST(request: NextRequest) {
   try {
-    const parsed = completeTestSchema.safeParse(await request.json());
+    const parsed = completeTestSchema.safeParse(await request.json().catch(() => null));
 
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid test completion payload." }, { status: 400 });
@@ -24,7 +27,28 @@ export async function POST(request: NextRequest) {
 
     const answers = parsed.data.answers;
     const questionIds = Object.keys(answers);
+    const userId = await getAuthenticatedUserId(request);
+    const sessionId = parsed.data.testSessionId;
+    if (sessionId && !userId) {
+      return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+    }
+    if (sessionId && userId) {
+      const { data: session, error } = await getSupabaseAdminClient()
+        .from("test_sessions")
+        .select("total,completed_at")
+        .eq("id", sessionId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!session) return NextResponse.json({ error: "Test session not found." }, { status: 404 });
+      if (session.completed_at || session.total !== questionIds.length) {
+        return NextResponse.json({ error: "This test session cannot be submitted." }, { status: 409 });
+      }
+    }
     const gradingById = await loadGradingData(questionIds);
+    if (gradingById.size !== questionIds.length) {
+      return NextResponse.json({ error: "Some test questions are unavailable." }, { status: 400 });
+    }
     const solutions = questionIds.flatMap((questionId) => {
       const grading = gradingById.get(questionId);
 
@@ -42,11 +66,11 @@ export async function POST(request: NextRequest) {
     const total = questionIds.length;
     const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
     const estimatedSatScore = Math.min(1600, Math.max(400, 400 + Math.round(percentage * 12)));
-    const reviewQuestions = await getReviewQuestions(answers);
-    const userId = await getAuthenticatedUserId(request);
+    const submittedAnswers = Object.fromEntries(Object.entries(answers).filter(([, answer]) => answer !== null));
+    const reviewQuestions = await getReviewQuestions(submittedAnswers);
 
     if (userId && parsed.data.testSessionId) {
-      await saveVerifiedTestResult({
+      const saved = await saveVerifiedTestResult({
         answers,
         estimatedSatScore,
         percentage,
@@ -54,9 +78,9 @@ export async function POST(request: NextRequest) {
         solutions,
         testSessionId: parsed.data.testSessionId,
         timeSpentSeconds: parsed.data.timeSpentSeconds,
-        total,
         userId
       });
+      if (!saved) return NextResponse.json({ error: "This test session was already submitted." }, { status: 409 });
     }
 
     return NextResponse.json({
@@ -82,7 +106,6 @@ async function saveVerifiedTestResult({
   solutions,
   testSessionId,
   timeSpentSeconds,
-  total,
   userId
 }: {
   answers: Record<string, string | null>;
@@ -92,50 +115,23 @@ async function saveVerifiedTestResult({
   solutions: Array<{ isCorrect: boolean; questionId: string; solution: { correct_answer: string } }>;
   testSessionId: string;
   timeSpentSeconds: number;
-  total: number;
   userId: string;
 }) {
   const supabase = getSupabaseAdminClient();
-  const { data: session } = await supabase
-    .from("test_sessions")
-    .select("id,user_id")
-    .eq("id", testSessionId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (!session) {
-    return;
-  }
-
-  await Promise.all(
-    solutions.map(({ isCorrect, questionId, solution }) =>
-      supabase
-        .from("test_answers")
-        .upsert(
-          {
-            correct_answer: solution.correct_answer,
-            is_correct: isCorrect,
-            question_id: questionId,
-            selected_answer: answers[questionId],
-            test_session_id: testSessionId,
-            user_id: userId
-          },
-          { onConflict: "test_session_id,question_id" }
-        )
-    )
-  );
-
-  await supabase
-    .from("test_sessions")
-    .update({
-      completed_at: new Date().toISOString(),
-      estimated_sat_score: estimatedSatScore,
-      percentage,
-      score,
-      time_spent_seconds: timeSpentSeconds,
-      total
-    })
-    .eq("id", testSessionId)
-    .eq("user_id", userId);
+  const { data, error } = await supabase.rpc("finalize_verified_test", {
+    p_session: testSessionId,
+    p_user: userId,
+    p_answers: solutions.map(({ isCorrect, questionId, solution }) => ({
+      correct_answer: solution.correct_answer,
+      is_correct: isCorrect,
+      question_id: questionId,
+      selected_answer: answers[questionId]
+    })),
+    p_estimate: estimatedSatScore,
+    p_percentage: percentage,
+    p_score: score,
+    p_seconds: timeSpentSeconds
+  });
+  if (error) throw error;
+  return data;
 }
-

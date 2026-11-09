@@ -5,7 +5,7 @@ import {
   RotateCcw, Sparkles, Timer as TimerIcon
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
 import { QuestionNavigator } from "@/components/question-bank/practice/QuestionNavigator";
 import { Highlightable } from "@/components/quiz/Highlightable";
@@ -13,6 +13,7 @@ import { MathText } from "@/components/quiz/MathText";
 import { QuestionAnswers, QuestionExplanation, QuestionStem } from "@/components/quiz/QuestionCard";
 import { QuestionHighlightControls, useQuestionHighlight } from "@/components/quiz/QuestionHighlight";
 import { formatTime } from "@/components/quiz/Timer";
+import { getMarkedQuestionIds, setQuestionMarked } from "@/lib/supabase/queries";
 import { splitReadingQuestion } from "@/lib/readingQuestionLayout";
 import type { Question, QuestionFeedback, QuestionSummary } from "@/types/sat";
 
@@ -40,18 +41,22 @@ type PracticeExamProps = {
   questionSeconds: number;
   questions: QuestionSummary[];
   selectedAnswer: string | null;
+  userId?: string;
 };
 
 export function PracticeExam({
   backHref, children, currentIndex, elapsedSeconds, feedbackByQuestion, isChecking, isTimerPaused, isSavingResult,
   onNext, onTimerPauseChange, onPrevious, onRestart, onSelect, onShowQuestion, persistenceMessage,
-  question, questionSeconds, questions, selectedAnswer
+  question, questionSeconds, questions, selectedAnswer, userId
 }: PracticeExamProps) {
   const [timerVisible, setTimerVisible] = useState(true);
   const [showSessionTime, setShowSessionTime] = useState(false);
   const [tutorOpen, setTutorOpen] = useState(false);
   const [choiceDrafts, setChoiceDrafts] = useState<Record<string, string | null>>({});
-  const [marked, setMarked] = useState<number[]>([]);
+  const [markedIds, setMarkedIds] = useState<Set<string>>(() => new Set());
+  const [marksStatus, setMarksStatus] = useState<"loading" | "ready" | "saving">("loading");
+  const [marksError, setMarksError] = useState<string | null>(null);
+  const marked = useMemo(() => questions.flatMap((item, index) => markedIds.has(item.id) ? [index] : []), [questions, markedIds]);
   const [openExplanationId, setOpenExplanationId] = useState<string | null>(null);
   const highlight = useQuestionHighlight();
   const passagePanel = useRef<HTMLElement>(null);
@@ -73,6 +78,39 @@ export function PracticeExam({
   useEffect(() => {
     if (showExplanation) explanation.current?.scrollIntoView({ block: "nearest" });
   }, [showExplanation, questionId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    let active = true;
+    void getMarkedQuestionIds(userId).then((ids) => {
+      if (active) setMarkedIds(ids);
+    }).catch(() => {
+      if (active) setMarksError("Saved review marks could not be loaded.");
+    }).finally(() => {
+      if (active) setMarksStatus("ready");
+    });
+    return () => { active = false; };
+  }, [userId]);
+
+  async function toggleMark() {
+    if (!questionId) return;
+    const next = !markedIds.has(questionId);
+    setMarksError(null);
+    setMarksStatus("saving");
+    try {
+      if (userId) await setQuestionMarked(userId, questionId, next);
+      setMarkedIds((current) => {
+        const updated = new Set(current);
+        if (next) updated.add(questionId);
+        else updated.delete(questionId);
+        return updated;
+      });
+    } catch {
+      setMarksError("This review mark could not be saved. Try again.");
+    } finally {
+      setMarksStatus("ready");
+    }
+  }
 
   const { passage, prompt } = question?.section === "reading-writing"
     ? splitReadingQuestion(question.question)
@@ -189,13 +227,15 @@ export function PracticeExam({
                     <button
                       aria-pressed={isMarked}
                       className="inline-flex min-h-10 items-center gap-2 px-3 text-sm font-medium hover:underline"
-                      onClick={() => setMarked((items) => isMarked ? items.filter((i) => i !== currentIndex) : [...items, currentIndex])}
+                      disabled={Boolean(userId) && marksStatus !== "ready"}
+                      onClick={toggleMark}
                       type="button"
                     >
                       <Bookmark aria-hidden="true" className={isMarked ? "fill-amber-400 text-amber-700" : "text-slate-500"} size={16} />
                       Mark for Review
                     </button>
                   </div>
+                  {marksError ? <p className="mt-2 text-sm text-amber-700" role="status">{marksError}</p> : null}
                   {prompt ? (
                     <Highlightable
                       className="mt-3 break-words font-serif text-[18px] leading-[1.5]"

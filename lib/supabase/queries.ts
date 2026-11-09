@@ -498,16 +498,29 @@ function getWeekStartIso(date: Date) {
 
 export async function getMarkedQuestionIds(userId: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from("question_marks")
-    .select("question_id")
-    .eq("user_id", userId);
+  const { data, error } = await loadQuestionPages((from, to, withCount) =>
+    supabase.from("question_marks")
+      .select("question_id", withCount ? { count: "exact" } : undefined)
+      .eq("user_id", userId)
+      .order("question_id").range(from, to)
+  );
 
   if (error) {
     throw new Error(error.message);
   }
 
   return new Set((data ?? []).map((mark) => mark.question_id));
+}
+
+export async function setQuestionMarked(userId: string, questionId: string, marked: boolean) {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await (marked
+    ? supabase.from("question_marks").upsert({ user_id: userId, question_id: questionId }, {
+      onConflict: "user_id,question_id",
+      ignoreDuplicates: true
+    })
+    : supabase.from("question_marks").delete().eq("user_id", userId).eq("question_id", questionId));
+  if (error) throw new Error(error.message);
 }
 
 export async function getQuestionStats() {
@@ -559,9 +572,20 @@ export async function getRandomQuestions(
   limit: number,
   filters: QuestionFilters = {}
 ) {
-  const questions = await getQuestions(filters);
-
-  return questions.sort(() => Math.random() - 0.5).slice(0, limit);
+  const catalog = (await getQuestionCatalog()).filter((question) =>
+    (!filters.section || filters.section === "all" || question.section === filters.section) &&
+    (!filters.difficulty || filters.difficulty === "all" || question.difficulty === filters.difficulty) &&
+    (!filters.topic || normalizeTopic(question.topic) === normalizeTopic(filters.topic))
+  );
+  for (let index = catalog.length - 1; index > 0; index--) {
+    const target = Math.floor(Math.random() * (index + 1));
+    [catalog[index], catalog[target]] = [catalog[target], catalog[index]];
+  }
+  const ids = catalog.slice(0, limit).map((question) => question.id);
+  const batches = Array.from({ length: Math.ceil(ids.length / 50) }, (_, index) =>
+    getQuestionDetails(ids.slice(index * 50, (index + 1) * 50))
+  );
+  return (await Promise.all(batches)).flat();
 }
 
 export async function createPracticeSession(

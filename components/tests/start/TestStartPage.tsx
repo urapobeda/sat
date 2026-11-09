@@ -179,11 +179,7 @@ export function TestStartPage() {
   }
 
   async function finishTest(expired: boolean) {
-    if (hasSaved.current) {
-      setTimeUp(expired);
-      setIsFinished(true);
-      return;
-    }
+    if (hasSaved.current) return;
 
     hasSaved.current = true;
     setIsSavingResult(true);
@@ -215,12 +211,15 @@ export function TestStartPage() {
 
       setCompletionResult((await response.json()) as TestCompletionResult);
     } catch {
-      setPersistenceMessage("Results are shown here, but Supabase did not save them.");
+      hasSaved.current = false;
+      setPersistenceMessage("The test could not be submitted. Please try again.");
+      return;
     } finally {
       setIsSavingResult(false);
-      setTimeUp(expired);
-      setIsFinished(true);
     }
+
+    setTimeUp(expired);
+    setIsFinished(true);
   }
 
   return (
@@ -293,7 +292,7 @@ export function TestStartPage() {
               {timeUp ? "Time is up" : "Test submitted"}
             </p>
             <h2 className="mt-2 text-3xl font-black text-slate-950">
-              Estimated SAT Score: {estimatedScore}
+              Unofficial SAT Score Estimate: {estimatedScore}
             </h2>
             <p className="mt-2 text-lg font-bold text-slate-600">
               {score} of {testQuestions.length} correct • {percentage}% accuracy

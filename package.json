@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/adaptive-routing.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/sat-score-estimator.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/security-boundary.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/question-pagination.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/practice-timing.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/practice-answer-route.test.mjs && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/question-bank-filters.test.ts",
+    "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/adaptive-routing.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/sat-score-estimator.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/security-boundary.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/auth-redirect.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/question-pagination.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/practice-timing.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/practice-answer-route.test.mjs && node scripts/test-completion-route.test.mjs && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/question-bank-filters.test.ts",
     "questions:extract-pdf": "python scripts/extract-question-bank-pdfs.py",
     "questions:import-supabase": "node scripts/import-questions-supabase.mjs",
     "questions:sql": "node scripts/generate-questions-sql.mjs",
@@ -19,13 +19,13 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.107.0",
-    "katex": "^0.16.22",
+    "katex": "^0.19.1",
     "lucide-react": "latest",
     "next": "^16.4.3",
     "openai": "^6.48.0",
     "react": "latest",
     "react-dom": "latest",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "latest",
@@ -40,6 +40,6 @@
     "typescript": "latest"
   },
   "overrides": {
-    "sharp": "0.35.3"
+    "sharp": "0.35.5"
   }
 }

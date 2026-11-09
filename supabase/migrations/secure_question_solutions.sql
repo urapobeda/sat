@@ -10,23 +10,21 @@ create table if not exists public.question_solutions (
   updated_at timestamptz not null default now()
 );
 
-insert into public.question_solutions (
-  question_id,
-  correct_answer,
-  explanation
-)
-select
-  id,
-  correct_answer,
-  explanation
-from public.questions
-where correct_answer is not null
-  and explanation is not null
-on conflict (question_id) do update
-set
-  correct_answer = excluded.correct_answer,
-  explanation = excluded.explanation,
-  updated_at = now();
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public'
+             and table_name = 'questions' and column_name = 'correct_answer')
+     and exists (select 1 from information_schema.columns where table_schema = 'public'
+                 and table_name = 'questions' and column_name = 'explanation') then
+    execute $copy$
+      insert into public.question_solutions (question_id, correct_answer, explanation)
+      select id, correct_answer, explanation
+      from public.questions
+      where correct_answer is not null and explanation is not null
+      on conflict (question_id) do nothing
+    $copy$;
+  end if;
+end $$;
 
 do $$
 declare
@@ -47,6 +45,7 @@ alter table public.question_solutions enable row level security;
 
 revoke all on public.question_solutions from anon, authenticated;
 revoke all on public.question_solutions from public;
+grant select, insert, update on public.question_solutions to service_role;
 
 drop policy if exists "No public question solution reads" on public.question_solutions;
 

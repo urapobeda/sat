@@ -397,6 +397,7 @@ export function QuestionBankPracticePage() {
       questionSeconds={questionSeconds}
       selectedAnswer={selectedAnswer}
       questions={practiceQuestions}
+      userId={currentUser?.id}
     >
       {waitingForQuestion ? (
         <section className="mx-auto mt-6 w-full max-w-3xl px-5 py-6">

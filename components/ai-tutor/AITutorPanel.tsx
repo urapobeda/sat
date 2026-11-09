@@ -13,6 +13,7 @@ import {
   type AITutorChatMessage,
   type AITutorResponse
 } from "@/lib/aiTutor";
+import { getSupabaseAuthHeaders } from "@/lib/supabase/authHeaders";
 import type { Question } from "@/types/sat";
 
 type AITutorPanelProps = {
@@ -110,7 +111,8 @@ export function AITutorPanel({
           })
         ),
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          ...await getSupabaseAuthHeaders().catch(() => ({}))
         },
         method: "POST"
       });

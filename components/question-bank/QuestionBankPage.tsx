@@ -73,11 +73,13 @@ export function QuestionBankPage({ initialCatalog = null }: { initialCatalog?: Q
   const [timings, setTimings] = useState<PracticeAnswerTiming[]>([]);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(initialCatalog === null);
+  const [analyticsFailures, setAnalyticsFailures] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const loadQuestionBank = useCallback(async () => {
     setIsLoading(initialCatalog === null);
     setError(null);
+    setAnalyticsFailures([]);
 
     try {
       const userRequest = getCurrentUser().catch(() => null);
@@ -98,22 +100,23 @@ export function QuestionBankPage({ initialCatalog = null }: { initialCatalog?: Q
 
       setIsSignedIn(true);
 
-      const [
-        loadedProgress,
-        loadedMarkedQuestionIds,
-        loadedWeeklyActivity,
-        loadedTimings
-      ] = await Promise.all([
+      const [progress, marks, activity, timings] = await Promise.allSettled([
         getQuestionProgressLookup(user.id),
-        getMarkedQuestionIds(user.id).catch(() => new Set<string>()),
-        getWeeklyQuestionActivity(user.id).catch(() => []),
-        getPracticeAnswerTimings(user.id).catch(() => [])
+        getMarkedQuestionIds(user.id),
+        getWeeklyQuestionActivity(user.id),
+        getPracticeAnswerTimings(user.id)
       ]);
 
-      setProgress(loadedProgress);
-      setMarkedQuestionIds(loadedMarkedQuestionIds);
-      setWeeklyActivity(loadedWeeklyActivity);
-      setTimings(loadedTimings);
+      setProgress(progress.status === "fulfilled" ? progress.value : EMPTY_PROGRESS);
+      setMarkedQuestionIds(marks.status === "fulfilled" ? marks.value : new Set());
+      setWeeklyActivity(activity.status === "fulfilled" ? activity.value : []);
+      setTimings(timings.status === "fulfilled" ? timings.value : []);
+      setAnalyticsFailures([
+        progress.status === "rejected" ? "progress" : null,
+        marks.status === "rejected" ? "saved questions" : null,
+        activity.status === "rejected" ? "weekly activity" : null,
+        timings.status === "rejected" ? "timing" : null
+      ].filter((feature): feature is string => feature !== null));
     } catch (requestError) {
       console.error("Question Bank load failed", requestError);
       setError(
@@ -282,6 +285,12 @@ export function QuestionBankPage({ initialCatalog = null }: { initialCatalog?: Q
               })}
             </div>
 
+            {analyticsFailures.length ? (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-slate-800" role="status">
+                Some analytics could not be loaded ({analyticsFailures.join(", ")}).
+                <button className="ml-2 cursor-pointer font-semibold underline" onClick={() => void loadQuestionBank()} type="button">Retry</button>
+              </p>
+            ) : null}
             <div>
               <h2 className="mb-3 text-lg font-bold text-slate-950">
                 Question Analytics

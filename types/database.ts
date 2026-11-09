@@ -319,7 +319,20 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      finalize_verified_test: {
+        Args: {
+          p_session: string;
+          p_user: string;
+          p_answers: { question_id: string; selected_answer: string | null; correct_answer: string; is_correct: boolean }[];
+          p_estimate: number;
+          p_percentage: number;
+          p_score: number;
+          p_seconds: number;
+        };
+        Returns: boolean;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

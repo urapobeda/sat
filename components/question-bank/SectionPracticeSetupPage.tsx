@@ -49,6 +49,7 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
   const [progress, setProgress] = useState<QuestionProgressLookup>(EMPTY_PROGRESS);
   const [selectedTopics, setSelectedTopics] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(initialCatalog === null);
+  const [progressError, setProgressError] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
     async function load() {
       setIsLoading(initialCatalog === null);
       setError(null);
+      setProgressError(false);
       setIsProgressReady(false);
 
       try {
@@ -73,9 +75,14 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
         const user = await userRequest;
         if (!isMounted) return;
 
-        const loadedProgress = user ? await getQuestionProgressLookup(user.id) : EMPTY_PROGRESS;
+        const loadedProgress = user
+          ? await getQuestionProgressLookup(user.id).catch(() => {
+            if (isMounted) setProgressError(true);
+            return null;
+          })
+          : EMPTY_PROGRESS;
 
-        if (isMounted) {
+        if (isMounted && loadedProgress) {
           setProgress(loadedProgress);
           setIsProgressReady(true);
         }
@@ -228,6 +235,10 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
             Start practice
           </button>
         </div>
+
+        {progressError ? (
+          <p className="text-sm text-amber-700" role="status">Completion status is temporarily unavailable. You can still start practice.</p>
+        ) : null}
 
         {isLoading ? (
           <SetupSkeleton />

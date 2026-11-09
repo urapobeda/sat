@@ -14,7 +14,7 @@ const answerSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const parsed = answerSchema.safeParse(await request.json());
+    const parsed = answerSchema.safeParse(await request.json().catch(() => null));
 
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid answer payload." }, { status: 400 });
@@ -69,13 +69,13 @@ async function saveVerifiedPracticeAnswer({
   const supabase = getSupabaseAdminClient();
   const { data: session, error: sessionError } = await supabase
     .from("practice_sessions")
-    .select("id,user_id")
+    .select("id,user_id,completed_at")
     .eq("id", sessionId)
     .eq("user_id", userId)
     .maybeSingle();
 
   if (sessionError) throw new Error(sessionError.message);
-  if (!session) return { answerSaved: false, timingRecorded: false };
+  if (!session || session.completed_at) return { answerSaved: false, timingRecorded: false };
 
   const countedSeconds = countedAnswerSeconds(feedback.isCorrect, timeSpentSeconds);
   const row = {

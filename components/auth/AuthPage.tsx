@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { BearIcon } from "@/components/dashboard/BearIcon";
 import { getSupabaseBrowserClient, isSupabaseConfigured, normalizeSupabaseUrl } from "@/lib/supabase/client";
+import { getAuthRedirectAction } from "@/lib/authRedirect";
 import { ensureProfile } from "@/lib/supabase/queries";
 
 type AuthMode = "signin" | "signup" | "forgot" | "reset" | "callback";
@@ -40,33 +41,34 @@ export function AuthPage({ initialMode = "signin" }: { initialMode?: AuthMode })
   useEffect(() => {
     if (initialMode !== "callback" && initialMode !== "reset") return;
     if (!isSupabaseConfigured()) return;
-    const supabase = getSupabaseBrowserClient();
     let active = true;
     let callbackStarted = false;
     let recoveryReceived = false;
     const url = new URL(window.location.href);
     const fragment = new URLSearchParams(url.hash.slice(1));
     const redirectError = url.searchParams.get("error_description") ?? fragment.get("error_description");
+    const hasCallbackPayload = url.searchParams.has("code") || fragment.has("access_token");
+    const supabase = getSupabaseBrowserClient();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
-      if (initialMode === "reset") {
-        if (event === "PASSWORD_RECOVERY" && session) {
-          recoveryReceived = true;
-          setCanReset(true);
-          setError(null);
-        } else if (event === "INITIAL_SESSION" && !recoveryReceived) {
-          setError((previous) => previous ?? (redirectError || "Open the password reset link from your email."));
-        }
+      const action = getAuthRedirectAction({
+        mode: initialMode, event, hasSession: Boolean(session), hasCallbackPayload, redirectError
+      });
+      if (action === "recover") {
+        recoveryReceived = true;
+        setCanReset(true);
+        setError(null);
         return;
       }
-
-      if (redirectError || !session) {
-        if (event === "INITIAL_SESSION") setError(redirectError || "The sign-in link is invalid or has expired.");
-        return;
+      if (action === "invalid" && !recoveryReceived && !callbackStarted) {
+        setError(redirectError || (initialMode === "reset"
+          ? "Open the password reset link from your email."
+          : "The sign-in link is invalid or has expired."));
       }
-      if (callbackStarted) return;
+      if (action !== "sign-in" || !session || callbackStarted) return;
       callbackStarted = true;
+      setError(null);
       // Profile requests must run outside the Supabase auth listener.
       window.setTimeout(() => {
         if (!active) return;

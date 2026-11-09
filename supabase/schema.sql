@@ -151,7 +151,9 @@ alter table public.study_plans enable row level security;
 alter table public.question_marks enable row level security;
 
 grant usage on schema public to anon, authenticated;
-grant select on public.questions to anon, authenticated;
+revoke select on public.questions from public, anon, authenticated;
+grant select (id, section, topic, difficulty, question, choices, is_bluebook,
+  source_question_id, created_at) on public.questions to anon, authenticated;
 grant select, insert, update, delete on public.profiles to authenticated;
 grant select, insert, update, delete on public.practice_sessions to authenticated;
 grant select, insert, update, delete on public.practice_answers to authenticated;
