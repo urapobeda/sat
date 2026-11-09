@@ -129,7 +129,7 @@ async function hasVerifiedAnswer(request: NextRequest, questionId: string) {
         .eq("question_id", questionId)
         .eq("user_id", userId)
         .not("selected_answer", "is", null)
-        .not("is_correct", "is", null)
+        .in("is_correct", table === "practice_answers" ? [true] : [true, false])
         .limit(1)
     )
   );

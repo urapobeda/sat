@@ -15,7 +15,7 @@ type QuestionNavigatorProps = {
   currentIndex: number;
   position?: "above" | "below";
   disabled: boolean;
-  feedback: Record<string, QuestionFeedback>;
+  feedback: Record<string, Pick<QuestionFeedback, "isCorrect">>;
   marked: readonly number[];
   onShowQuestion: (index: number) => void;
   questions: readonly QuestionSummary[];

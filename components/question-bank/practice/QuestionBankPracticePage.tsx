@@ -23,7 +23,7 @@ import type { User } from "@supabase/supabase-js";
 import type {
   Question,
   QuestionSummary,
-  QuestionFeedback,
+  PracticeFeedback,
   SectionFilter
 } from "@/types/sat";
 
@@ -44,7 +44,7 @@ export function QuestionBankPracticePage() {
   const [questionDetails, setQuestionDetails] = useState<Record<string, Question>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [feedback, setFeedback] = useState<Record<string, QuestionFeedback>>({});
+  const [feedback, setFeedback] = useState<Record<string, PracticeFeedback>>({});
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -239,15 +239,24 @@ export function QuestionBankPracticePage() {
     const question = currentQuestion;
     submissionPending.current = true;
     setIsChecking(true);
+    setPersistenceMessage(currentUser ? null : "Guest mode: sign in to save this practice session.");
     const clock = questionClocks.current.get(question.id) ?? new QuestionStopwatch();
     questionClocks.current.set(question.id, clock);
     const timeSpentSeconds = clock.submit(performance.now());
-    setSubmittedSeconds((previous) => ({ ...previous, [question.id]: timeSpentSeconds }));
 
     setAnswers((currentAnswers) => ({
       ...currentAnswers,
       [currentQuestion.id]: choice
     }));
+
+    function unlockAnswer() {
+      clock.retry(performance.now(), !isTimerPaused);
+      setAnswers((previous) => {
+        const next = { ...previous };
+        delete next[question.id];
+        return next;
+      });
+    }
 
     try {
       const authHeaders = currentUser ? await getSupabaseAuthHeaders() : {};
@@ -269,20 +278,23 @@ export function QuestionBankPracticePage() {
         throw new Error("Unable to verify answer.");
       }
 
-      const verifiedFeedback = (await response.json()) as QuestionFeedback;
+      const verifiedFeedback = (await response.json()) as PracticeFeedback;
       setFeedback((currentFeedback) => ({
         ...currentFeedback,
         [currentQuestion.id]: verifiedFeedback
       }));
+      if (verifiedFeedback.isCorrect) {
+        setSubmittedSeconds((previous) => ({ ...previous, [question.id]: timeSpentSeconds }));
+      } else {
+        unlockAnswer();
+      }
       if (currentUser && !verifiedFeedback.answerSaved) {
         setPersistenceMessage("Answer checked, but your result could not be saved.");
       } else if (currentUser && verifiedFeedback.isCorrect && !verifiedFeedback.timingRecorded) {
         setPersistenceMessage("Answer saved, but its timing could not be saved.");
       }
     } catch {
-      clock.retry(performance.now(), !isTimerPaused);
-      setAnswers((previous) => { const next = { ...previous }; delete next[question.id]; return next; });
-      setSubmittedSeconds((previous) => { const next = { ...previous }; delete next[question.id]; return next; });
+      unlockAnswer();
       setPersistenceMessage("The answer could not be checked. Please try again.");
     } finally {
       submissionPending.current = false;

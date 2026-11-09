@@ -61,6 +61,8 @@ try {
   assert.equal(wrong.body.isCorrect, false, "client correctness flags are ignored");
   assert.equal(wrong.body.timingRecorded, false);
   assert.equal(wrong.writes[0].time_spent_seconds, null);
+  assert.equal(wrong.writes[0].correct_answer, null);
+  assert.deepEqual(wrong.body, { isCorrect: false, answerSaved: true, timingRecorded: false });
   assert.equal(wrong.writes[0].is_correct, false, "wrong answers still contribute to accuracy history");
 
   const guest = await check({ correct: true, guest: true });

@@ -17,7 +17,7 @@ import { QuestionHighlightControls, useQuestionHighlight } from "@/components/qu
 import { formatTime } from "@/components/quiz/Timer";
 import { getMarkedQuestionIds, setQuestionMarked } from "@/lib/supabase/queries";
 import { splitReadingQuestion } from "@/lib/readingQuestionLayout";
-import type { Question, QuestionFeedback, QuestionSummary } from "@/types/sat";
+import type { Question, PracticeFeedback, QuestionSummary } from "@/types/sat";
 
 const control = "inline-flex min-h-9 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-default disabled:opacity-40";
 const summary = "list-none [&::-webkit-details-marker]:hidden";
@@ -28,7 +28,7 @@ type PracticeExamProps = {
   children?: ReactNode;
   currentIndex: number;
   elapsedSeconds: number;
-  feedbackByQuestion: Record<string, QuestionFeedback>;
+  feedbackByQuestion: Record<string, PracticeFeedback>;
   isChecking: boolean;
   isTimerPaused: boolean;
   isSavingResult: boolean;
@@ -67,7 +67,7 @@ export function PracticeExam({
   const questionPanel = useRef<HTMLDivElement>(null);
   const explanation = useRef<HTMLDivElement>(null);
   const feedback = question ? feedbackByQuestion[question.id] : undefined;
-  const showExplanation = !!question && question.id === openExplanationId && !!feedback;
+  const showExplanation = !!question && question.id === openExplanationId && feedback?.isCorrect === true;
   const questionId = question?.id;
   const timer = showSessionTime ? elapsedSeconds : questionSeconds;
   const timerLabel = showSessionTime ? "Session timer" : "Question timer";
@@ -270,23 +270,28 @@ export function PracticeExam({
                       onChange: (value) => setChoiceDrafts((drafts) => ({ ...drafts, [question.id]: value }))
                     }}
                     examStyle
-                    feedback={feedback}
+                    feedback={feedback?.isCorrect ? feedback : null}
                     key={question.id}
                     mode="practice"
-                    onSelect={onSelect}
+                    onSelect={(answer) => {
+                      setChoiceDrafts((drafts) => ({ ...drafts, [question.id]: null }));
+                      onSelect(answer);
+                    }}
                     question={question}
                     selectedAnswer={selectedAnswer}
-                    showFeedback={Boolean(feedback)}
+                    showFeedback={feedback?.isCorrect === true}
                   />
-                  {feedback ? (
+                  {feedback?.isCorrect ? (
                     <div ref={explanation}>
                       <QuestionExplanation feedback={feedback} highlight={highlight} key={question.id} questionId={question.id} showExplanation={showExplanation} />
                       <p className="mt-2 text-sm text-slate-600">
-                        {feedback.isCorrect
-                          ? `Correct answer time: ${formatTime(questionSeconds)}${feedback.timingRecorded ? " · saved to your timing statistics." : "."}`
-                          : "Incorrect answers are excluded from timing statistics."}
+                        Correct answer time: {formatTime(questionSeconds)}{feedback.timingRecorded ? " · saved to your timing statistics." : "."}
                       </p>
                     </div>
+                  ) : feedback ? (
+                    <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-950" role="status">
+                      Incorrect. Try again.
+                    </p>
                   ) : null}
                 </div>
               </section>
@@ -311,13 +316,13 @@ export function PracticeExam({
                 >
                   <Sparkles size={15} aria-hidden="true" /> Ask AI Tutor
                 </button>
-                <button aria-expanded={showExplanation} className={control} disabled={!feedback} onClick={() => setOpenExplanationId(showExplanation ? null : question.id)} type="button">
+                <button aria-expanded={showExplanation} className={control} disabled={!feedback?.isCorrect} onClick={() => setOpenExplanationId(showExplanation ? null : question.id)} type="button">
                   <ListChecks size={15} aria-hidden="true" /> Explanation
                 </button>
                 <button className={control} disabled={currentIndex === 0 || isChecking || isSavingResult} onClick={onPrevious} type="button">
                   Previous
                 </button>
-                <button className={control} disabled={!feedback || isChecking || isSavingResult} onClick={onNext} type="button">
+                <button className={control} disabled={!feedback?.isCorrect || isChecking || isSavingResult} onClick={onNext} type="button">
                   {isSavingResult ? <Loader2 className="animate-spin" size={16} aria-hidden="true" /> : null}
                   {currentIndex === questions.length - 1 ? "Show Results" : "Next"}
                 </button>

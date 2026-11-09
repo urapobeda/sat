@@ -42,6 +42,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (!feedback.isCorrect) {
+      return NextResponse.json({ isCorrect: false, answerSaved: persistence.answerSaved, timingRecorded: false });
+    }
+
     return NextResponse.json({ ...feedback, ...persistence });
   } catch {
     return NextResponse.json(
@@ -79,7 +83,7 @@ async function saveVerifiedPracticeAnswer({
 
   const countedSeconds = countedAnswerSeconds(feedback.isCorrect, timeSpentSeconds);
   const row = {
-    correct_answer: feedback.correctAnswer,
+    correct_answer: feedback.isCorrect ? feedback.correctAnswer : null,
     is_correct: feedback.isCorrect,
     question_id: questionId,
     selected_answer: selectedAnswer,

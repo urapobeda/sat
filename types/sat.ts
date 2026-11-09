@@ -36,6 +36,10 @@ export type QuestionFeedback = {
   isCorrect: boolean;
 };
 
+export type PracticeFeedback =
+  | (QuestionFeedback & { isCorrect: true })
+  | { isCorrect: false; answerSaved: boolean; timingRecorded: false };
+
 export type ReviewQuestion = Question & {
   correctAnswer: string;
   correctLabel: string | null;
