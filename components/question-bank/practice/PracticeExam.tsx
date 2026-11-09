@@ -49,6 +49,7 @@ export function PracticeExam({
   const [timerVisible, setTimerVisible] = useState(true);
   const [showSessionTime, setShowSessionTime] = useState(false);
   const [tutorOpen, setTutorOpen] = useState(false);
+  const [choiceDrafts, setChoiceDrafts] = useState<Record<string, string | null>>({});
   const [marked, setMarked] = useState<number[]>([]);
   const [openExplanationId, setOpenExplanationId] = useState<string | null>(null);
   const highlight = useQuestionHighlight();
@@ -100,7 +101,7 @@ export function PracticeExam({
               <div className={`${panel} left-2 top-full mt-1 max-w-[min(24rem,calc(100vw-1rem))] sm:left-28`}>
                 <p className="font-semibold">{question.section === "math" ? "Math" : "Reading & Writing"} directions</p>
                 <p className="mt-2 leading-6">{question.choices.length
-                  ? "Read each question carefully and select the best answer. You can cross out choices and mark questions for review."
+                  ? "Read each question carefully, select the best answer, then choose Check. You can cross out choices and mark questions for review."
                   : "Read the question, enter your answer, then choose Check. You can enter a whole number, decimal, or fraction."}</p>
               </div>
             </details>
@@ -213,6 +214,10 @@ export function PracticeExam({
                     </Highlightable>
                   ) : null}
                   <QuestionAnswers
+                    choiceDraft={{
+                      value: choiceDrafts[question.id] ?? null,
+                      onChange: (value) => setChoiceDrafts((drafts) => ({ ...drafts, [question.id]: value }))
+                    }}
                     examStyle
                     feedback={feedback}
                     key={question.id}

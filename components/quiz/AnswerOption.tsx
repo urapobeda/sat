@@ -8,6 +8,7 @@ type AnswerOptionProps = {
   isDisabled?: boolean;
   isEliminated?: boolean;
   isSelected: boolean;
+  onCheck?: (label: string) => void;
   onSelect: (label: string) => void;
   onToggleEliminate?: (label: string) => void;
   showFeedback?: boolean;
@@ -20,6 +21,7 @@ export function AnswerOption({
   isDisabled = false,
   isEliminated = false,
   isSelected,
+  onCheck,
   onSelect,
   onToggleEliminate,
   showFeedback = false
@@ -31,7 +33,9 @@ export function AnswerOption({
     : isIncorrect
       ? "border-rose-400 bg-rose-50 text-rose-950 ring-1 ring-rose-400"
       : isSelected
-        ? "border-blue-600 bg-blue-50 text-slate-950 ring-1 ring-blue-600"
+        ? onCheck
+          ? "border-sky-500 bg-white text-slate-950 ring-1 ring-sky-500"
+          : "border-blue-600 bg-blue-50 text-slate-950 ring-1 ring-blue-600"
         : examStyle
           ? "border-slate-500 bg-white text-slate-950 hover:bg-slate-50"
           : "border-slate-300 bg-white text-slate-800 hover:border-slate-500";
@@ -40,40 +44,56 @@ export function AnswerOption({
     : isIncorrect
       ? "border-rose-600 bg-rose-600 text-white"
       : isSelected
-        ? "border-blue-600 bg-blue-600 text-white"
+        ? onCheck ? "border-sky-500 bg-sky-500 text-white" : "border-blue-600 bg-blue-600 text-white"
         : "border-slate-500 bg-white text-slate-800";
 
   return (
     <div className="flex items-center gap-3">
-      <button
-        aria-pressed={isSelected}
-        className={[
-          "flex min-h-14 w-full min-w-0 items-center gap-4 rounded-xl border px-3 py-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-default",
-          examStyle ? "font-serif text-[17px]" : "px-4 text-base",
-          optionClass,
-          isEliminated && !isDisabled ? "opacity-45" : ""
-        ].join(" ")}
-        disabled={isDisabled}
-        onClick={() => onSelect(choice.label)}
-        type="button"
-      >
-        <span
+      <div className={[
+        "flex min-w-0 flex-1 items-center rounded-xl border",
+        onCheck ? "max-[400px]:flex-wrap" : "",
+        optionClass,
+        isEliminated && !isDisabled ? "opacity-45" : ""
+      ].join(" ")}>
+        <button
+          aria-pressed={isSelected}
           className={[
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-sans text-sm font-semibold",
-            letterClass,
-            isEliminated ? "line-through" : ""
+            "flex min-h-14 min-w-0 flex-1 items-center gap-4 rounded-xl px-3 py-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-default",
+            examStyle ? "font-serif text-[17px]" : "px-4 text-base",
+            onCheck ? "max-[400px]:basis-full" : ""
           ].join(" ")}
+          disabled={isDisabled}
+          onClick={() => onSelect(choice.label)}
+          type="button"
         >
-          {choice.label}
-        </span>
-        <span className={["min-w-0 flex-1 leading-7", isEliminated ? "line-through decoration-slate-500" : ""].join(" ")}>
-          {choice.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- graph answer choice from Supabase Storage
-            <img alt={`Choice ${choice.label}`} className="block h-auto max-h-64 w-auto max-w-full" src={choice.imageUrl} />
-          ) : null}
-          {choice.text ? <MathText text={choice.text} /> : null}
-        </span>
-      </button>
+          <span
+            className={[
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-sans text-sm font-semibold",
+              letterClass,
+              isEliminated ? "line-through" : ""
+            ].join(" ")}
+          >
+            {choice.label}
+          </span>
+          <span className={["min-w-0 flex-1 leading-7", isEliminated ? "line-through decoration-slate-500" : ""].join(" ")}>
+            {choice.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- graph answer choice from Supabase Storage
+              <img alt={`Choice ${choice.label}`} className="block h-auto max-h-64 w-auto max-w-full" src={choice.imageUrl} />
+            ) : null}
+            {choice.text ? <MathText text={choice.text} /> : null}
+          </span>
+        </button>
+        {onCheck ? (
+          <button
+            className="ml-auto mr-3 shrink-0 rounded-xl bg-sky-500 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-600 disabled:opacity-60 max-[400px]:mb-3"
+            disabled={isDisabled}
+            onClick={() => onCheck(choice.label)}
+            type="button"
+          >
+            {isDisabled ? "Checking…" : "Check"}
+          </button>
+        ) : null}
+      </div>
 
       {onToggleEliminate ? (
         <button

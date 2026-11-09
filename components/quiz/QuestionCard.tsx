@@ -118,6 +118,7 @@ export function QuestionStem({ className, highlight, number, question, text = qu
 }
 
 export function QuestionAnswers({
+  choiceDraft,
   examStyle = false,
   feedback,
   mode,
@@ -126,6 +127,7 @@ export function QuestionAnswers({
   selectedAnswer,
   showFeedback = false
 }: Pick<QuestionCardProps, "feedback" | "onSelect" | "question" | "selectedAnswer" | "showFeedback"> & {
+  choiceDraft?: { value: string | null; onChange: (value: string | null) => void };
   examStyle?: boolean;
   mode: NonNullable<QuestionCardProps["mode"]>;
 }) {
@@ -139,10 +141,15 @@ export function QuestionAnswers({
 
   function selectChoice(label: string) {
     if (eliminated.includes(label)) updateEliminated(eliminated.filter((item) => item !== label));
-    onSelect(label);
+    if (choiceDraft) {
+      choiceDraft.onChange(label);
+    } else {
+      onSelect(label);
+    }
   }
 
   function toggleEliminate(label: string) {
+    if (choiceDraft?.value === label) choiceDraft.onChange(null);
     updateEliminated(eliminated.includes(label) ? eliminated.filter((item) => item !== label) : [...eliminated, label]);
   }
 
@@ -168,8 +175,9 @@ export function QuestionAnswers({
           examStyle={examStyle}
           isDisabled={mode === "practice" && hasAnswered}
           isEliminated={eliminated.includes(choice.label)}
-          isSelected={selectedAnswer === choice.label}
+          isSelected={(selectedAnswer ?? choiceDraft?.value) === choice.label}
           key={choice.label}
+          onCheck={choiceDraft?.value === choice.label && !showFeedback ? onSelect : undefined}
           onSelect={selectChoice}
           onToggleEliminate={toggleEliminate}
           showFeedback={showFeedback}
