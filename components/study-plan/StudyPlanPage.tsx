@@ -194,7 +194,7 @@ export function StudyPlanPage() {
 
   if (isLoading) {
     return (
-      <Layout>
+      <Layout active="study-plan">
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-3 text-sm font-black text-blue-600">
             <Loader2 className="animate-spin" size={20} />
@@ -212,7 +212,7 @@ export function StudyPlanPage() {
 
   if (isAuthenticated === false) {
     return (
-      <Layout>
+      <Layout active="study-plan">
         <EmptyState
           description="Sign in to create your personalized SAT Study Plan."
           icon={<LockKeyhole size={26} />}
@@ -224,7 +224,7 @@ export function StudyPlanPage() {
 
   if (error && !studyPlan) {
     return (
-      <Layout>
+      <Layout active="study-plan">
         <section className="rounded-3xl border border-rose-100 bg-rose-50 p-6 text-center shadow-sm">
           <RotateCcw className="mx-auto text-rose-600" size={30} />
           <h1 className="mt-3 text-2xl font-black text-rose-900">
@@ -248,7 +248,7 @@ export function StudyPlanPage() {
   }
 
   return (
-    <Layout>
+    <Layout active="study-plan">
       <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-violet-50/60 p-6 shadow-soft sm:p-8">
         <div className="absolute right-8 top-8 hidden h-20 w-20 rounded-3xl bg-white/70 shadow-lg shadow-blue-900/10 lg:block" />
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">

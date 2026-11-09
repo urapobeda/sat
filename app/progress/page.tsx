@@ -3,7 +3,7 @@ import { ProgressDashboard } from "@/components/ProgressDashboard";
 
 export default function ProgressPage() {
   return (
-    <Layout>
+    <Layout active="progress">
       <section className="space-y-4">
         <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-600">
           Progress

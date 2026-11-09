@@ -3,6 +3,9 @@ import type { ComponentType, ReactNode } from "react";
 import {
   BookOpen,
   CalendarDays,
+  Calculator,
+  ChartNoAxesCombined,
+  Target,
   ClipboardList,
   FileText,
   FolderOpen,
@@ -11,6 +14,7 @@ import {
   Video
 } from "lucide-react";
 import { StudentAccount, StudentAccountProvider } from "@/components/dashboard/StudentAccount";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { BearIcon } from "@/components/dashboard/BearIcon";
 
 // Draft redesign — student/teacher workflow (homework, schedule, lesson
@@ -20,6 +24,9 @@ import { BearIcon } from "@/components/dashboard/BearIcon";
 
 export type NavId =
   | "home"
+  | "progress"
+  | "study-plan"
+  | "calculator"
   | "homework"
   | "question-bank"
   | "tests"
@@ -59,7 +66,10 @@ const sidebarNav: NavItem[] = [
   },
   { id: "schedule", label: "Schedule", href: "/schedule", icon: CalendarDays },
   { id: "recordings", label: "Lesson Recordings", href: "/recordings", icon: Video },
-  { id: "materials", label: "Materials", href: "/materials", icon: FolderOpen }
+  { id: "materials", label: "Materials", href: "/materials", icon: FolderOpen },
+  { id: "study-plan", label: "Study Plan", href: "/study-plan", icon: Target },
+  { id: "progress", label: "Progress", href: "/progress", icon: ChartNoAxesCombined },
+  { id: "calculator", label: "SAT Score Calculator", href: "/tools/sat-score-calculator", icon: Calculator }
 ];
 
 export function StudentShell({
@@ -74,6 +84,11 @@ export function StudentShell({
       <div className="min-h-screen bg-slate-50">
         <header className="bg-slate-900 px-6 py-3 lg:hidden">
           <StudentAccount />
+          <nav aria-label="Main navigation" className="mt-3 flex gap-4 overflow-x-auto whitespace-nowrap pb-1 text-sm">
+            {sidebarNav.map((item) => (
+              <Link aria-current={item.id === active ? "page" : undefined} className="!text-slate-300 aria-[current=page]:!text-white aria-[current=page]:underline" href={item.href} key={item.id}>{item.label}</Link>
+            ))}
+          </nav>
         </header>
         <div className="flex">
           <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto bg-slate-900 px-4 py-6 lg:sticky lg:top-0 lg:flex lg:h-screen">
@@ -127,6 +142,7 @@ export function StudentShell({
 
             <div className="mt-auto border-t border-white/10 pt-5">
               <StudentAccount />
+              <div className="mt-3"><ThemeToggle /></div>
             </div>
           </aside>
 

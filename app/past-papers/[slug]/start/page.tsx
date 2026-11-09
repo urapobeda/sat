@@ -12,7 +12,7 @@ export default async function PaperStartRoute({ params }: PaperStartRouteProps) 
   const { slug } = await params;
 
   return (
-    <Layout>
+    <Layout active="tests">
       <Link
         className="inline-flex items-center gap-2 text-sm font-black text-blue-600 transition hover:text-blue-700"
         href={`/past-papers/${slug}`}

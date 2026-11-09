@@ -224,7 +224,7 @@ export function TestStartPage() {
   }
 
   return (
-    <Layout>
+    <Layout active="tests">
       <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-white p-6 shadow-soft sm:p-8">
         <Link
           className="inline-flex items-center gap-2 text-sm font-black text-blue-600 transition hover:text-blue-700"
