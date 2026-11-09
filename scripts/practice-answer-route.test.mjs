@@ -12,7 +12,11 @@ const mockSource = `
 export const z = globalThis.__satTimingRouteTest.z;
 export const NextResponse = { json: (data, init) => Response.json(data, init) };
 export async function getAuthenticatedUserId() { return globalThis.__satTimingRouteTest.current.user; }
-export async function gradeQuestionAnswer() { return globalThis.__satTimingRouteTest.current.feedback; }
+export async function gradeQuestionAnswer() {
+  const current = globalThis.__satTimingRouteTest.current;
+  if (current.waitForOwnership) await current.waitForOwnership;
+  return current.feedback;
+}
 export function getSupabaseAdminClient() { return globalThis.__satTimingRouteTest.current.db; }
 `;
 const mockUrl = "data:text/javascript;base64," + Buffer.from(mockSource).toString("base64");
@@ -25,18 +29,24 @@ const user = "00000000-0000-4000-8000-000000000001";
 const question = "00000000-0000-4000-8000-000000000002";
 const session = "00000000-0000-4000-8000-000000000003";
 
-async function check({ correct, guest = false, missingColumn = false, owned = true, invalid = false }) {
+async function check({ correct, guest = false, missingColumn = false, owned = true, invalid = false, verifyOverlap = false }) {
   const writes = [];
   const filters = [];
+  let ownershipStarted;
+  const waitForOwnership = verifyOverlap ? new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Ownership lookup did not run in parallel")), 500);
+    ownershipStarted = () => { clearTimeout(timeout); resolve(); };
+  }) : undefined;
   context.current = {
     user: guest ? null : user,
+    waitForOwnership,
     feedback: { isCorrect: correct, correctAnswer: "B", correctLabel: "B", explanation: "Verified on the server." },
     db: {
       from(table) {
         if (table === "practice_sessions") return {
           select() { return this; },
           eq(key, value) { filters.push([key, value]); return this; },
-          async maybeSingle() { return { data: owned ? { id: session, user_id: user } : null, error: null }; }
+          async maybeSingle() { ownershipStarted?.(); return { data: owned ? { id: session, user_id: user } : null, error: null }; }
         };
         assert.equal(table, "practice_answers");
         return { async upsert(row) {
@@ -51,7 +61,7 @@ async function check({ correct, guest = false, missingColumn = false, owned = tr
 }
 
 try {
-  const correct = await check({ correct: true });
+  const correct = await check({ correct: true, verifyOverlap: true });
   assert.equal(correct.body.timingRecorded, true);
   assert.equal(correct.body.answerSaved, true);
   assert.equal(correct.writes[0].time_spent_seconds, 37);

@@ -20,25 +20,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid answer payload." }, { status: 400 });
     }
 
-    const userId = await getAuthenticatedUserId(request);
-    const feedback = await gradeQuestionAnswer({
-      questionId: parsed.data.questionId,
-      selectedAnswer: parsed.data.selectedAnswer
-    });
+    const sessionId = parsed.data.sessionId;
+    const [owner, feedback] = await Promise.all([
+      sessionId ? getPracticeSessionOwner(request, sessionId).catch((error: unknown) => {
+        logPersistenceError(error);
+        return null;
+      }) : null,
+      gradeQuestionAnswer({
+        questionId: parsed.data.questionId,
+        selectedAnswer: parsed.data.selectedAnswer
+      })
+    ]);
 
     let persistence = { answerSaved: false, timingRecorded: false };
-    if (userId && parsed.data.sessionId) {
+    if (owner && sessionId) {
       try {
         persistence = await saveVerifiedPracticeAnswer({
           feedback,
           questionId: parsed.data.questionId,
           selectedAnswer: parsed.data.selectedAnswer,
-          sessionId: parsed.data.sessionId,
+          sessionId,
           timeSpentSeconds: parsed.data.timeSpentSeconds ?? null,
-          userId
+          ...owner
         });
       } catch (error) {
-        console.error("Practice answer persistence failed:", error instanceof Error ? error.message : "Request failed");
+        logPersistenceError(error);
       }
     }
 
@@ -55,11 +61,30 @@ export async function POST(request: NextRequest) {
   }
 }
 
+function logPersistenceError(error: unknown) {
+  console.error("Practice answer persistence failed:", error instanceof Error ? error.message : "Request failed");
+}
+
+async function getPracticeSessionOwner(request: NextRequest, sessionId: string) {
+  const userId = await getAuthenticatedUserId(request);
+  if (!userId) return null;
+  const supabase = getSupabaseAdminClient();
+  const { data: session, error } = await supabase
+    .from("practice_sessions")
+    .select("id,user_id,completed_at")
+    .eq("id", sessionId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return session && !session.completed_at ? { supabase, userId } : null;
+}
+
 async function saveVerifiedPracticeAnswer({
   feedback,
   questionId,
   selectedAnswer,
   sessionId,
+  supabase,
   timeSpentSeconds,
   userId
 }: {
@@ -67,20 +92,10 @@ async function saveVerifiedPracticeAnswer({
   questionId: string;
   selectedAnswer: string;
   sessionId: string;
+  supabase: ReturnType<typeof getSupabaseAdminClient>;
   timeSpentSeconds: number | null;
   userId: string;
 }) {
-  const supabase = getSupabaseAdminClient();
-  const { data: session, error: sessionError } = await supabase
-    .from("practice_sessions")
-    .select("id,user_id,completed_at")
-    .eq("id", sessionId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (sessionError) throw new Error(sessionError.message);
-  if (!session || session.completed_at) return { answerSaved: false, timingRecorded: false };
-
   const countedSeconds = countedAnswerSeconds(feedback.isCorrect, timeSpentSeconds);
   const row = {
     correct_answer: feedback.isCorrect ? feedback.correctAnswer : null,

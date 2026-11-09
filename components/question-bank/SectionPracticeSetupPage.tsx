@@ -172,7 +172,7 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
     if (isLoading || !selectedQuestions.length) return;
     const timer = window.setTimeout(() => {
       router.prefetch(practiceHref);
-      void getQuestionDetails(selectedQuestions.slice(0, 5).map((q) => q.id)).catch(() => {
+      void getQuestionDetails([selectedQuestions[0].id]).catch(() => {
         // Practice retries through its normal loader if speculative loading fails.
       });
     }, 150);

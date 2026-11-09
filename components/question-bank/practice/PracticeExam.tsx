@@ -7,7 +7,7 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
-import { confirmLeavingStudy, StudentShell } from "@/components/dashboard/StudentShell";
+import { StudentShell } from "@/components/dashboard/StudentShell";
 import { ReportQuestion } from "@/components/question-bank/practice/ReportQuestion";
 import { QuestionNavigator } from "@/components/question-bank/practice/QuestionNavigator";
 import { Highlightable } from "@/components/quiz/Highlightable";
@@ -29,6 +29,7 @@ type PracticeExamProps = {
   currentIndex: number;
   elapsedSeconds: number;
   feedbackByQuestion: Record<string, PracticeFeedback>;
+  isAccountPending: boolean;
   isChecking: boolean;
   isTimerPaused: boolean;
   isSavingResult: boolean;
@@ -47,7 +48,7 @@ type PracticeExamProps = {
 };
 
 export function PracticeExam({
-  backHref, children, currentIndex, elapsedSeconds, feedbackByQuestion, isChecking, isTimerPaused, isSavingResult,
+  backHref, children, currentIndex, elapsedSeconds, feedbackByQuestion, isAccountPending, isChecking, isTimerPaused, isSavingResult,
   onNext, onTimerPauseChange, onPrevious, onRestart, onSelect, onShowQuestion, persistenceMessage,
   question, questionSeconds, questions, selectedAnswer, userId
 }: PracticeExamProps) {
@@ -125,11 +126,11 @@ export function PracticeExam({
   const isMarked = marked.includes(currentIndex);
 
   return (
-    <StudentShell active="question-bank" exam guardExit={Boolean(question)}>
+    <StudentShell active="question-bank" exam>
     <main aria-label="Practice Mode" className="flex h-full min-h-0 flex-col bg-white text-slate-950">
       <header className="relative z-20 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-slate-200 px-2 py-1.5 sm:gap-4 sm:px-5">
         <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-0.5 text-sm font-medium text-slate-700 sm:gap-x-7">
-          <Link className="inline-flex items-center gap-1 whitespace-nowrap hover:text-slate-950" href={backHref} onNavigate={(event) => { if (question && !confirmLeavingStudy()) event.preventDefault(); }}>
+          <Link className="inline-flex items-center gap-1 whitespace-nowrap hover:text-slate-950" href={backHref}>
             <ChevronLeft size={16} aria-hidden="true" />
             Go back
           </Link>
@@ -234,7 +235,7 @@ export function PracticeExam({
                     <button
                       aria-pressed={isMarked}
                       className="inline-flex min-h-10 cursor-pointer items-center gap-2 px-3 text-sm font-medium hover:underline disabled:cursor-wait"
-                      disabled={Boolean(userId) && marksStatus !== "ready"}
+                      disabled={isAccountPending || (Boolean(userId) && marksStatus !== "ready")}
                       onClick={toggleMark}
                       type="button"
                     >

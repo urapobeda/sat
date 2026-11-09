@@ -27,6 +27,8 @@ import type {
   SectionFilter
 } from "@/types/sat";
 
+type PracticePersistence = { user: User | null; sessionId: string | null };
+
 export function QuestionBankPracticePage() {
   const searchParams = useSearchParams();
   const section = parseSection(searchParams.get("section"));
@@ -45,8 +47,8 @@ export function QuestionBankPracticePage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<Record<string, PracticeFeedback>>({});
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null | undefined>(undefined);
+  const persistenceRequest = useRef<Promise<PracticePersistence> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingResult, setIsSavingResult] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
@@ -71,7 +73,23 @@ export function QuestionBankPracticePage() {
     practiceQuestions.length > 0
       ? Math.round((score / practiceQuestions.length) * 100)
       : 0;
-  const weakTopics = getWeakTopics(practiceQuestions, feedback);
+  const weakTopics = useMemo(() => getWeakTopics(practiceQuestions, feedback), [practiceQuestions, feedback]);
+
+  const createSession = useCallback(async (user: User | null, catalog: QuestionSummary[]): Promise<PracticePersistence> => {
+    if (!user || !catalog.length) return { user, sessionId: null };
+    try {
+      const session = await createPracticeSession({
+        difficulty: difficulties.length === 1 ? difficulties[0] : null,
+        section: section === "all" ? null : section,
+        topic: topics.length > 0 ? null : catalog[0]?.topic ?? topic,
+        total: catalog.length,
+        user_id: user.id
+      });
+      return { user, sessionId: session.id };
+    } catch {
+      return { user, sessionId: null };
+    }
+  }, [difficulties, section, topic, topics.length]);
 
   useEffect(() => {
     if (!currentQuestion || isLoading || isFinished || isTimerPaused) return;
@@ -104,7 +122,7 @@ export function QuestionBankPracticePage() {
       setCurrentIndex(0);
       setIsFinished(false);
       setElapsedSeconds(0);
-      setSessionId(null);
+      setCurrentUser(undefined);
       setIsTimerPaused(false);
       setReviewQuestion(null);
       questionClocks.current.clear();
@@ -112,75 +130,49 @@ export function QuestionBankPracticePage() {
       setSubmittedSeconds({});
       setQuestionTick({ id: null, seconds: 0 });
       setIsChecking(false);
+      setIsSavingResult(false);
       submissionPending.current = false;
       hasSaved.current = false;
 
-      try {
-        const userRequest = getCurrentUser().catch(() => null);
-        const progressRequest = completion === "all" && !reviewMissed
-          ? Promise.resolve(null)
-          : userRequest.then((user) => user ? getQuestionProgressLookup(user.id) : null);
+      const userRequest = getCurrentUser().catch(() => null).then((user) => {
+        if (isMounted) setCurrentUser(user);
+        return user;
+      });
+      const progressRequest = completion === "all" && !reviewMissed
+        ? Promise.resolve(null)
+        : userRequest.then((user) => user ? getQuestionProgressLookup(user.id) : null);
+      const catalogRequest = Promise.all([getQuestionCatalog(), progressRequest]).then(([questions, progress]) => {
+        const eligible = reviewMissed ? questions.filter((question) => progress?.incorrectIds.has(question.id)) : questions;
+        const matching = filterQuestionCatalog(eligible, { section, difficulties, topic, topics });
+        return filterQuestionsByCompletion(matching, completion, progress?.answeredIds ?? new Set<string>());
+      });
 
-        const questionsRequest = Promise.all([getQuestionCatalog(), progressRequest]).then(async ([questions, progress]) => {
-          const eligible = reviewMissed ? questions.filter((question) => progress?.incorrectIds.has(question.id)) : questions;
-          const matchingQuestions = filterQuestionCatalog(eligible, { section, difficulties, topic, topics });
-          const catalog = filterQuestionsByCompletion(matchingQuestions, completion, progress?.answeredIds ?? new Set<string>());
-          const firstQuestions = await getQuestionDetails(catalog.slice(0, 5).map((q) => q.id));
-          return { catalog, firstQuestions };
-        });
-
-        const [loadedQuestions, user] = await Promise.all([questionsRequest, userRequest]);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setPracticeQuestions(loadedQuestions.catalog);
-        setQuestionDetails(Object.fromEntries(loadedQuestions.firstQuestions.map((q) => [q.id, q])));
-        setCurrentUser(user);
-
+      const persistence = Promise.all([userRequest, catalogRequest])
+        .then(([user, catalog]) => isMounted ? createSession(user, catalog) : { user, sessionId: null })
+        .catch((): PracticePersistence => ({ user: null, sessionId: null }));
+      persistenceRequest.current = persistence;
+      void persistence.then(({ user, sessionId }) => {
+        if (!isMounted || persistenceRequest.current !== persistence || submissionPending.current) return;
         if (!user) {
           setPersistenceMessage("Guest mode: sign in to save this practice session.");
-          return;
+        } else if (!sessionId) {
+          setPersistenceMessage("Practice is available, but this session could not be saved.");
         }
+      });
 
-        if (loadedQuestions.catalog.length > 0) {
-          await createSession(user, loadedQuestions.catalog);
-        }
+      try {
+        const catalog = await catalogRequest;
+        if (!isMounted) return;
+        const [firstQuestion] = catalog.length ? await getQuestionDetails([catalog[0].id]) : [];
+        if (!isMounted) return;
+        setPracticeQuestions(catalog);
+        if (firstQuestion) setQuestionDetails({ [firstQuestion.id]: firstQuestion });
       } catch (requestError) {
         if (isMounted) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load practice questions."
-          );
+          setError(requestError instanceof Error ? requestError.message : "Unable to load practice questions.");
         }
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    async function createSession(user: User, loadedQuestions: QuestionSummary[]) {
-      try {
-        const session = await createPracticeSession({
-          difficulty: difficulties.length === 1 ? difficulties[0] : null,
-          section: section === "all" ? null : section,
-          topic: topics.length > 0 ? null : loadedQuestions[0]?.topic ?? topic,
-          total: loadedQuestions.length,
-          user_id: user.id
-        });
-
-        if (isMounted) {
-          setSessionId(session.id);
-        }
-      } catch {
-        if (isMounted) {
-          setPersistenceMessage(
-            "Practice is available, but this session could not be saved."
-          );
-        }
+        if (isMounted) setIsLoading(false);
       }
     }
 
@@ -188,18 +180,21 @@ export function QuestionBankPracticePage() {
 
     return () => {
       isMounted = false;
+      persistenceRequest.current = null;
     };
-  }, [completion, difficulties, reviewMissed, section, topic, topics]);
+  }, [completion, createSession, difficulties, reviewMissed, section, topic, topics]);
 
   // Keep the next questions ready while the student works on the current one.
   useEffect(() => {
     let active = true;
     const currentId = practiceQuestions[currentIndex]?.id;
-    const batchStart = Math.floor(currentIndex / 5) * 5;
-    const missing = practiceQuestions.slice(batchStart, batchStart + 10)
-      .filter((q) => !questionDetails[q.id]).map((q) => q.id);
+    const needsCurrent = Boolean(currentId && !questionDetails[currentId]);
+    const missing = needsCurrent
+      ? [currentId]
+      : practiceQuestions.slice(currentIndex + 1, currentIndex + 4)
+        .filter((question) => !questionDetails[question.id])
+        .map((question) => question.id);
     if (!missing.length) return;
-    const needsCurrent = currentId && !questionDetails[currentId];
     void getQuestionDetails(missing).then((loaded) => {
       if (active) setQuestionDetails((previous) => ({ ...previous, ...Object.fromEntries(loaded.map((q) => [q.id, q])) }));
     }).catch((error) => {
@@ -237,9 +232,10 @@ export function QuestionBankPracticePage() {
       return;
     }
     const question = currentQuestion;
+    const persistence = persistenceRequest.current;
     submissionPending.current = true;
     setIsChecking(true);
-    setPersistenceMessage(currentUser ? null : "Guest mode: sign in to save this practice session.");
+    setPersistenceMessage(null);
     const clock = questionClocks.current.get(question.id) ?? new QuestionStopwatch();
     questionClocks.current.set(question.id, clock);
     const timeSpentSeconds = clock.submit(performance.now());
@@ -259,12 +255,15 @@ export function QuestionBankPracticePage() {
     }
 
     try {
-      const authHeaders = currentUser ? await getSupabaseAuthHeaders() : {};
+      const account = await persistence;
+      if (persistenceRequest.current !== persistence) return;
+      const authHeaders = account?.user ? await getSupabaseAuthHeaders() : {};
+      if (persistenceRequest.current !== persistence) return;
       const response = await fetch("/api/practice/answers", {
         body: JSON.stringify({
           questionId: currentQuestion.id,
           selectedAnswer: choice,
-          sessionId,
+          sessionId: account?.sessionId,
           timeSpentSeconds
         }),
         headers: {
@@ -279,6 +278,7 @@ export function QuestionBankPracticePage() {
       }
 
       const verifiedFeedback = (await response.json()) as PracticeFeedback;
+      if (persistenceRequest.current !== persistence) return;
       setFeedback((currentFeedback) => ({
         ...currentFeedback,
         [currentQuestion.id]: verifiedFeedback
@@ -288,17 +288,22 @@ export function QuestionBankPracticePage() {
       } else {
         unlockAnswer();
       }
-      if (currentUser && !verifiedFeedback.answerSaved) {
+      if (!account?.user) {
+        setPersistenceMessage("Guest mode: sign in to save this practice session.");
+      } else if (!verifiedFeedback.answerSaved) {
         setPersistenceMessage("Answer checked, but your result could not be saved.");
-      } else if (currentUser && verifiedFeedback.isCorrect && !verifiedFeedback.timingRecorded) {
+      } else if (verifiedFeedback.isCorrect && !verifiedFeedback.timingRecorded) {
         setPersistenceMessage("Answer saved, but its timing could not be saved.");
       }
     } catch {
+      if (persistenceRequest.current !== persistence) return;
       unlockAnswer();
       setPersistenceMessage("The answer could not be checked. Please try again.");
     } finally {
-      submissionPending.current = false;
-      setIsChecking(false);
+      if (persistenceRequest.current === persistence) {
+        submissionPending.current = false;
+        setIsChecking(false);
+      }
     }
   }
 
@@ -329,11 +334,15 @@ export function QuestionBankPracticePage() {
 
     hasSaved.current = true;
     setIsSavingResult(true);
+    const persistence = persistenceRequest.current;
 
     try {
-      if (sessionId) {
-        const authHeaders = currentUser ? await getSupabaseAuthHeaders() : {};
-        const response = await fetch(`/api/practice/sessions/${sessionId}/complete`, {
+      const account = await persistence;
+      if (persistenceRequest.current !== persistence) return;
+      if (account?.sessionId) {
+        const authHeaders = await getSupabaseAuthHeaders();
+        if (persistenceRequest.current !== persistence) return;
+        const response = await fetch(`/api/practice/sessions/${account.sessionId}/complete`, {
           headers: authHeaders,
           method: "POST"
         });
@@ -343,14 +352,16 @@ export function QuestionBankPracticePage() {
         }
       }
     } catch {
-      setPersistenceMessage("Results are shown here, but Supabase did not save them.");
+      if (persistenceRequest.current === persistence) setPersistenceMessage("Results are shown here, but Supabase did not save them.");
     } finally {
-      setIsSavingResult(false);
-      setIsFinished(true);
+      if (persistenceRequest.current === persistence) {
+        setIsSavingResult(false);
+        setIsFinished(true);
+      }
     }
   }
 
-  async function restartPractice() {
+  function restartPractice() {
     setAnswers({});
     setFeedback({});
     setCurrentIndex(0);
@@ -363,27 +374,17 @@ export function QuestionBankPracticePage() {
     hasSaved.current = false;
     setIsTimerPaused(false);
     setReviewQuestion(null);
-    setSessionId(null);
-
-    if (!currentUser || practiceQuestions.length === 0) {
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const session = await createPracticeSession({
-        difficulty: difficulties.length === 1 ? difficulties[0] : null,
-        section: section === "all" ? null : section,
-        topic: practiceQuestions[0]?.topic ?? topic,
-        total: practiceQuestions.length,
-        user_id: currentUser.id
-      });
-      setSessionId(session.id);
-    } catch {
-      setPersistenceMessage("Practice restarted, but the new session was not saved.");
-    } finally {
-      setIsLoading(false);
-    }
+    setPersistenceMessage(null);
+    const previous = persistenceRequest.current;
+    const persistence: Promise<PracticePersistence> = previous
+      ? previous.then(({ user }) => persistenceRequest.current === persistence ? createSession(user, practiceQuestions) : { user, sessionId: null })
+      : createSession(currentUser ?? null, practiceQuestions);
+    persistenceRequest.current = persistence;
+    void persistence.then(({ user, sessionId }) => {
+      if (persistenceRequest.current !== persistence || submissionPending.current) return;
+      if (user && !sessionId) setPersistenceMessage("Practice restarted, but the new session was not saved.");
+      if (!user) setPersistenceMessage("Guest mode: sign in to save this practice session.");
+    });
   }
 
   const waitingForQuestion = isLoading || (!error && !isFinished && practiceQuestions.length > 0 && !currentQuestion);
@@ -396,6 +397,7 @@ export function QuestionBankPracticePage() {
       currentIndex={currentIndex}
       elapsedSeconds={elapsedSeconds}
       feedbackByQuestion={feedback}
+      isAccountPending={currentUser === undefined}
       isChecking={isChecking}
       isTimerPaused={isTimerPaused}
       isSavingResult={isSavingResult}

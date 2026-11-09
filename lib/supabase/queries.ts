@@ -207,6 +207,15 @@ export function getQuestionCatalog(): Promise<QuestionSummary[]> {
   if (catalogRequest && Date.now() < catalogExpiresAt) return catalogRequest;
   catalogExpiresAt = Date.now() + PUBLIC_CACHE_TTL;
   catalogRequest = (async () => {
+    try {
+      const response = await fetch("/api/question-catalog", { signal: AbortSignal.timeout(1500) });
+      if (response.ok) {
+        const catalog: unknown = await response.json();
+        if (Array.isArray(catalog)) return catalog as QuestionSummary[];
+      }
+    } catch {
+      // Fall back to the public Supabase catalog if the route is unavailable.
+    }
     const supabase = getSupabaseBrowserClient();
     const result = await loadQuestionPages<QuestionSummary>(async (from, to, withCount) => {
       const response = await supabase.from("questions")
