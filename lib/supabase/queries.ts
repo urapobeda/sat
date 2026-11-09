@@ -765,15 +765,9 @@ export async function getTestHistory(userId: string) {
   return data ?? [];
 }
 
-export async function getRecentAttempts(userId: string) {
-  const [practiceHistory, testHistory] = await Promise.all([
-    getPracticeHistory(userId),
-    getTestHistory(userId)
-  ]);
-
-  const practiceAttempts: RecentAttempt[] = practiceHistory
-    .filter((record) => record.completed_at)
-    .map((record) => ({
+export async function getRecentPracticeAttempts(userId: string): Promise<RecentAttempt[]> {
+  const history = await getPracticeHistory(userId);
+  return history.filter((record) => record.completed_at).map((record) => ({
     date: record.completed_at ?? record.started_at,
     id: record.id,
     mode: "practice",
@@ -782,10 +776,12 @@ export async function getRecentAttempts(userId: string) {
     section: record.section,
     topic: record.topic,
     total: record.total
-    }));
-  const testAttempts: RecentAttempt[] = testHistory
-    .filter((record) => record.completed_at)
-    .map((record) => ({
+  }));
+}
+
+export async function getRecentTestAttempts(userId: string): Promise<RecentAttempt[]> {
+  const history = await getTestHistory(userId);
+  return history.filter((record) => record.completed_at).map((record) => ({
     date: record.completed_at ?? record.started_at,
     estimatedScore: record.estimated_sat_score,
     id: record.id,
@@ -794,13 +790,21 @@ export async function getRecentAttempts(userId: string) {
     score: record.score,
     timeSpent: record.time_spent_seconds,
     total: record.total
-    }));
+  }));
+}
 
-  return [...practiceAttempts, ...testAttempts]
+export function mergeRecentAttempts(practice: RecentAttempt[], tests: RecentAttempt[]) {
+  return [...practice, ...tests]
     .filter((attempt) => Boolean(attempt.date))
-    .sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+export async function getRecentAttempts(userId: string) {
+  const [practice, tests] = await Promise.all([
+    getRecentPracticeAttempts(userId),
+    getRecentTestAttempts(userId)
+  ]);
+  return mergeRecentAttempts(practice, tests);
 }
 
 export async function getUserProgress(userId: string) {

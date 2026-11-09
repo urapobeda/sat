@@ -5,11 +5,12 @@ import { useEffect, useState } from "react";
 import { useStudentAccount } from "@/components/dashboard/StudentAccount";
 import { getNextSATDate } from "@/lib/satDates";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { getRecentAttempts, type RecentAttempt } from "@/lib/supabase/queries";
+import { getRecentPracticeAttempts, getRecentTestAttempts, mergeRecentAttempts, type RecentAttempt } from "@/lib/supabase/queries";
 
 type Snapshot = {
   userId: string;
-  attempts: RecentAttempt[] | null;
+  practice: RecentAttempt[] | null;
+  tests: RecentAttempt[] | null;
   plan: { target_score: number; exam_date: string } | null;
   planError: boolean;
 };
@@ -44,11 +45,16 @@ export function LearningSnapshot() {
     if (!userId) return;
     let active = true;
     const planRequest = getSupabaseBrowserClient().from("study_plans").select("target_score,exam_date").eq("user_id", userId).maybeSingle();
-    void Promise.allSettled([getRecentAttempts(userId), planRequest]).then(([attempts, plan]) => {
+    void Promise.allSettled([
+      getRecentPracticeAttempts(userId),
+      getRecentTestAttempts(userId),
+      planRequest
+    ]).then(([practice, tests, plan]) => {
       if (!active) return;
       setSnapshot({
         userId,
-        attempts: attempts.status === "fulfilled" ? attempts.value : null,
+        practice: practice.status === "fulfilled" ? practice.value : null,
+        tests: tests.status === "fulfilled" ? tests.value : null,
         plan: plan.status === "fulfilled" ? plan.value.data : null,
         planError: plan.status === "rejected" || Boolean(plan.value.error)
       });
@@ -58,7 +64,12 @@ export function LearningSnapshot() {
 
   const current = snapshot?.userId === userId ? snapshot : null;
   const pending = isLoading || Boolean(userId && !current);
-  const attempts = current?.attempts ?? [];
+  const attempts = mergeRecentAttempts(current?.practice ?? [], current?.tests ?? []);
+  const unavailable = current ? [
+    current.practice === null ? "practice history" : null,
+    current.tests === null ? "test history" : null,
+    current.planError ? "study plan" : null
+  ].filter(Boolean) : [];
   const scored = attempts.filter((attempt) => attempt.mode === "test" && attempt.estimatedScore != null);
   const score = scored[0]?.estimatedScore;
   const previousScore = scored[1]?.estimatedScore;
@@ -66,7 +77,7 @@ export function LearningSnapshot() {
   const exam = current?.plan ? new Date(`${current.plan.exam_date}T00:00:00`) : calendar?.nextExam;
   const days = exam && calendar ? Math.ceil((exam.getTime() - calendar.now) / 86_400_000) : null;
 
-  const streak = current?.attempts && calendar ? getSessionStreak(current.attempts, calendar.now) : null;
+  const streak = current?.practice && current.tests && calendar ? getSessionStreak(attempts, calendar.now) : null;
 
   return (
     <section aria-labelledby="learning-snapshot">
@@ -74,9 +85,9 @@ export function LearningSnapshot() {
         <h2 className="hub-section-title" id="learning-snapshot">Learning snapshot</h2>
         <Link className="text-sm font-semibold hub-text-link hover:underline" href="/progress">Full progress</Link>
       </div>
-      {current && (current.attempts === null || current.planError) ? (
+      {unavailable.length > 0 ? (
         <p className="mb-3 text-sm text-slate-600" role="status">
-          Some saved data is temporarily unavailable. <button className="cursor-pointer font-semibold text-blue-700 underline" onClick={() => setRetry((value) => value + 1)} type="button">Retry</button>
+          Could not load {unavailable.join(", ")}. <button className="cursor-pointer font-semibold text-blue-700 underline" onClick={() => setRetry((value) => value + 1)} type="button">Retry</button>
         </p>
       ) : null}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -104,7 +115,7 @@ export function LearningSnapshot() {
               </li>
             ))}
           </ul>
-        ) : current?.attempts === null ? <p className="mt-2 text-sm text-slate-600">Activity could not be loaded.</p> : (
+        ) : (current?.practice === null || current?.tests === null) ? <p className="mt-2 text-sm text-slate-600">No completed sessions in the history that loaded.</p> : (
           <p className="mt-2 text-sm text-slate-600">{userId ? "Complete a practice session or test to see it here." : <> <Link className="font-semibold hub-text-link hover:underline" href="/auth">Sign in</Link> to track scores and practice across devices.</>}</p>
         )}
       </div>
