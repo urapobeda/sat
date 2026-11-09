@@ -27,10 +27,10 @@ type PracticeExamProps = {
   elapsedSeconds: number;
   feedbackByQuestion: Record<string, QuestionFeedback>;
   isChecking: boolean;
-  isPaused: boolean;
+  isTimerPaused: boolean;
   isSavingResult: boolean;
   onNext: () => void;
-  onPauseChange: (paused: boolean) => void;
+  onTimerPauseChange: (paused: boolean) => void;
   onPrevious: () => void;
   onRestart: () => void;
   onSelect: (answer: string) => void;
@@ -43,8 +43,8 @@ type PracticeExamProps = {
 };
 
 export function PracticeExam({
-  backHref, children, currentIndex, elapsedSeconds, feedbackByQuestion, isChecking, isPaused, isSavingResult,
-  onNext, onPauseChange, onPrevious, onRestart, onSelect, onShowQuestion, persistenceMessage,
+  backHref, children, currentIndex, elapsedSeconds, feedbackByQuestion, isChecking, isTimerPaused, isSavingResult,
+  onNext, onTimerPauseChange, onPrevious, onRestart, onSelect, onShowQuestion, persistenceMessage,
   question, questionSeconds, questions, selectedAnswer
 }: PracticeExamProps) {
   const [timerVisible, setTimerVisible] = useState(true);
@@ -111,13 +111,13 @@ export function PracticeExam({
               </p>
               <div className="flex items-center justify-center gap-1.5">
                 <button
-                  aria-label={isPaused ? "Resume practice" : "Pause practice"}
+                  aria-label={isTimerPaused ? "Resume timer" : "Pause timer"}
                   className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40"
                   disabled={isChecking || isSavingResult}
-                  onClick={() => onPauseChange(!isPaused)}
+                  onClick={() => onTimerPauseChange(!isTimerPaused)}
                   type="button"
                 >
-                  {isPaused ? <Play size={12} /> : <Pause size={12} />}
+                  {isTimerPaused ? <Play size={12} /> : <Pause size={12} />}
                 </button>
                 <button className="h-6 rounded-full border border-slate-200 px-2 text-xs text-slate-700 hover:bg-slate-100" onClick={() => setTimerVisible(!timerVisible)} type="button">
                   {timerVisible ? "Hide" : "Show"}
@@ -160,7 +160,6 @@ export function PracticeExam({
             ) : null}
             <div
               className={`grid min-h-0 flex-1 content-start overflow-y-auto ${hasPassage ? "lg:grid-cols-2 lg:content-stretch lg:overflow-hidden" : ""}`}
-              inert={isPaused}
               ref={workspace}
             >
               {hasPassage ? (
@@ -235,21 +234,13 @@ export function PracticeExam({
                 </div>
               </section>
             </div>
-            {isPaused ? (
-              <div className="absolute inset-0 z-10 grid place-content-center gap-3 bg-white text-center">
-                <p className="text-xl font-semibold">Practice paused</p>
-                <button className={control} onClick={() => onPauseChange(false)} type="button">
-                  <Play size={15} aria-hidden="true" /> Resume practice
-                </button>
-              </div>
-            ) : null}
           </div>
 
           <footer className="relative z-10 shrink-0 border-t border-slate-200 bg-white px-3 py-2.5 sm:px-5">
             <div className="mx-auto flex max-w-[72rem] flex-wrap items-center justify-between gap-2">
               <QuestionNavigator
                 currentIndex={currentIndex}
-                disabled={isPaused || isChecking || isSavingResult}
+                disabled={isChecking || isSavingResult}
                 feedback={feedbackByQuestion}
                 marked={marked}
                 onShowQuestion={onShowQuestion}
@@ -258,26 +249,25 @@ export function PracticeExam({
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <button
                   className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-violet-600 px-3 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-40"
-                  disabled={isPaused}
                   onClick={() => setTutorOpen(true)}
                   type="button"
                 >
                   <Sparkles size={15} aria-hidden="true" /> Ask AI Tutor
                 </button>
-                <button aria-expanded={showExplanation} className={control} disabled={!feedback || isPaused} onClick={() => setOpenExplanationId(showExplanation ? null : question.id)} type="button">
+                <button aria-expanded={showExplanation} className={control} disabled={!feedback} onClick={() => setOpenExplanationId(showExplanation ? null : question.id)} type="button">
                   <ListChecks size={15} aria-hidden="true" /> Explanation
                 </button>
-                <button className={control} disabled={currentIndex === 0 || isChecking || isPaused || isSavingResult} onClick={onPrevious} type="button">
+                <button className={control} disabled={currentIndex === 0 || isChecking || isSavingResult} onClick={onPrevious} type="button">
                   Previous
                 </button>
-                <button className={control} disabled={!feedback || isChecking || isPaused || isSavingResult} onClick={onNext} type="button">
+                <button className={control} disabled={!feedback || isChecking || isSavingResult} onClick={onNext} type="button">
                   {isSavingResult ? <Loader2 className="animate-spin" size={16} aria-hidden="true" /> : null}
                   {currentIndex === questions.length - 1 ? "Show Results" : "Next"}
                 </button>
               </div>
             </div>
           </footer>
-          {tutorOpen && !isPaused ? (
+          {tutorOpen ? (
             <AITutorPanel isOpen key={question.id} onClose={() => setTutorOpen(false)} overlay question={question} selectedAnswer={selectedAnswer} />
           ) : null}
         </>

@@ -52,7 +52,7 @@ export function QuestionBankPracticePage() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState<string | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isTimerPaused, setIsTimerPaused] = useState(false);
   const [reviewQuestion, setReviewQuestion] = useState<Question | null>(null);
   const hasSaved = useRef(false);
   const questionClocks = useRef(new Map<string, QuestionStopwatch>());
@@ -73,7 +73,7 @@ export function QuestionBankPracticePage() {
   const weakTopics = getWeakTopics(practiceQuestions, feedback);
 
   useEffect(() => {
-    if (!currentQuestion || isLoading || isFinished || isPaused) return;
+    if (!currentQuestion || isLoading || isFinished || isTimerPaused) return;
     const id = currentQuestion.id;
     const clock = questionClocks.current.get(id) ?? new QuestionStopwatch();
     questionClocks.current.set(id, clock);
@@ -87,7 +87,7 @@ export function QuestionBankPracticePage() {
       window.clearInterval(interval);
       clock.pause(performance.now());
     };
-  }, [currentQuestion, isLoading, isFinished, isPaused, timerRun]);
+  }, [currentQuestion, isLoading, isFinished, isTimerPaused, timerRun]);
 
   useEffect(() => {
     let isMounted = true;
@@ -104,7 +104,7 @@ export function QuestionBankPracticePage() {
       setIsFinished(false);
       setElapsedSeconds(0);
       setSessionId(null);
-      setIsPaused(false);
+      setIsTimerPaused(false);
       setReviewQuestion(null);
       questionClocks.current.clear();
       setTimerRun((run) => run + 1);
@@ -207,7 +207,7 @@ export function QuestionBankPracticePage() {
   }, [practiceQuestions, currentIndex, questionDetails]);
 
   useEffect(() => {
-    if (isLoading || isFinished || isPaused || practiceQuestions.length === 0) {
+    if (isLoading || isFinished || isTimerPaused || practiceQuestions.length === 0) {
       return;
     }
 
@@ -216,9 +216,9 @@ export function QuestionBankPracticePage() {
     }, 1000);
 
     return () => window.clearInterval(interval);
-  }, [isFinished, isLoading, isPaused, practiceQuestions.length]);
+  }, [isFinished, isLoading, isTimerPaused, practiceQuestions.length]);
 
-  function changePaused(paused: boolean) {
+  function changeTimerPaused(paused: boolean) {
     if (paused && currentQuestion) {
       const clock = questionClocks.current.get(currentQuestion.id);
       if (clock) {
@@ -227,11 +227,11 @@ export function QuestionBankPracticePage() {
         setQuestionTick({ id: currentQuestion.id, seconds: clock.seconds(now) });
       }
     }
-    setIsPaused(paused);
+    setIsTimerPaused(paused);
   }
 
   async function handleSelect(choice: string) {
-    if (!currentQuestion || isPaused || answers[currentQuestion.id] || submissionPending.current) {
+    if (!currentQuestion || answers[currentQuestion.id] || submissionPending.current) {
       return;
     }
     const question = currentQuestion;
@@ -278,10 +278,10 @@ export function QuestionBankPracticePage() {
         setPersistenceMessage("Answer saved, but its timing could not be saved.");
       }
     } catch {
-      clock.retry(performance.now(), true);
+      clock.retry(performance.now(), !isTimerPaused);
       setAnswers((previous) => { const next = { ...previous }; delete next[question.id]; return next; });
       setSubmittedSeconds((previous) => { const next = { ...previous }; delete next[question.id]; return next; });
-      setPersistenceMessage("The answer could not be checked. Please try again; your question timer has resumed.");
+      setPersistenceMessage("The answer could not be checked. Please try again.");
     } finally {
       submissionPending.current = false;
       setIsChecking(false);
@@ -347,7 +347,7 @@ export function QuestionBankPracticePage() {
     setSubmittedSeconds({});
     setQuestionTick({ id: null, seconds: 0 });
     hasSaved.current = false;
-    setIsPaused(false);
+    setIsTimerPaused(false);
     setReviewQuestion(null);
     setSessionId(null);
 
@@ -383,11 +383,11 @@ export function QuestionBankPracticePage() {
       elapsedSeconds={elapsedSeconds}
       feedbackByQuestion={feedback}
       isChecking={isChecking}
-      isPaused={isPaused}
+      isTimerPaused={isTimerPaused}
       isSavingResult={isSavingResult}
       key={timerRun}
       onNext={handleNext}
-      onPauseChange={changePaused}
+      onTimerPauseChange={changeTimerPaused}
       onPrevious={handlePrevious}
       onRestart={restartPractice}
       onSelect={handleSelect}
