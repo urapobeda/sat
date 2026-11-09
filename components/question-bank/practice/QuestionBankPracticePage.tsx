@@ -1,27 +1,15 @@
 "use client";
 
-import {
-  ArrowLeft,
-  ArrowRight,
-  Loader2,
-  RotateCcw,
-  Search,
-  Sparkles
-} from "lucide-react";
-import Link from "next/link";
+import { Loader2, Search, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
 import { EmptyState } from "@/components/EmptyState";
-import { Layout } from "@/components/Layout";
-import { QuestionCard } from "@/components/quiz/QuestionCard";
+import { PracticeExam } from "@/components/question-bank/practice/PracticeExam";
 import { ResultsCard } from "@/components/quiz/ResultsCard";
-import { Timer, formatTime } from "@/components/quiz/Timer";
+import { formatTime } from "@/components/quiz/Timer";
 import { filterQuestionCatalog, filterQuestionsByCompletion, parseQuestionCompletion, parseQuestionDifficulties } from "@/lib/questionBankFilters";
-import {
-  formatSection,
-  getWeakTopics
-} from "@/lib/questions";
+import { getWeakTopics } from "@/lib/questions";
 import {
   createPracticeSession,
   getCurrentUser,
@@ -64,7 +52,7 @@ export function QuestionBankPracticePage() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState<string | null>(null);
-  const [isTutorOpen, setIsTutorOpen] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [reviewQuestion, setReviewQuestion] = useState<Question | null>(null);
   const hasSaved = useRef(false);
   const questionClocks = useRef(new Map<string, QuestionStopwatch>());
@@ -83,10 +71,9 @@ export function QuestionBankPracticePage() {
       ? Math.round((score / practiceQuestions.length) * 100)
       : 0;
   const weakTopics = getWeakTopics(practiceQuestions, feedback);
-  const displayTopic = practiceQuestions[0]?.topic ?? topic;
 
   useEffect(() => {
-    if (!currentQuestion || isLoading || isFinished) return;
+    if (!currentQuestion || isLoading || isFinished || isPaused) return;
     const id = currentQuestion.id;
     const clock = questionClocks.current.get(id) ?? new QuestionStopwatch();
     questionClocks.current.set(id, clock);
@@ -100,7 +87,7 @@ export function QuestionBankPracticePage() {
       window.clearInterval(interval);
       clock.pause(performance.now());
     };
-  }, [currentQuestion, isLoading, isFinished, timerRun]);
+  }, [currentQuestion, isLoading, isFinished, isPaused, timerRun]);
 
   useEffect(() => {
     let isMounted = true;
@@ -117,7 +104,7 @@ export function QuestionBankPracticePage() {
       setIsFinished(false);
       setElapsedSeconds(0);
       setSessionId(null);
-      setIsTutorOpen(false);
+      setIsPaused(false);
       setReviewQuestion(null);
       questionClocks.current.clear();
       setTimerRun((run) => run + 1);
@@ -220,7 +207,7 @@ export function QuestionBankPracticePage() {
   }, [practiceQuestions, currentIndex, questionDetails]);
 
   useEffect(() => {
-    if (isLoading || isFinished || practiceQuestions.length === 0) {
+    if (isLoading || isFinished || isPaused || practiceQuestions.length === 0) {
       return;
     }
 
@@ -229,10 +216,22 @@ export function QuestionBankPracticePage() {
     }, 1000);
 
     return () => window.clearInterval(interval);
-  }, [isFinished, isLoading, practiceQuestions.length]);
+  }, [isFinished, isLoading, isPaused, practiceQuestions.length]);
+
+  function changePaused(paused: boolean) {
+    if (paused && currentQuestion) {
+      const clock = questionClocks.current.get(currentQuestion.id);
+      if (clock) {
+        const now = performance.now();
+        clock.pause(now);
+        setQuestionTick({ id: currentQuestion.id, seconds: clock.seconds(now) });
+      }
+    }
+    setIsPaused(paused);
+  }
 
   async function handleSelect(choice: string) {
-    if (!currentQuestion || answers[currentQuestion.id] || submissionPending.current) {
+    if (!currentQuestion || isPaused || answers[currentQuestion.id] || submissionPending.current) {
       return;
     }
     const question = currentQuestion;
@@ -348,7 +347,7 @@ export function QuestionBankPracticePage() {
     setSubmittedSeconds({});
     setQuestionTick({ id: null, seconds: 0 });
     hasSaved.current = false;
-    setIsTutorOpen(false);
+    setIsPaused(false);
     setReviewQuestion(null);
     setSessionId(null);
 
@@ -373,39 +372,37 @@ export function QuestionBankPracticePage() {
     }
   }
 
-  return (
-    <Layout>
-      <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-white p-6 shadow-soft sm:p-8">
-        <Link
-          className="inline-flex items-center gap-2 text-sm font-black text-blue-600 transition hover:text-blue-700"
-          href="/question-bank"
-        >
-          <ArrowLeft size={17} />
-          Back to Question Bank
-        </Link>
-        <h1 className="mt-5 text-4xl font-black leading-tight text-slate-950 sm:text-5xl">
-          Practice Mode
-        </h1>
-        <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
-          {formatSection(section)}
-          {displayTopic ? ` / ${displayTopic}` : ""} practice with instant
-          explanations.
-        </p>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Timer label="Session" seconds={elapsedSeconds} />
-          {persistenceMessage ? (
-            <p className="inline-flex rounded-2xl border border-blue-100 bg-white/80 px-4 py-2 text-sm font-bold text-slate-600">
-              {persistenceMessage}
-            </p>
-          ) : null}
-        </div>
-      </section>
+  const waitingForQuestion = isLoading || (!error && !isFinished && practiceQuestions.length > 0 && !currentQuestion);
+  const activeQuestion = !waitingForQuestion && !error && !isFinished ? currentQuestion : undefined;
+  const backHref = section === "all" ? "/question-bank" : `/question-bank/${section}`;
 
-      {isLoading || (!error && !isFinished && practiceQuestions.length > 0 && !currentQuestion) ? (
-        <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+  return (
+    <PracticeExam
+      backHref={backHref}
+      currentIndex={currentIndex}
+      elapsedSeconds={elapsedSeconds}
+      feedback={activeQuestion ? feedback[activeQuestion.id] : undefined}
+      isChecking={isChecking}
+      isPaused={isPaused}
+      isSavingResult={isSavingResult}
+      key={timerRun}
+      onNext={handleNext}
+      onPauseChange={changePaused}
+      onPrevious={handlePrevious}
+      onRestart={restartPractice}
+      onSelect={handleSelect}
+      onShowQuestion={showQuestionAt}
+      persistenceMessage={persistenceMessage}
+      question={activeQuestion}
+      questionSeconds={questionSeconds}
+      selectedAnswer={selectedAnswer}
+      total={practiceQuestions.length}
+    >
+      {waitingForQuestion ? (
+        <section className="mx-auto mt-6 w-full max-w-3xl px-5 py-6">
           <div className="flex items-center gap-3 text-sm font-black text-blue-600">
             <Loader2 className="animate-spin" size={20} />
-            Loading practice questions from Supabase...
+            Loading practice questions…
           </div>
           <div className="mt-6 space-y-4">
             {[0, 1, 2].map((item) => (
@@ -426,8 +423,9 @@ export function QuestionBankPracticePage() {
           title="No questions found"
         />
       ) : isFinished ? (
-        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
-          <div className="space-y-5">
+        <section className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
+          <div className="mx-auto max-w-3xl space-y-5">
+            {persistenceMessage ? <p className="text-sm text-slate-600" role="status">{persistenceMessage}</p> : null}
             <ResultsCard
               correctLabel={`${score} / ${practiceQuestions.length - score}`}
               onRestart={restartPractice}
@@ -474,96 +472,14 @@ export function QuestionBankPracticePage() {
               isOpen={Boolean(reviewQuestion)}
               key={reviewQuestion.id}
               onClose={() => setReviewQuestion(null)}
+              overlay
               question={reviewQuestion}
               selectedAnswer={answers[reviewQuestion.id] ?? null}
             />
           ) : null}
         </section>
-      ) : currentQuestion ? (
-        <section
-          className={[
-            "mt-6 grid gap-6",
-            isTutorOpen ? "lg:grid-cols-[minmax(0,1fr)_420px]" : ""
-          ].join(" ")}
-        >
-          <div className="space-y-5">
-            <div className="flex justify-end">
-              <button
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:shadow-xl"
-                onClick={() => setIsTutorOpen(true)}
-                type="button"
-              >
-                <Sparkles size={18} />
-                Ask AI Tutor
-              </button>
-            </div>
-
-            <QuestionCard
-              currentIndex={currentIndex}
-              onSelect={handleSelect}
-              feedback={currentQuestion ? feedback[currentQuestion.id] : null}
-              question={currentQuestion}
-              selectedAnswer={selectedAnswer}
-              showFeedback={Boolean(currentQuestion && feedback[currentQuestion.id])}
-              totalQuestions={practiceQuestions.length}
-              timerSeconds={questionSeconds}
-            />
-
-            {feedback[currentQuestion.id] ? (
-              <p className="text-sm text-slate-600">
-                {feedback[currentQuestion.id].isCorrect
-                  ? `Correct answer time: ${formatTime(questionSeconds)}${feedback[currentQuestion.id].timingRecorded ? " · saved to your timing statistics." : "."}`
-                  : "Time not counted: incorrect answers are excluded from timing statistics."}
-              </p>
-            ) : null}
-
-            <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-              <button
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-5 py-3 text-sm font-black text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-400"
-                disabled={currentIndex === 0 || isChecking}
-                onClick={handlePrevious}
-                type="button"
-              >
-                <ArrowLeft size={18} />
-                Previous
-              </button>
-
-              <button
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-                onClick={restartPractice}
-                disabled={isChecking}
-                type="button"
-              >
-                <RotateCcw size={17} />
-                Restart
-              </button>
-
-              <button
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none sm:justify-self-end"
-                disabled={!selectedAnswer || !feedback[currentQuestion.id] || isChecking || isSavingResult}
-                onClick={handleNext}
-                type="button"
-              >
-                {isSavingResult ? <Loader2 className="animate-spin" size={18} /> : null}
-                {currentIndex === practiceQuestions.length - 1
-                  ? "Show Results"
-                  : "Next"}
-                {!isSavingResult ? <ArrowRight size={18} /> : null}
-              </button>
-            </div>
-          </div>
-          {isTutorOpen ? (
-            <AITutorPanel
-              isOpen={isTutorOpen}
-              key={currentQuestion.id}
-              onClose={() => setIsTutorOpen(false)}
-              question={currentQuestion}
-              selectedAnswer={selectedAnswer}
-            />
-          ) : null}
-        </section>
       ) : null}
-    </Layout>
+    </PracticeExam>
   );
 }
 

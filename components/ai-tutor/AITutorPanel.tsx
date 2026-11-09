@@ -19,6 +19,7 @@ type AITutorPanelProps = {
   hasSubmittedOverride?: boolean;
   isOpen: boolean;
   onClose: () => void;
+  overlay?: boolean;
   question: Question;
   selectedAnswer: string | null;
 };
@@ -36,6 +37,7 @@ export function AITutorPanel({
   hasSubmittedOverride,
   isOpen,
   onClose,
+  overlay = false,
   question,
   selectedAnswer
 }: AITutorPanelProps) {
@@ -144,11 +146,11 @@ export function AITutorPanel({
     <>
       <button
         aria-label="Close AI Tutor"
-        className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm lg:hidden"
+        className={`fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm ${overlay ? "" : "lg:hidden"}`}
         onClick={onClose}
         type="button"
       />
-      <aside className="fixed inset-x-3 bottom-3 z-50 flex max-h-[85vh] flex-col overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-2xl shadow-blue-950/20 lg:sticky lg:top-24 lg:z-10 lg:h-[calc(100vh-8rem)] lg:max-h-none lg:w-[420px]">
+      <aside className={`fixed inset-x-3 bottom-3 z-50 flex max-h-[85vh] flex-col overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-2xl shadow-blue-950/20 ${overlay ? "sm:left-auto sm:right-5 sm:w-[420px]" : "lg:sticky lg:top-24 lg:z-10 lg:h-[calc(100vh-8rem)] lg:max-h-none lg:w-[420px]"}`}>
         <header className="border-b border-slate-100 bg-gradient-to-br from-white via-blue-50 to-violet-50 p-5">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">

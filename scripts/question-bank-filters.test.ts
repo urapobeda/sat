@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { filterQuestionCatalog, filterQuestionsByCompletion, parseQuestionCompletion, parseQuestionDifficulties, QUESTION_DIFFICULTIES, toggleQuestionDifficulty } from "../lib/questionBankFilters.ts";
 import { getQuestionSubtopic } from "../lib/questionBankStructure.ts";
+import { splitReadingQuestion } from "../lib/readingQuestionLayout.ts";
 import type { QuestionSummary } from "../types/sat.ts";
 
 assert.deepEqual(toggleQuestionDifficulty(QUESTION_DIFFICULTIES, "easy"), ["medium", "hard"]);
@@ -52,4 +53,16 @@ assert.equal(subtopic("Form Structure and Sense"), "Form, Structure, and Sense")
 assert.equal(subtopic("Vocabulary in Context"), "Words in Context");
 const oldLabels = [...Array(259).fill("Words in Context"), ...Array(149).fill("Craft and Structure"), ...Array(417).fill("Uncategorized")];
 assert.equal(oldLabels.filter((topic) => subtopic(topic) === "Words in Context").length, 259, "the reported 825 vocabulary regression never recurs");
+assert.deepEqual(
+  splitReadingQuestion("When the wind shifted, the team returned. Which choice best supports the claim?"),
+  { passage: "When the wind shifted, the team returned.", prompt: "Which choice best supports the claim?" }
+);
+assert.deepEqual(
+  splitReadingQuestion("Text 1 A passage. Text 2 A response. Based on the texts, how would the authors disagree?"),
+  { passage: "Text 1\nA passage.\n\nText 2\nA response.", prompt: "Based on the texts, how would the authors disagree?" }
+);
+assert.deepEqual(splitReadingQuestion("A prompt with a different format."), {
+  passage: "A prompt with a different format.",
+  prompt: ""
+});
 console.log("question-bank-filters tests passed");
