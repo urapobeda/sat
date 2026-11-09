@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Search, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
 import { EmptyState } from "@/components/EmptyState";
@@ -288,6 +288,12 @@ export function QuestionBankPracticePage() {
     }
   }
 
+  const showQuestionAt = useCallback((index: number) => {
+    const id = practiceQuestions[index]?.id ?? null;
+    setQuestionTick({ id, seconds: id ? questionClocks.current.get(id)?.seconds(performance.now()) ?? 0 : 0 });
+    setCurrentIndex(index);
+  }, [practiceQuestions]);
+
   async function handleNext() {
     if (currentIndex === practiceQuestions.length - 1) {
       finishPractice();
@@ -299,12 +305,6 @@ export function QuestionBankPracticePage() {
 
   function handlePrevious() {
     showQuestionAt(Math.max(currentIndex - 1, 0));
-  }
-
-  function showQuestionAt(index: number) {
-    const id = practiceQuestions[index]?.id ?? null;
-    setQuestionTick({ id, seconds: id ? questionClocks.current.get(id)?.seconds(performance.now()) ?? 0 : 0 });
-    setCurrentIndex(index);
   }
 
   async function finishPractice() {
@@ -381,7 +381,7 @@ export function QuestionBankPracticePage() {
       backHref={backHref}
       currentIndex={currentIndex}
       elapsedSeconds={elapsedSeconds}
-      feedback={activeQuestion ? feedback[activeQuestion.id] : undefined}
+      feedbackByQuestion={feedback}
       isChecking={isChecking}
       isPaused={isPaused}
       isSavingResult={isSavingResult}
@@ -396,7 +396,7 @@ export function QuestionBankPracticePage() {
       question={activeQuestion}
       questionSeconds={questionSeconds}
       selectedAnswer={selectedAnswer}
-      total={practiceQuestions.length}
+      questions={practiceQuestions}
     >
       {waitingForQuestion ? (
         <section className="mx-auto mt-6 w-full max-w-3xl px-5 py-6">

@@ -7,13 +7,14 @@ import {
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
+import { QuestionNavigator } from "@/components/question-bank/practice/QuestionNavigator";
 import { Highlightable } from "@/components/quiz/Highlightable";
 import { MathText } from "@/components/quiz/MathText";
 import { QuestionAnswers, QuestionExplanation, QuestionStem } from "@/components/quiz/QuestionCard";
 import { QuestionHighlightControls, useQuestionHighlight } from "@/components/quiz/QuestionHighlight";
 import { formatTime } from "@/components/quiz/Timer";
 import { splitReadingQuestion } from "@/lib/readingQuestionLayout";
-import type { Question, QuestionFeedback } from "@/types/sat";
+import type { Question, QuestionFeedback, QuestionSummary } from "@/types/sat";
 
 const control = "inline-flex min-h-9 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-default disabled:opacity-40";
 const summary = "list-none [&::-webkit-details-marker]:hidden";
@@ -24,7 +25,7 @@ type PracticeExamProps = {
   children?: ReactNode;
   currentIndex: number;
   elapsedSeconds: number;
-  feedback?: QuestionFeedback;
+  feedbackByQuestion: Record<string, QuestionFeedback>;
   isChecking: boolean;
   isPaused: boolean;
   isSavingResult: boolean;
@@ -37,14 +38,14 @@ type PracticeExamProps = {
   persistenceMessage: string | null;
   question?: Question;
   questionSeconds: number;
+  questions: QuestionSummary[];
   selectedAnswer: string | null;
-  total: number;
 };
 
 export function PracticeExam({
-  backHref, children, currentIndex, elapsedSeconds, feedback, isChecking, isPaused, isSavingResult,
+  backHref, children, currentIndex, elapsedSeconds, feedbackByQuestion, isChecking, isPaused, isSavingResult,
   onNext, onPauseChange, onPrevious, onRestart, onSelect, onShowQuestion, persistenceMessage,
-  question, questionSeconds, selectedAnswer, total
+  question, questionSeconds, questions, selectedAnswer
 }: PracticeExamProps) {
   const [timerVisible, setTimerVisible] = useState(true);
   const [showSessionTime, setShowSessionTime] = useState(false);
@@ -57,7 +58,7 @@ export function PracticeExam({
   const workspace = useRef<HTMLDivElement>(null);
   const questionPanel = useRef<HTMLDivElement>(null);
   const explanation = useRef<HTMLDivElement>(null);
-  const navigator = useRef<HTMLDetailsElement>(null);
+  const feedback = question ? feedbackByQuestion[question.id] : undefined;
   const showExplanation = !!question && question.id === openExplanationId && !!feedback;
   const questionId = question?.id;
   const timer = showSessionTime ? elapsedSeconds : questionSeconds;
@@ -72,12 +73,6 @@ export function PracticeExam({
   useEffect(() => {
     if (showExplanation) explanation.current?.scrollIntoView({ block: "nearest" });
   }, [showExplanation, questionId]);
-
-  function jumpTo(index: number) {
-    if (isChecking || isSavingResult || isPaused || index < 0 || index >= total) return;
-    if (navigator.current) navigator.current.open = false;
-    onShowQuestion(index);
-  }
 
   const { passage, prompt } = question?.section === "reading-writing"
     ? splitReadingQuestion(question.question)
@@ -252,39 +247,14 @@ export function PracticeExam({
 
           <footer className="relative z-10 shrink-0 border-t border-slate-200 bg-white px-3 py-2.5 sm:px-5">
             <div className="mx-auto flex max-w-[72rem] flex-wrap items-center justify-between gap-2">
-              <details className="relative" ref={navigator}>
-                <summary aria-label={`Question ${currentIndex + 1} of ${total}. Jump to question`} className={`${summary} inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-xl bg-neutral-900 px-3 text-sm font-semibold text-white sm:px-5`}>
-                  {currentIndex + 1} of {total} <ChevronDown size={14} aria-hidden="true" />
-                </summary>
-                <div className={`${panel} bottom-full left-0 mb-2 w-64 max-w-[calc(100vw-1.5rem)]`}>
-                  <form
-                    className="flex items-end gap-2"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      const number = Number(new FormData(event.currentTarget).get("question-number"));
-                      if (Number.isInteger(number)) jumpTo(number - 1);
-                    }}
-                  >
-                    <label className="flex min-w-0 flex-1 flex-col gap-1">
-                      Jump to question
-                      <input className="min-h-9 rounded-lg border border-slate-300 px-2" max={total} min={1} name="question-number" placeholder={String(currentIndex + 1)} required type="number" />
-                    </label>
-                    <button className={control} disabled={isPaused || isChecking || isSavingResult} type="submit">Go</button>
-                  </form>
-                  {marked.length ? (
-                    <div className="mt-3 border-t border-slate-200 pt-2">
-                      <p className="font-semibold">Marked for review</p>
-                      <div className="mt-2 flex max-h-32 flex-wrap gap-1 overflow-y-auto">
-                        {[...marked].sort((a, b) => a - b).map((index) => (
-                          <button className={control} disabled={isPaused || isChecking || isSavingResult} key={index} onClick={() => jumpTo(index)} type="button">
-                            {index + 1}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </details>
+              <QuestionNavigator
+                currentIndex={currentIndex}
+                disabled={isPaused || isChecking || isSavingResult}
+                feedback={feedbackByQuestion}
+                marked={marked}
+                onShowQuestion={onShowQuestion}
+                questions={questions}
+              />
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <button
                   className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-violet-600 px-3 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-40"
@@ -302,7 +272,7 @@ export function PracticeExam({
                 </button>
                 <button className={control} disabled={!feedback || isChecking || isPaused || isSavingResult} onClick={onNext} type="button">
                   {isSavingResult ? <Loader2 className="animate-spin" size={16} aria-hidden="true" /> : null}
-                  {currentIndex === total - 1 ? "Show Results" : "Next"}
+                  {currentIndex === questions.length - 1 ? "Show Results" : "Next"}
                 </button>
               </div>
             </div>
