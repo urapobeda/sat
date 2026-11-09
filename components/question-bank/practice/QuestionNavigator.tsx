@@ -11,7 +11,9 @@ const tileColors: Record<QuestionSummary["difficulty"], string> = {
 };
 
 type QuestionNavigatorProps = {
+  answers?: Readonly<Record<string, string>>;
   currentIndex: number;
+  position?: "above" | "below";
   disabled: boolean;
   feedback: Record<string, QuestionFeedback>;
   marked: readonly number[];
@@ -20,7 +22,7 @@ type QuestionNavigatorProps = {
 };
 
 export const QuestionNavigator = memo(function QuestionNavigator({
-  currentIndex, disabled, feedback, marked, onShowQuestion, questions
+  answers, currentIndex, disabled, feedback, marked, onShowQuestion, position = "above", questions
 }: QuestionNavigatorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [groupAnswered, setGroupAnswered] = useState(false);
@@ -55,9 +57,10 @@ export const QuestionNavigator = memo(function QuestionNavigator({
 
   const markedIndices = new Set(marked);
   const indices = isOpen ? questions.map((_, index) => index) : [];
+  const isAnswered = (id: string) => Boolean(feedback[id] || answers?.[id]);
   const groups = groupAnswered ? [
-    { label: "Answered", indices: indices.filter((index) => feedback[questions[index].id]) },
-    { label: "Unanswered", indices: indices.filter((index) => !feedback[questions[index].id]) }
+    { label: "Answered", indices: indices.filter((index) => isAnswered(questions[index].id)) },
+    { label: "Unanswered", indices: indices.filter((index) => !isAnswered(questions[index].id)) }
   ] : [{ label: "", indices }];
 
   return (
@@ -82,7 +85,7 @@ export const QuestionNavigator = memo(function QuestionNavigator({
       {isOpen ? (
         <section
           aria-labelledby={`${id}-title`}
-          className="absolute bottom-full left-0 z-30 mb-3 flex max-h-[min(40rem,calc(100dvh-8rem))] w-[min(28rem,calc(100vw-1.5rem))] flex-col rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-900 shadow-xl sm:p-4"
+          className={`absolute left-0 z-30 flex max-h-[min(40rem,calc(100dvh-8rem))] w-[min(28rem,calc(100vw-4rem))] flex-col rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-900 shadow-xl sm:p-4 ${position === "below" ? "top-full mt-2" : "bottom-full mb-3"}`}
           id={id}
         >
           <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-slate-200 pb-3">
@@ -107,8 +110,9 @@ export const QuestionNavigator = memo(function QuestionNavigator({
           </div>
 
           <ul aria-label="Question status legend" className="flex shrink-0 flex-wrap gap-x-4 gap-y-1.5 py-3">
+            {answers ? <li className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-blue-600" /> Answered</li> : <>
             <li className="flex items-center gap-1.5"><Check aria-hidden="true" className="size-5 rounded-full bg-green-700 p-0.5 text-white" /> Correct</li>
-            <li className="flex items-center gap-1.5"><X aria-hidden="true" className="size-5 rounded-full bg-red-600 p-0.5 text-white" /> Incorrect</li>
+            <li className="flex items-center gap-1.5"><X aria-hidden="true" className="size-5 rounded-full bg-red-600 p-0.5 text-white" /> Incorrect</li></>}
             <li className="flex items-center gap-1.5"><Bookmark aria-hidden="true" className="fill-amber-600 text-amber-600" size={16} /> For Review</li>
           </ul>
 
@@ -122,7 +126,7 @@ export const QuestionNavigator = memo(function QuestionNavigator({
                     const result = feedback[question.id];
                     const isMarked = markedIndices.has(index);
                     const isCurrent = currentIndex === index;
-                    const status = result ? (result.isCorrect ? "Correct" : "Incorrect") : "Unanswered";
+                    const status = result ? (result.isCorrect ? "Correct" : "Incorrect") : isAnswered(question.id) ? "Answered" : "Unanswered";
 
                     return (
                       <button
@@ -140,6 +144,7 @@ export const QuestionNavigator = memo(function QuestionNavigator({
                       >
                         {index + 1}
                         {isMarked ? <Bookmark aria-hidden="true" className="absolute -left-0.5 -top-1.5 size-4 fill-amber-600 text-amber-600" /> : null}
+                        {answers?.[question.id] && !result ? <span aria-hidden="true" className="absolute -top-1 right-0 size-2.5 rounded-full bg-blue-600 ring-2 ring-white" /> : null}
                         {result ? (
                           <span aria-hidden="true" className={`absolute -top-1.5 right-0 flex size-5 items-center justify-center rounded-full text-white ring-2 ring-white ${result.isCorrect ? "bg-green-700" : "bg-red-600"}`}>
                             {result.isCorrect ? <Check size={14} /> : <X size={14} />}

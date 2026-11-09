@@ -130,17 +130,16 @@ export function TestsPage() {
   return (
     <StudentShell active="tests">
       <div className="mx-auto w-full max-w-7xl">
-      <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-white p-6 shadow-soft sm:p-8">
+      <section className="hub-card relative overflow-hidden p-5 sm:p-7">
         <HeaderIllustration />
 
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="lg:max-w-2xl lg:pt-3">
-            <h1 className="text-4xl font-black leading-tight text-slate-950 sm:text-5xl">
-              Full-Length Tests
+            <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl">
+              Practice Tests
             </h1>
             <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg lg:max-w-xl">
-              Take full-length SAT-style tests under real exam conditions. Track
-              your performance and improve your score.
+              Build exam confidence with timed SAT-style questions and review your saved attempts.
             </p>
           </div>
 

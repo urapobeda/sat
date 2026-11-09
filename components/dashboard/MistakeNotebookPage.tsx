@@ -1,106 +1,81 @@
-import Link from "next/link";
-import { getMistakePracticeHref, mistakeTopics } from "@/components/dashboard/mistakeData";
-import { StudentShell } from "@/components/dashboard/StudentShell";
+"use client";
 
-function getAccuracyColor(percent: number) {
-  if (percent < 55) return "bg-rose-500";
-  if (percent < 65) return "bg-orange-500";
-  if (percent < 75) return "bg-amber-500";
-  return "bg-emerald-500";
-}
+import Link from "next/link";
+import { BookOpen, NotebookPen } from "lucide-react";
+import { useEffect, useState } from "react";
+import { PageHeading } from "@/components/dashboard/PageHeading";
+import { useStudentAccount } from "@/components/dashboard/StudentAccount";
+import { StudentShell } from "@/components/dashboard/StudentShell";
+import { getQuestionSubtopic } from "@/lib/questionBankStructure";
+import { formatSection } from "@/lib/questions";
+import { getQuestionCatalog, getQuestionProgressLookup } from "@/lib/supabase/queries";
+import type { QuestionSummary } from "@/types/sat";
+
+type Group = { topic: string; section: QuestionSummary["section"]; count: number };
 
 export function MistakeNotebookPage() {
-  const totalMissed = mistakeTopics.reduce((sum, topic) => sum + topic.missedCount, 0);
-  const topicsCount = mistakeTopics.length;
-  const weakestTopic = mistakeTopics.reduce((weakest, topic) =>
-    topic.accuracy < weakest.accuracy ? topic : weakest
-  );
-  const mostRecent = mistakeTopics[0];
+  return <StudentShell active="mistakes"><Mistakes /></StudentShell>;
+}
 
-  const summaryStats = [
-    { label: "Questions to Review", value: String(totalMissed) },
-    { label: "Topics", value: String(topicsCount) },
-    { label: "Weakest Topic", value: weakestTopic.topic },
-    { label: "Most Recent Miss", value: mostRecent.lastMissed }
-  ];
+function Mistakes() {
+  const { userId, isLoading } = useStudentAccount();
+  const [result, setResult] = useState<{ userId: string; groups: Group[] | null } | null>(null);
+  const [retry, setRetry] = useState(0);
 
+  useEffect(() => {
+    if (!userId) return;
+    let active = true;
+    void Promise.all([getQuestionCatalog(), getQuestionProgressLookup(userId)]).then(([catalog, progress]) => {
+      if (!active) return;
+      const topics = new Map<string, Group>();
+      for (const question of catalog) {
+        if (!progress.incorrectIds.has(question.id)) continue;
+        const topic = getQuestionSubtopic(question);
+        const key = `${question.section}:${topic}`;
+        const group = topics.get(key) ?? { topic, section: question.section, count: 0 };
+        group.count++;
+        topics.set(key, group);
+      }
+      setResult({ userId, groups: [...topics.values()].sort((a, b) => b.count - a.count || a.topic.localeCompare(b.topic)) });
+    }).catch(() => {
+      if (active) setResult({ userId, groups: null });
+    });
+    return () => { active = false; };
+  }, [userId, retry]);
+
+  const current = result?.userId === userId ? result : null;
+  const loading = isLoading || Boolean(userId && !current);
   return (
-    <StudentShell active="mistakes">
-      <div className="mx-auto w-full max-w-7xl space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-950">Mistake Notebook</h1>
-          <p className="mt-2 text-base text-slate-600">
-            {totalMissed} questions are waiting for review across {topicsCount}{" "}
-            topics.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {summaryStats.map((stat) => (
-            <div
-              className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
-              key={stat.label}
-            >
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                {stat.label}
-              </p>
-              <p className="mt-1 truncate text-xl font-bold text-slate-950">
-                {stat.value}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-950">
-              Missed by Topic
-            </h2>
-            <p className="text-xs font-semibold text-slate-400">
-              Accuracy over the last 30 days
-            </p>
-          </div>
-
-          <ul className="divide-y divide-slate-100">
-            {mistakeTopics.map((topic) => (
-              <li
-                className="grid gap-3 py-5 sm:grid-cols-[1fr_auto] sm:items-center"
-                key={topic.topic}
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-slate-900">{topic.topic}</p>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                      {topic.sectionLabel}
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-xs text-slate-500">
-                    {topic.missedCount} missed · last missed {topic.lastMissed}
-                  </p>
-                  <div className="mt-2.5 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className={`h-full rounded-full ${getAccuracyColor(topic.accuracy)}`}
-                      style={{ width: `${topic.accuracy}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-start gap-3 sm:justify-end">
-                  <span className="text-sm font-semibold text-slate-500">
-                    {topic.accuracy}%
-                  </span>
-                  <Link
-                    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold !text-white shadow-sm transition hover:bg-blue-700"
-                    href={getMistakePracticeHref(topic)}
-                  >
-                    Review {topic.missedCount}
-                  </Link>
-                </div>
+    <main className="mx-auto max-w-5xl space-y-4">
+      <PageHeading eyebrow="Targeted review" title="Mistake Notebook" description="Review questions from your saved attempts whose latest answer was incorrect." />
+      {loading ? <p className="hub-card p-5 text-sm text-slate-600" role="status">Loading your mistakes…</p> : !userId ? (
+        <section className="hub-card flex flex-col items-start gap-3 p-5">
+          <span className="hub-icon"><NotebookPen size={18} aria-hidden="true" /></span>
+          <h2 className="font-semibold text-slate-950">Make mistakes part of your practice</h2>
+          <p className="text-sm text-slate-600">Sign in to see questions you missed across practice and tests.</p>
+          <Link className="hub-primary" href="/auth">Sign in</Link>
+        </section>
+      ) : current?.groups === null ? (
+        <p className="hub-card p-5 text-sm text-slate-600" role="status">Could not load saved mistakes. <button className="cursor-pointer underline" onClick={() => setRetry((value) => value + 1)} type="button">Retry</button></p>
+      ) : current?.groups.length ? (
+        <section className="hub-card p-5">
+          <h2 className="hub-section-title">Missed by skill</h2>
+          <ul className="mt-2 divide-y divide-slate-200">
+            {current.groups.map(({ section, topic, count }) => (
+              <li className="flex flex-wrap items-center justify-between gap-2 py-3" key={`${section}:${topic}`}>
+                <div><p className="font-semibold text-slate-950">{topic}</p><p className="text-sm text-slate-600">{formatSection(section)} · {count} to review</p></div>
+                <Link className="hub-primary" href={`/question-bank/practice?${new URLSearchParams({ section, topics: topic, review: "missed" })}`}>Review {count}</Link>
               </li>
             ))}
           </ul>
         </section>
-      </div>
-    </StudentShell>
+      ) : (
+        <section className="hub-card p-5">
+          <span className="hub-icon"><BookOpen size={18} aria-hidden="true" /></span>
+          <h2 className="mt-3 font-semibold text-slate-950">No missed questions to review</h2>
+          <Link className="hub-primary mt-3" href="/question-bank">Open Question Bank</Link>
+        </section>
+      )}
+    </main>
   );
 }

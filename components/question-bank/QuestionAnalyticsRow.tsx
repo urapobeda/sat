@@ -1,4 +1,4 @@
-import { Bookmark, CheckCircle2, Flame, PieChart, type LucideIcon } from "lucide-react";
+import { Bookmark, CheckCircle2, PieChart, type LucideIcon } from "lucide-react";
 
 type AnalyticsStat = {
   icon: LucideIcon;
@@ -9,13 +9,11 @@ type AnalyticsStat = {
 export function QuestionAnalyticsRow({
   accuracyPercent,
   attempted,
-  saved,
-  streak
+  saved
 }: {
   accuracyPercent: number | null;
   attempted: number;
   saved: number;
-  streak: number;
 }) {
   const stats: AnalyticsStat[] = [
     {
@@ -32,16 +30,11 @@ export function QuestionAnalyticsRow({
       icon: Bookmark,
       label: "Saved Questions",
       value: saved.toLocaleString()
-    },
-    {
-      icon: Flame,
-      label: "Study Streak",
-      value: String(streak)
     }
   ];
 
   return (
-    <div className="grid gap-4 overflow-hidden rounded-3xl border border-slate-200 bg-white sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-slate-100">
+    <div className="hub-card grid gap-2 overflow-hidden sm:grid-cols-3 sm:divide-x sm:divide-slate-100">
       {stats.map((stat) => {
         const Icon = stat.icon;
 

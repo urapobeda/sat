@@ -249,15 +249,14 @@ export function StudyPlanPage() {
 
   return (
     <Layout active="study-plan">
-      <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-violet-50/60 p-6 shadow-soft sm:p-8">
-        <div className="absolute right-8 top-8 hidden h-20 w-20 rounded-3xl bg-white/70 shadow-lg shadow-blue-900/10 lg:block" />
+      <section className="hub-card relative overflow-hidden p-5 sm:p-7">
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-600">
               Study Plan
             </p>
-            <h1 className="mt-3 text-4xl font-black leading-tight text-slate-950 sm:text-5xl">
-              Personalized SAT Prep Dashboard
+            <h1 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl">
+              Your SAT study plan
             </h1>
             <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
               Your weekly goals, countdown, recommendations, and calendar adapt

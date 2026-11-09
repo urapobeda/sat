@@ -291,3 +291,78 @@ a {
 /* KaTeX formulas follow the surrounding text size */
 .math-text .katex { font-size: 1.12em; }
 .math-text .katex-display { margin: 0.25em 0; }
+
+/* Shared SAT Hub 2.0 surfaces and navigation. */
+:root {
+  --hub-sidebar-width: 15rem;
+  --hub-navy: #101d36;
+  --hub-canvas: #f2f6fc;
+  --hub-card: #ffffff;
+  --hub-line: #dce6f4;
+  --hub-radius: 1.125rem;
+  --hub-shadow: 0 4px 14px rgb(19 48 93 / 5%);
+}
+.dark {
+  --hub-canvas: #0a1220;
+  --hub-card: #101d30;
+  --hub-line: #283b56;
+}
+.hub-shell { background: var(--hub-canvas); }
+.hub-sidebar, .hub-mobile-bar { background: var(--hub-navy); color: #f8fbff; }
+.hub-mobile-bar { padding: .55rem 1rem; }
+.hub-drawer {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: min(19rem, 88vw);
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  background: var(--hub-navy);
+}
+.hub-drawer::backdrop { background: rgb(8 18 36 / 62%); }
+.hub-nav-link {
+  display: flex;
+  align-items: center;
+  min-height: 2.35rem;
+  border-radius: .65rem;
+  color: #c3d1e6;
+  font-size: .8125rem;
+  font-weight: 550;
+}
+.hub-nav-link:hover, .hub-nav-link[aria-current="page"] { color: #fff; background: #243b60; }
+.hub-nav-link[aria-current="page"] { box-shadow: inset 2px 0 #65a5ff; }
+.hub-nav-button {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  cursor: pointer;
+  place-items: center;
+  border-radius: .6rem;
+  color: #d4e3fa;
+}
+.hub-nav-button:hover { background: #243b60; }
+.hub-nav-link:focus-visible, .hub-nav-button:focus-visible {
+  outline: 2px solid #a6cbff;
+  outline-offset: 2px;
+}
+.hub-card { background: var(--hub-card); border: 1px solid var(--hub-line); border-radius: var(--hub-radius); box-shadow: var(--hub-shadow); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+.hub-eyebrow { color: #275895; font-size: .7rem; font-weight: 750; letter-spacing: .15em; text-transform: uppercase; }
+.dark .hub-eyebrow { color: #a5c8fd; }
+.hub-section-title { color: var(--foreground); font-size: 1.15rem; font-weight: 700; letter-spacing: -.02em; }
+.hub-primary {
+  display: inline-flex; align-items: center; gap: .6rem; min-height: 2.65rem;
+  padding: .55rem 1rem; border-radius: .75rem; background: #1d5bd7;
+  color: #fff !important; font-size: .875rem; font-weight: 650;
+}
+.hub-primary:hover { background: #174cb8; }
+.hub-primary:focus-visible, .hub-resource-link:focus-visible { outline: 2px solid #3c82ee; outline-offset: 3px; }
+.hub-resource-link:hover { border-color: #8db8f0; }
+.hub-icon { display: grid; width: 2.4rem; height: 2.4rem; flex: none; place-items: center; border-radius: .7rem; background: #e7f1ff; color: #235fba; }
+.dark .hub-icon { background: #243c60; color: #b9d6ff; }
+.hub-text-link { color: #1d53b9 !important; }
+.dark .hub-text-link { color: #a9ccff !important; }

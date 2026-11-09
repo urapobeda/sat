@@ -32,6 +32,7 @@ export function QuestionBankPracticePage() {
   const section = parseSection(searchParams.get("section"));
   const difficultyParam = searchParams.get("difficulties") ?? searchParams.get("difficulty");
   const difficulties = useMemo(() => parseQuestionDifficulties(difficultyParam), [difficultyParam]);
+  const reviewMissed = searchParams.get("review") === "missed";
   const completion = parseQuestionCompletion(searchParams.get("completion"));
   const topic = searchParams.get("topic");
   const topicsParam = searchParams.get("topics");
@@ -116,12 +117,13 @@ export function QuestionBankPracticePage() {
 
       try {
         const userRequest = getCurrentUser().catch(() => null);
-        const progressRequest = completion === "all"
+        const progressRequest = completion === "all" && !reviewMissed
           ? Promise.resolve(null)
           : userRequest.then((user) => user ? getQuestionProgressLookup(user.id) : null);
 
         const questionsRequest = Promise.all([getQuestionCatalog(), progressRequest]).then(async ([questions, progress]) => {
-          const matchingQuestions = filterQuestionCatalog(questions, { section, difficulties, topic, topics });
+          const eligible = reviewMissed ? questions.filter((question) => progress?.incorrectIds.has(question.id)) : questions;
+          const matchingQuestions = filterQuestionCatalog(eligible, { section, difficulties, topic, topics });
           const catalog = filterQuestionsByCompletion(matchingQuestions, completion, progress?.answeredIds ?? new Set<string>());
           const firstQuestions = await getQuestionDetails(catalog.slice(0, 5).map((q) => q.id));
           return { catalog, firstQuestions };
@@ -187,7 +189,7 @@ export function QuestionBankPracticePage() {
     return () => {
       isMounted = false;
     };
-  }, [completion, difficulties, section, topic, topics]);
+  }, [completion, difficulties, reviewMissed, section, topic, topics]);
 
   // Keep the next questions ready while the student works on the current one.
   useEffect(() => {
@@ -374,7 +376,7 @@ export function QuestionBankPracticePage() {
 
   const waitingForQuestion = isLoading || (!error && !isFinished && practiceQuestions.length > 0 && !currentQuestion);
   const activeQuestion = !waitingForQuestion && !error && !isFinished ? currentQuestion : undefined;
-  const backHref = section === "all" ? "/question-bank" : `/question-bank/${section}`;
+  const backHref = reviewMissed ? "/mistakes" : section === "all" ? "/question-bank" : `/question-bank/${section}`;
 
   return (
     <PracticeExam

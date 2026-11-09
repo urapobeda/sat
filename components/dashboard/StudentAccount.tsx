@@ -9,7 +9,7 @@ import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/c
 import { getProfile } from "@/lib/supabase/queries";
 import type { Profile } from "@/types/database";
 
-const StudentAccountContext = createContext<{ isLoading: boolean; name: string | null }>({
+const StudentAccountContext = createContext<{ isLoading: boolean; name: string | null; userId?: string }>({
   isLoading: false,
   name: null
 });
@@ -48,18 +48,22 @@ export function StudentAccountProvider({ children }: { children: ReactNode }) {
     : null;
 
   return (
-    <StudentAccountContext.Provider value={{ isLoading: configured && user === undefined, name }}>
+    <StudentAccountContext.Provider value={{ isLoading: configured && user === undefined, name, userId }}>
       {children}
     </StudentAccountContext.Provider>
   );
 }
 
-export function StudentGreeting({ greeting }: { greeting: string }) {
-  const { name } = useContext(StudentAccountContext);
-  return <>{greeting}{name ? `, ${name}` : ""}! 👋</>;
+export function useStudentAccount() {
+  return useContext(StudentAccountContext);
 }
 
-export function StudentAccount() {
+export function StudentGreeting({ greeting }: { greeting: string }) {
+  const { name } = useContext(StudentAccountContext);
+  return <>{greeting}{name ? `, ${name}` : ""}!</>;
+}
+
+export function StudentAccount({ compact = false }: { compact?: boolean }) {
   const { isLoading, name } = useContext(StudentAccountContext);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +79,14 @@ export function StudentAccount() {
     } finally {
       setIsSigningOut(false);
     }
+  }
+
+  if (compact) {
+    return (
+      <Link aria-label={name ? "My progress" : "Sign in"} className="grid size-9 place-items-center rounded-xl bg-blue-600 !text-white" href={name ? "/progress" : "/auth"} title={name ?? "Sign in"}>
+        <BearIcon size={20} />
+      </Link>
+    );
   }
 
   return (

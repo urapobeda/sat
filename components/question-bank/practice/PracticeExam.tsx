@@ -7,6 +7,7 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
+import { confirmLeavingStudy, StudentShell } from "@/components/dashboard/StudentShell";
 import { QuestionNavigator } from "@/components/question-bank/practice/QuestionNavigator";
 import { Highlightable } from "@/components/quiz/Highlightable";
 import { MathText } from "@/components/quiz/MathText";
@@ -119,10 +120,11 @@ export function PracticeExam({
   const isMarked = marked.includes(currentIndex);
 
   return (
-    <main aria-label="Practice Mode" className="flex h-dvh min-h-0 flex-col bg-white text-slate-950">
+    <StudentShell active="question-bank" exam guardExit={Boolean(question)}>
+    <main aria-label="Practice Mode" className="flex h-full min-h-0 flex-col bg-white text-slate-950">
       <header className="relative z-20 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-slate-200 px-2 py-1.5 sm:gap-4 sm:px-5">
         <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-0.5 text-sm font-medium text-slate-700 sm:gap-x-7">
-          <Link className="inline-flex items-center gap-1 whitespace-nowrap hover:text-slate-950" href={backHref}>
+          <Link className="inline-flex items-center gap-1 whitespace-nowrap hover:text-slate-950" href={backHref} onNavigate={(event) => { if (question && !confirmLeavingStudy()) event.preventDefault(); }}>
             <ChevronLeft size={16} aria-hidden="true" />
             Go back
           </Link>
@@ -313,5 +315,6 @@ export function PracticeExam({
         </>
       ) : null)}
     </main>
+    </StudentShell>
   );
 }

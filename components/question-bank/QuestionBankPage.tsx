@@ -53,10 +53,6 @@ const SECTIONS = [
   }
 ];
 
-// Study streak is not tracked anywhere yet (no daily-activity table in
-// Supabase), so it is shown as a static placeholder.
-const STUDY_STREAK_PLACEHOLDER = 0;
-
 const DIFFICULTIES = [
   { key: "easy" as const, label: "Easy" },
   { key: "medium" as const, label: "Medium" },
@@ -233,14 +229,14 @@ export function QuestionBankPage({ initialCatalog = null }: { initialCatalog?: Q
   return (
     <StudentShell active="question-bank">
       <section className="mx-auto w-full max-w-7xl space-y-5">
-        <section className="relative overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-violet-50 via-indigo-50 to-white p-6 shadow-sm sm:p-8">
+        <section className="hub-card relative overflow-hidden p-5 sm:p-7">
           <div className="relative z-10 flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
             <div>
               <div className="flex items-center gap-3">
                 <span className="text-blue-600">
                   <BookOpen size={24} />
                 </span>
-                <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+                <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
                   Question Bank
                 </h1>
               </div>
@@ -299,7 +295,6 @@ export function QuestionBankPage({ initialCatalog = null }: { initialCatalog?: Q
                 accuracyPercent={accuracyPercent}
                 attempted={progress.answeredIds.size}
                 saved={markedQuestionIds.size}
-                streak={STUDY_STREAK_PLACEHOLDER}
               />
             </div>
 

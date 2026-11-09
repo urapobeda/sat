@@ -112,6 +112,7 @@ export function SchedulePage() {
       <div className="mx-auto w-full max-w-7xl space-y-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-950">Schedule</h1>
+          <p className="mt-2 text-sm font-medium text-slate-600">Sample workspace · personal data is not connected.</p>
           <p className="mt-2 text-base text-slate-600">
             Your upcoming and past lessons with your teacher.
           </p>

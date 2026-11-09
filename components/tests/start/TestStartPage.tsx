@@ -13,10 +13,12 @@ import {
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { z } from "zod";
 import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
 import { EmptyState } from "@/components/EmptyState";
-import { Layout } from "@/components/Layout";
+import { confirmLeavingStudy, StudentShell } from "@/components/dashboard/StudentShell";
+import { QuestionNavigator } from "@/components/question-bank/practice/QuestionNavigator";
 import { ProgressBar } from "@/components/quiz/ProgressBar";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
 import { ReviewAnswers } from "@/components/quiz/ReviewAnswers";
@@ -24,6 +26,7 @@ import { Timer, formatTime } from "@/components/quiz/Timer";
 import {
   createTestSession,
   getCurrentUser,
+  getQuestionDetails,
   getRandomQuestions
 } from "@/lib/supabase/queries";
 import { getSupabaseAuthHeaders } from "@/lib/supabase/authHeaders";
@@ -40,6 +43,29 @@ type TestCompletionResult = {
   total: number;
 };
 
+const EMPTY_TEST_FEEDBACK = {};
+const draftSchema = z.object({
+  questions: z.array(z.uuid()).min(1).max(TEST_QUESTION_LIMIT),
+  sessionId: z.uuid().nullable(),
+  endsAt: z.number().positive(),
+  answers: z.record(z.uuid(), z.string().max(500)),
+  flags: z.record(z.uuid(), z.boolean()),
+  index: z.number().int().min(0).max(TEST_QUESTION_LIMIT - 1)
+});
+
+function draftKey(userId?: string) {
+  return `sat-hub-test-draft-v1:${userId ?? "guest"}`;
+}
+
+function readDraft(key: string) {
+  try {
+    const parsed = draftSchema.safeParse(JSON.parse(window.sessionStorage.getItem(key) ?? "null"));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
 export function TestStartPage() {
   const [testQuestions, setTestQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -47,6 +73,7 @@ export function TestStartPage() {
   const [flaggedQuestions, setFlaggedQuestions] = useState<Record<string, boolean>>({});
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [testSessionId, setTestSessionId] = useState<string | null>(null);
+  const [endsAt, setEndsAt] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(TEST_DURATION_SECONDS);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingResult, setIsSavingResult] = useState(false);
@@ -56,7 +83,9 @@ export function TestStartPage() {
   const [persistenceMessage, setPersistenceMessage] = useState<string | null>(null);
   const [reviewQuestion, setReviewQuestion] = useState<ReviewQuestion | null>(null);
   const [completionResult, setCompletionResult] = useState<TestCompletionResult | null>(null);
+  const submitDialog = useRef<HTMLDialogElement>(null);
   const hasSaved = useRef(false);
+  const expirySubmitted = useRef(false);
 
   const currentQuestion = testQuestions[currentIndex];
   const selectedAnswer = currentQuestion ? answers[currentQuestion.id] ?? null : null;
@@ -77,34 +106,34 @@ export function TestStartPage() {
       setReviewQuestion(null);
 
       try {
-        const [loadedQuestions, user] = await Promise.all([
-          getRandomQuestions(TEST_QUESTION_LIMIT),
-          getCurrentUser().catch(() => null)
-        ]);
-
-        if (!isMounted) {
-          return;
+        const user = await getCurrentUser().catch(() => null);
+        if (!isMounted) return;
+        const draft = readDraft(draftKey(user?.id));
+        const loadedQuestions = draft ? await getQuestionDetails(draft.questions) : await getRandomQuestions(TEST_QUESTION_LIMIT);
+        if (!isMounted) return;
+        if (draft && loadedQuestions.length !== draft.questions.length) {
+          throw new Error("Some saved test questions are unavailable. The draft is still saved.");
         }
 
+        let sessionId = draft?.sessionId ?? null;
+        if (!draft && user && loadedQuestions.length > 0) {
+          const session = await createTestSession({ mode: "full", total: loadedQuestions.length, user_id: user.id });
+          sessionId = session.id;
+        }
+        if (!isMounted) return;
+
+        const deadline = draft?.endsAt ?? Date.now() + TEST_DURATION_SECONDS * 1000;
         setTestQuestions(loadedQuestions);
         setCurrentUser(user);
-
-        if (!user) {
-          setPersistenceMessage("Guest mode: sign in to save this test result.");
-          return;
+        setTestSessionId(sessionId);
+        setEndsAt(deadline);
+        setRemainingSeconds(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
+        if (draft) {
+          setAnswers(draft.answers);
+          setFlaggedQuestions(draft.flags);
+          setCurrentIndex(Math.min(draft.index, loadedQuestions.length - 1));
         }
-
-        if (loadedQuestions.length > 0) {
-          const session = await createTestSession({
-            mode: "full",
-            total: loadedQuestions.length,
-            user_id: user.id
-          });
-
-          if (isMounted) {
-            setTestSessionId(session.id);
-          }
-        }
+        if (!user) setPersistenceMessage("Guest mode: sign in to save this test result.");
       } catch (requestError) {
         if (isMounted) {
           setError(
@@ -127,29 +156,41 @@ export function TestStartPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (isFinished || isLoading || testQuestions.length === 0) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      setRemainingSeconds((seconds) => {
-        if (seconds <= 1) {
-          window.setTimeout(() => {
-            finishTest(true);
-          }, 0);
-          return 0;
-        }
-
-        return seconds - 1;
-      });
-    }, 1000);
-
-    return () => window.clearInterval(timer);
+  const submitOnExpiry = useEffectEvent(() => {
+    if (expirySubmitted.current) return;
+    submitDialog.current?.close();
+    expirySubmitted.current = true;
+    void finishTest(true);
   });
 
+  useEffect(() => {
+    if (isFinished || isLoading || endsAt === null || !testQuestions.length) return;
+
+    const deadline = endsAt;
+    function updateTimer() {
+      const seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setRemainingSeconds(seconds);
+      if (seconds === 0) submitOnExpiry();
+    }
+
+    const timer = window.setInterval(updateTimer, 250);
+    return () => window.clearInterval(timer);
+  }, [endsAt, isFinished, isLoading, testQuestions.length]);
+
+  useEffect(() => {
+    if (isFinished || isLoading || endsAt === null || !testQuestions.length) return;
+    try {
+      window.sessionStorage.setItem(draftKey(currentUser?.id), JSON.stringify({
+        questions: testQuestions.map((question) => question.id),
+        sessionId: testSessionId, endsAt, answers, flags: flaggedQuestions, index: currentIndex
+      }));
+    } catch {
+      // The test remains usable when browser storage is unavailable.
+    }
+  }, [answers, currentIndex, currentUser?.id, endsAt, flaggedQuestions, isFinished, isLoading, testQuestions, testSessionId]);
+
   function selectAnswer(choice: string) {
-    if (!currentQuestion) {
+    if (!currentQuestion || remainingSeconds === 0 || hasSaved.current) {
       return;
     }
 
@@ -183,7 +224,8 @@ export function TestStartPage() {
 
     hasSaved.current = true;
     setIsSavingResult(true);
-    const spentSeconds = expired ? TEST_DURATION_SECONDS : timeSpent;
+    const secondsUntilDeadline = endsAt === null ? remainingSeconds : Math.ceil((endsAt - Date.now()) / 1000);
+    const spentSeconds = expired ? TEST_DURATION_SECONDS : TEST_DURATION_SECONDS - Math.min(TEST_DURATION_SECONDS, Math.max(0, secondsUntilDeadline));
 
     try {
       const authHeaders = currentUser ? await getSupabaseAuthHeaders() : {};
@@ -210,6 +252,11 @@ export function TestStartPage() {
       }
 
       setCompletionResult((await response.json()) as TestCompletionResult);
+      try {
+        window.sessionStorage.removeItem(draftKey(currentUser?.id));
+      } catch {
+        // Storage can be unavailable.
+      }
     } catch {
       hasSaved.current = false;
       setPersistenceMessage("The test could not be submitted. Please try again.");
@@ -222,22 +269,25 @@ export function TestStartPage() {
     setIsFinished(true);
   }
 
+  const activeTest = !isLoading && !isFinished && testQuestions.length > 0;
   return (
-    <Layout active="tests">
-      <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-white p-6 shadow-soft sm:p-8">
+    <StudentShell active="tests" exam guardExit={activeTest}>
+    <main className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
+      <section className="hub-card p-4 sm:p-5">
         <Link
           className="inline-flex items-center gap-2 text-sm font-black text-blue-600 transition hover:text-blue-700"
           href="/tests"
+          onNavigate={(event) => { if (activeTest && !confirmLeavingStudy()) event.preventDefault(); }}
         >
           <ArrowLeft size={17} />
           Back to Tests
         </Link>
-        <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-4xl font-black leading-tight text-slate-950 sm:text-5xl">
-              Full SAT Test
+            <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950 sm:text-3xl">
+              Timed SAT Practice
             </h1>
-            <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
               Work through a randomized SAT-style test. Answers and explanations
               unlock after you submit.
             </p>
@@ -359,6 +409,10 @@ export function TestStartPage() {
       ) : currentQuestion ? (
         <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-5">
+            <div className="hub-card flex flex-wrap items-center justify-between gap-3 p-3">
+              <QuestionNavigator currentIndex={currentIndex} disabled={isSavingResult} feedback={EMPTY_TEST_FEEDBACK} answers={answers} marked={testQuestions.flatMap((question, index) => flaggedQuestions[question.id] ? [index] : [])} onShowQuestion={setCurrentIndex} position="below" questions={testQuestions} />
+              <span className="text-sm font-medium text-slate-600">{answeredCount} answered · {flaggedCount} marked for review</span>
+            </div>
             <QuestionCard
               currentIndex={currentIndex}
               mode="test"
@@ -396,7 +450,7 @@ export function TestStartPage() {
               <button
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-5 py-3 text-sm font-black text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                 disabled={isSavingResult}
-                onClick={() => finishTest(false)}
+                onClick={() => submitDialog.current?.showModal()}
                 type="button"
               >
                 {isSavingResult ? <Loader2 className="animate-spin" size={17} /> : <Send size={17} />}
@@ -475,7 +529,21 @@ export function TestStartPage() {
           </aside>
         </section>
       ) : null}
-    </Layout>
+      <dialog aria-labelledby="test-submit-title" className="hub-card m-auto w-[min(28rem,calc(100%-2rem))] p-5 text-slate-950 backdrop:bg-slate-950/60 sm:p-6" ref={submitDialog}>
+        <h2 className="hub-section-title" id="test-submit-title">Submit your test?</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          You answered {answeredCount} of {testQuestions.length} questions. Your answers will be locked when you submit.
+        </p>
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <button className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100" onClick={() => submitDialog.current?.close()} type="button">Keep working</button>
+          <button className="hub-primary cursor-pointer" onClick={() => {
+            submitDialog.current?.close();
+            void finishTest(remainingSeconds === 0);
+          }} type="button">Submit answers</button>
+        </div>
+      </dialog>
+    </main>
+    </StudentShell>
   );
 }
 
