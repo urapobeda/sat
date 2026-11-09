@@ -20,13 +20,13 @@ export function DifficultyTabs({
 
   if (multiple) {
     return (
-      <fieldset className="flex w-full flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm xl:w-auto">
+      <fieldset className="space-y-1">
         <legend className="sr-only">Difficulty levels</legend>
         {items.map((item) => (
-          <label key={item.value} className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+          <label key={item.value} className="flex min-h-11 cursor-pointer items-center gap-4 rounded-lg px-2 text-sm font-medium text-slate-900 hover:bg-slate-50">
             <input
               checked={item.value === "all" ? allSelected : value.includes(item.value)}
-              className="h-4 w-4 accent-blue-600"
+              className="h-5 w-5 accent-blue-600"
               onChange={() => onChange(toggleQuestionDifficulty(value, item.value))}
               type="checkbox"
             />

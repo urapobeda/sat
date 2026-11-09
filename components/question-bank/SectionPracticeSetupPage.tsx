@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { StudentShell } from "@/components/dashboard/StudentShell";
+import { ReadingQuestionFilters } from "@/components/question-bank/ReadingQuestionFilters";
 import { DifficultyTabs } from "@/components/question-bank/DifficultyTabs";
 import { ProgressMeter } from "@/components/question-bank/ProgressMeter";
 import {
@@ -15,7 +16,7 @@ import {
   type QuestionProgressLookup
 } from "@/lib/questionBankStructure";
 import { normalizeTopic } from "@/lib/questions";
-import { filterQuestionCatalog, QUESTION_DIFFICULTIES } from "@/lib/questionBankFilters";
+import { filterQuestionCatalog, filterQuestionsByCompletion, QUESTION_DIFFICULTIES, type QuestionCompletion } from "@/lib/questionBankFilters";
 import {
   getCurrentUser,
   getQuestionProgressLookup,
@@ -42,6 +43,8 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
   const sectionTitle = SECTION_TITLES[sectionKey];
 
   const [difficultyFilter, setDifficultyFilter] = useState<QuestionDifficulty[]>([...QUESTION_DIFFICULTIES]);
+  const [completion, setCompletion] = useState<QuestionCompletion>("all");
+  const [isProgressReady, setIsProgressReady] = useState(false);
   const [questions, setQuestions] = useState<QuestionSummary[]>(() => (initialCatalog ?? []).filter((q) => q.section === sectionKey));
   const [progress, setProgress] = useState<QuestionProgressLookup>(EMPTY_PROGRESS);
   const [selectedTopics, setSelectedTopics] = useState<Set<string>>(new Set());
@@ -54,6 +57,7 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
     async function load() {
       setIsLoading(initialCatalog === null);
       setError(null);
+      setIsProgressReady(false);
 
       try {
         const userRequest = getCurrentUser().catch(() => null);
@@ -69,15 +73,11 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
         const user = await userRequest;
         if (!isMounted) return;
 
-        if (!user) {
-          setProgress(EMPTY_PROGRESS);
-          return;
-        }
-
-        const loadedProgress = await getQuestionProgressLookup(user.id);
+        const loadedProgress = user ? await getQuestionProgressLookup(user.id) : EMPTY_PROGRESS;
 
         if (isMounted) {
           setProgress(loadedProgress);
+          setIsProgressReady(true);
         }
       } catch (requestError) {
         if (isMounted) {
@@ -101,26 +101,26 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
     };
   }, [sectionKey, initialCatalog]);
 
-  const difficultyQuestions = useMemo(
-    () =>
-      filterQuestionCatalog(questions, { section: sectionKey, difficulties: difficultyFilter }),
-    [questions, difficultyFilter, sectionKey]
-  );
+  const filteredQuestions = useMemo(() => {
+    if (completion !== "all" && !isProgressReady) return [];
+    const matchingQuestions = filterQuestionCatalog(questions, { section: sectionKey, difficulties: difficultyFilter });
+    return filterQuestionsByCompletion(matchingQuestions, completion, progress.answeredIds);
+  }, [questions, difficultyFilter, sectionKey, completion, isProgressReady, progress]);
 
   const categories = getCategoriesForSection(sectionKey);
   const selectedCount = selectedTopics.size;
 
   const selectedQuestions = useMemo(() => {
     if (selectedCount === 0) {
-      return difficultyQuestions;
+      return filteredQuestions;
     }
 
-    return difficultyQuestions.filter((question) =>
+    return filteredQuestions.filter((question) =>
       Array.from(selectedTopics).some((topicTitle) =>
         questionMatchesSubtopic(question, topicTitle)
       )
     );
-  }, [difficultyQuestions, selectedCount, selectedTopics]);
+  }, [filteredQuestions, selectedCount, selectedTopics]);
   const selectedStats = getQuestionGroupStats(selectedQuestions, progress);
 
   function toggleTopic(topicTitle: string) {
@@ -147,6 +147,8 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
       params.set("difficulties", difficultyFilter.join(","));
     }
 
+    if (completion !== "all") params.set("completion", completion);
+
     if (selectedCount > 0) {
       params.set(
         "topics",
@@ -157,7 +159,7 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
     }
 
     return `/question-bank/practice?${params.toString()}`;
-  }, [sectionKey, difficultyFilter, selectedCount, selectedTopics]);
+  }, [sectionKey, difficultyFilter, completion, selectedCount, selectedTopics]);
 
   useEffect(() => {
     if (isLoading || !selectedQuestions.length) return;
@@ -190,8 +192,17 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
           </h1>
         </div>
 
-        <DifficultyTabs multiple={sectionKey === "reading-writing"} onChange={setDifficultyFilter} value={difficultyFilter} />
-        {sectionKey === "reading-writing" ? <p className="text-xs text-slate-500">Choose one or more difficulty levels.</p> : null}
+        {sectionKey === "reading-writing" ? (
+          <ReadingQuestionFilters
+            completion={completion}
+            difficulties={difficultyFilter}
+            onCompletionChange={setCompletion}
+            onDifficultyChange={setDifficultyFilter}
+            isProgressReady={isProgressReady}
+          />
+        ) : (
+          <DifficultyTabs onChange={setDifficultyFilter} value={difficultyFilter} />
+        )}
 
         <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -201,9 +212,11 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
                 : "Practice all topics"}
             </p>
             <p className="mt-1 text-sm text-slate-500">
-              {selectedCount > 0
-                ? `${selectedStats.totalQuestions.toLocaleString("en-US")} questions in the selected topics.`
-                : `Start practicing all ${categories.length} skills in ${sectionTitle}.`}
+              {sectionKey === "reading-writing"
+                ? `${selectedStats.totalQuestions.toLocaleString("en-US")} questions match your selection.`
+                : selectedCount > 0
+                  ? `${selectedStats.totalQuestions.toLocaleString("en-US")} questions in the selected topics.`
+                  : `Start practicing all ${categories.length} skills in ${sectionTitle}.`}
             </p>
           </div>
           <button
@@ -236,7 +249,7 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
 
                 <div className="mt-3 space-y-1">
                   {category.subtopics.map((subtopic) => {
-                    const subtopicQuestions = difficultyQuestions.filter(
+                    const subtopicQuestions = filteredQuestions.filter(
                       (question) =>
                         questionMatchesSubtopic(question, subtopic.title)
                     );
@@ -254,7 +267,7 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
                       <label
                         className={[
                           "grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 rounded-xl px-2 py-2.5 transition",
-                          stats.totalQuestions > 0
+                          checked || stats.totalQuestions > 0
                             ? "cursor-pointer hover:bg-slate-50"
                             : "cursor-not-allowed opacity-50"
                         ].join(" ")}
@@ -263,7 +276,7 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
                         <input
                           checked={checked}
                           className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                          disabled={stats.totalQuestions === 0}
+                          disabled={!checked && stats.totalQuestions === 0}
                           onChange={() => toggleTopic(subtopic.title)}
                           type="checkbox"
                         />

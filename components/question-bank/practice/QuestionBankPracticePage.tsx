@@ -17,7 +17,7 @@ import { Layout } from "@/components/Layout";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
 import { ResultsCard } from "@/components/quiz/ResultsCard";
 import { Timer, formatTime } from "@/components/quiz/Timer";
-import { filterQuestionCatalog, parseQuestionDifficulties } from "@/lib/questionBankFilters";
+import { filterQuestionCatalog, filterQuestionsByCompletion, parseQuestionCompletion, parseQuestionDifficulties } from "@/lib/questionBankFilters";
 import {
   formatSection,
   getWeakTopics
@@ -26,13 +26,13 @@ import {
   createPracticeSession,
   getCurrentUser,
   getQuestionCatalog,
-  getQuestionDetails
+  getQuestionDetails,
+  getQuestionProgressLookup
 } from "@/lib/supabase/queries";
 import { getSupabaseAuthHeaders } from "@/lib/supabase/authHeaders";
 import { QuestionStopwatch } from "@/lib/practiceTiming";
 import type { User } from "@supabase/supabase-js";
 import type {
-  QuestionDifficulty,
   Question,
   QuestionSummary,
   QuestionFeedback,
@@ -44,6 +44,7 @@ export function QuestionBankPracticePage() {
   const section = parseSection(searchParams.get("section"));
   const difficultyParam = searchParams.get("difficulties") ?? searchParams.get("difficulty");
   const difficulties = useMemo(() => parseQuestionDifficulties(difficultyParam), [difficultyParam]);
+  const completion = parseQuestionCompletion(searchParams.get("completion"));
   const topic = searchParams.get("topic");
   const topicsParam = searchParams.get("topics");
   const topics = useMemo(
@@ -127,13 +128,19 @@ export function QuestionBankPracticePage() {
       hasSaved.current = false;
 
       try {
-        const [loadedQuestions, user] = await Promise.all([
-          loadQuestionsForPractice({ difficulties, section, topic, topics }).then(async (catalog) => {
-            const firstQuestions = await getQuestionDetails(catalog.slice(0, 5).map((q) => q.id));
-            return { catalog, firstQuestions };
-          }),
-          getCurrentUser().catch(() => null)
-        ]);
+        const userRequest = getCurrentUser().catch(() => null);
+        const progressRequest = completion === "all"
+          ? Promise.resolve(null)
+          : userRequest.then((user) => user ? getQuestionProgressLookup(user.id) : null);
+
+        const questionsRequest = Promise.all([getQuestionCatalog(), progressRequest]).then(async ([questions, progress]) => {
+          const matchingQuestions = filterQuestionCatalog(questions, { section, difficulties, topic, topics });
+          const catalog = filterQuestionsByCompletion(matchingQuestions, completion, progress?.answeredIds ?? new Set<string>());
+          const firstQuestions = await getQuestionDetails(catalog.slice(0, 5).map((q) => q.id));
+          return { catalog, firstQuestions };
+        });
+
+        const [loadedQuestions, user] = await Promise.all([questionsRequest, userRequest]);
 
         if (!isMounted) {
           return;
@@ -193,7 +200,7 @@ export function QuestionBankPracticePage() {
     return () => {
       isMounted = false;
     };
-  }, [difficulties, section, topic, topics]);
+  }, [completion, difficulties, section, topic, topics]);
 
   // Keep the next questions ready while the student works on the current one.
   useEffect(() => {
@@ -562,18 +569,4 @@ export function QuestionBankPracticePage() {
 
 function parseSection(value: string | null): SectionFilter {
   return value === "math" || value === "reading-writing" ? value : "all";
-}
-
-async function loadQuestionsForPractice({
-  difficulties,
-  section,
-  topic,
-  topics
-}: {
-  difficulties: QuestionDifficulty[];
-  section: SectionFilter;
-  topic: string | null;
-  topics: string[];
-}) {
-  return filterQuestionCatalog(await getQuestionCatalog(), { section, difficulties, topic, topics });
 }

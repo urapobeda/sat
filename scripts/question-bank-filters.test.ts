@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { filterQuestionCatalog, parseQuestionDifficulties, QUESTION_DIFFICULTIES, toggleQuestionDifficulty } from "../lib/questionBankFilters.ts";
+import { filterQuestionCatalog, filterQuestionsByCompletion, parseQuestionCompletion, parseQuestionDifficulties, QUESTION_DIFFICULTIES, toggleQuestionDifficulty } from "../lib/questionBankFilters.ts";
 import { getQuestionSubtopic } from "../lib/questionBankStructure.ts";
 import type { QuestionSummary } from "../types/sat.ts";
 
@@ -32,6 +32,13 @@ const catalog: QuestionSummary[] = [
 assert.deepEqual(filterQuestionCatalog(catalog, { section: "reading-writing", difficulties: ["medium", "hard"], topics: ["words-in-context"] }).map((q) => q.id), ["vocab-m", "vocab-h"]);
 assert.deepEqual(filterQuestionCatalog(catalog, { section: "reading-writing", difficulties: ["easy", "hard"], topics: ["words-in-context", "boundaries"] }).map((q) => q.id), ["vocab-e", "vocab-h", "boundaries"]);
 assert.deepEqual(filterQuestionCatalog(catalog, { section: "reading-writing", difficulties: ["medium"], topic: "text-structure-and-purpose" }).map((q) => q.id), ["structure"]);
+const answeredIds = new Set(["vocab-e", "vocab-h", "boundaries"]);
+const vocabulary = filterQuestionCatalog(catalog, { section: "reading-writing", difficulties: ["medium", "hard"], topics: ["words-in-context"] });
+assert.deepEqual(filterQuestionsByCompletion(vocabulary, parseQuestionCompletion("completed"), answeredIds).map((q) => q.id), ["vocab-h"]);
+assert.deepEqual(filterQuestionsByCompletion(vocabulary, parseQuestionCompletion("not-completed"), answeredIds).map((q) => q.id), ["vocab-m"]);
+assert.deepEqual(filterQuestionsByCompletion(vocabulary, "completed", new Set()), []);
+assert.deepEqual(filterQuestionsByCompletion(vocabulary, "not-completed", new Set()), vocabulary);
+assert.deepEqual(filterQuestionsByCompletion(vocabulary, parseQuestionCompletion("invalid"), answeredIds), vocabulary);
 const withLegacyAlias: QuestionSummary[] = [...catalog, { id: "structure-alias", section: "reading-writing", topic: "Text Structure", difficulty: "medium" }];
 assert.deepEqual(filterQuestionCatalog(withLegacyAlias, { section: "reading-writing", difficulties: ["medium"], topic: "text-structure-and-purpose" }).map((q) => q.id), ["structure"]);
 assert.deepEqual(filterQuestionCatalog(withLegacyAlias, { section: "reading-writing", difficulties: ["medium"], topics: ["text-structure-and-purpose"] }).map((q) => q.id), ["structure", "structure-alias"]);

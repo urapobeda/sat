@@ -343,18 +343,17 @@ export async function getIncorrectQuestionIds(userId: string) {
 
 export async function getQuestionProgressLookup(userId: string) {
   const supabase = getSupabaseBrowserClient();
-  const [practiceResult, testResult] = await Promise.all([
-    supabase
-      .from("practice_answers")
-      .select("question_id,is_correct,created_at")
-      .eq("user_id", userId)
-      .not("is_correct", "is", null),
-    supabase
-      .from("test_answers")
-      .select("question_id,is_correct,created_at")
-      .eq("user_id", userId)
-      .not("is_correct", "is", null)
-  ]);
+  const [practiceResult, testResult] = await Promise.all(
+    (["practice_answers", "test_answers"] as const).map((table) =>
+      loadQuestionPages((from, to, withCount) =>
+        supabase.from(table)
+          .select("question_id,is_correct,created_at", withCount ? { count: "exact" } : undefined)
+          .eq("user_id", userId)
+          .not("is_correct", "is", null)
+          .order("created_at").order("id").range(from, to)
+      )
+    )
+  );
 
   if (practiceResult.error || testResult.error) {
     throw new Error(

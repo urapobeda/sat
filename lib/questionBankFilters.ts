@@ -4,6 +4,21 @@ import type { QuestionDifficulty, QuestionSummary, SectionFilter } from "@/types
 
 export const QUESTION_DIFFICULTIES: QuestionDifficulty[] = ["easy", "medium", "hard"];
 
+export type QuestionCompletion = "all" | "completed" | "not-completed";
+
+export function parseQuestionCompletion(value: string | null): QuestionCompletion {
+  return value === "completed" || value === "not-completed" ? value : "all";
+}
+
+export function filterQuestionsByCompletion(
+  questions: QuestionSummary[],
+  completion: QuestionCompletion,
+  answeredIds: ReadonlySet<string>
+) {
+  if (completion === "all") return questions;
+  return questions.filter((question) => answeredIds.has(question.id) === (completion === "completed"));
+}
+
 export function parseQuestionDifficulties(value: string | null): QuestionDifficulty[] {
   const requested = new Set((value ?? "").toLowerCase().split(",").map((part) => part.trim()));
   const selected = QUESTION_DIFFICULTIES.filter((difficulty) => requested.has(difficulty));
