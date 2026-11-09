@@ -11,10 +11,10 @@ export function parseQuestionDifficulties(value: string | null): QuestionDifficu
 }
 
 export function toggleQuestionDifficulty(selected: QuestionDifficulty[], difficulty: QuestionDifficulty | "all"): QuestionDifficulty[] {
-  if (difficulty === "all") return [...QUESTION_DIFFICULTIES];
-  if (selected.length === QUESTION_DIFFICULTIES.length) return [difficulty];
-  const next = QUESTION_DIFFICULTIES.filter((item) => item === difficulty ? !selected.includes(item) : selected.includes(item));
-  return next.length ? next : [...QUESTION_DIFFICULTIES];
+  if (difficulty === "all") {
+    return selected.length === QUESTION_DIFFICULTIES.length ? [] : [...QUESTION_DIFFICULTIES];
+  }
+  return QUESTION_DIFFICULTIES.filter((item) => item === difficulty ? !selected.includes(item) : selected.includes(item));
 }
 
 /** Shared by the setup counts, speculative preloading and the practice session. */

@@ -3,14 +3,16 @@ import { filterQuestionCatalog, parseQuestionDifficulties, QUESTION_DIFFICULTIES
 import { getQuestionSubtopic } from "../lib/questionBankStructure.ts";
 import type { QuestionSummary } from "../types/sat.ts";
 
-let selected = toggleQuestionDifficulty(QUESTION_DIFFICULTIES, "hard");
+assert.deepEqual(toggleQuestionDifficulty(QUESTION_DIFFICULTIES, "easy"), ["medium", "hard"]);
+assert.deepEqual(toggleQuestionDifficulty(QUESTION_DIFFICULTIES, "all"), []);
+let selected = toggleQuestionDifficulty([], "hard");
 assert.deepEqual(selected, ["hard"]);
 selected = toggleQuestionDifficulty(selected, "medium");
 assert.deepEqual(selected, ["medium", "hard"]);
 assert.deepEqual(toggleQuestionDifficulty(selected, "medium"), ["hard"]);
 assert.deepEqual(toggleQuestionDifficulty(selected, "easy"), QUESTION_DIFFICULTIES);
 assert.deepEqual(toggleQuestionDifficulty(["hard"], "easy"), ["easy", "hard"]);
-assert.deepEqual(toggleQuestionDifficulty(["hard"], "hard"), QUESTION_DIFFICULTIES);
+assert.deepEqual(toggleQuestionDifficulty(["hard"], "hard"), []);
 assert.deepEqual(toggleQuestionDifficulty(selected, "all"), QUESTION_DIFFICULTIES);
 assert.deepEqual(parseQuestionDifficulties("hard,medium,hard"), ["medium", "hard"]);
 assert.deepEqual(parseQuestionDifficulties("hard, easy"), ["easy", "hard"]);
