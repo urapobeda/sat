@@ -39,6 +39,17 @@ export type QuestionSolution = {
   updated_at: string;
 };
 
+export type QuestionReportReason = "incorrect_answer" | "typo" | "display" | "other";
+
+type QuestionReport = {
+  id: string;
+  question_id: string;
+  reporter_id: string;
+  reason: QuestionReportReason;
+  details: string;
+  created_at: string;
+};
+
 export type QuestionMark = {
   marked_at: string;
   question_id: string;
@@ -296,6 +307,12 @@ export type Database = {
         Relationships: [];
         Row: QuestionSolution;
         Update: Partial<QuestionSolution>;
+      };
+      question_reports: {
+        Row: QuestionReport;
+        Insert: Pick<QuestionReport, "question_id" | "reason"> & Partial<Pick<QuestionReport, "details">>;
+        Update: never;
+        Relationships: [];
       };
       question_marks: {
         Insert: Pick<QuestionMark, "question_id" | "user_id"> &

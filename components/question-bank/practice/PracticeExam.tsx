@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
 import { confirmLeavingStudy, StudentShell } from "@/components/dashboard/StudentShell";
+import { ReportQuestion } from "@/components/question-bank/practice/ReportQuestion";
 import { QuestionNavigator } from "@/components/question-bank/practice/QuestionNavigator";
 import { Highlightable } from "@/components/quiz/Highlightable";
 import { MathText } from "@/components/quiz/MathText";
@@ -56,6 +57,7 @@ export function PracticeExam({
   const [choiceDrafts, setChoiceDrafts] = useState<Record<string, string | null>>({});
   const [markedIds, setMarkedIds] = useState<Set<string>>(() => new Set());
   const [marksStatus, setMarksStatus] = useState<"loading" | "ready" | "saving">("loading");
+  const [marksReload, setMarksReload] = useState(0);
   const [marksError, setMarksError] = useState<string | null>(null);
   const marked = useMemo(() => questions.flatMap((item, index) => markedIds.has(item.id) ? [index] : []), [questions, markedIds]);
   const [openExplanationId, setOpenExplanationId] = useState<string | null>(null);
@@ -84,14 +86,17 @@ export function PracticeExam({
     if (!userId) return;
     let active = true;
     void getMarkedQuestionIds(userId).then((ids) => {
-      if (active) setMarkedIds(ids);
+      if (active) {
+        setMarkedIds(ids);
+        setMarksError(null);
+      }
     }).catch(() => {
       if (active) setMarksError("Saved review marks could not be loaded.");
     }).finally(() => {
       if (active) setMarksStatus("ready");
     });
     return () => { active = false; };
-  }, [userId]);
+  }, [userId, marksReload]);
 
   async function toggleMark() {
     if (!questionId) return;
@@ -228,7 +233,7 @@ export function PracticeExam({
                     </span>
                     <button
                       aria-pressed={isMarked}
-                      className="inline-flex min-h-10 items-center gap-2 px-3 text-sm font-medium hover:underline"
+                      className="inline-flex min-h-10 cursor-pointer items-center gap-2 px-3 text-sm font-medium hover:underline disabled:cursor-wait"
                       disabled={Boolean(userId) && marksStatus !== "ready"}
                       onClick={toggleMark}
                       type="button"
@@ -236,8 +241,18 @@ export function PracticeExam({
                       <Bookmark aria-hidden="true" className={isMarked ? "fill-amber-400 text-amber-700" : "text-slate-500"} size={16} />
                       Mark for Review
                     </button>
+                    <ReportQuestion isSignedIn={Boolean(userId)} key={question.id} questionId={question.id} />
                   </div>
-                  {marksError ? <p className="mt-2 text-sm text-amber-700" role="status">{marksError}</p> : null}
+                  {marksError ? (
+                    <p className="mt-2 text-sm text-amber-700" role="status">
+                      {marksError}{" "}
+                      <button className="cursor-pointer font-semibold underline" onClick={() => {
+                        setMarksStatus("loading");
+                        setMarksError(null);
+                        setMarksReload((value) => value + 1);
+                      }} type="button">Reload marks</button>
+                    </p>
+                  ) : null}
                   {prompt ? (
                     <Highlightable
                       className="mt-3 break-words font-serif text-[18px] leading-[1.5]"

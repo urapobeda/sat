@@ -16,6 +16,7 @@ const paths = [
   "study-plans.sql",
   "migrations/add_past_papers.sql",
   "fix-permissions.sql",
+  "migrations/practice_persistence_and_reports.sql",
   "migrations/finalize_verified_tests.sql"
 ];
 const uid = "00000000-0000-4000-8000-000000000001";
@@ -58,6 +59,10 @@ try {
   await assert.rejects(db.query("select explanation from public.question_solutions"), { code: "42501" });
   await db.query("insert into public.question_marks(user_id,question_id) values ($1,$2)", [uid, question]);
   await assert.rejects(db.query("insert into public.question_marks(user_id,question_id) values ($1,$2)", [other, question]), { code: "42501" });
+  await db.query("insert into public.question_reports(question_id,reason,details) values ($1,'typo','Fixture')", [question]);
+  await assert.rejects(db.query("insert into public.question_reports(question_id,reason) values ($1,'typo')", [question]), { code: "23505" });
+  await assert.rejects(db.query("insert into public.question_reports(question_id,reporter_id,reason) values ($1,$2,'typo')", [question, other]), { code: "42501" });
+  await assert.rejects(db.query("select * from public.question_reports"), { code: "42501" });
   await db.exec(`set request.jwt.claim.sub = '${other}';`);
   assert.equal((await db.query("select * from public.question_marks")).rows.length, 0);
   await db.exec(`set request.jwt.claim.sub = '${uid}';`);
@@ -80,6 +85,16 @@ try {
   assert.deepEqual((await db.query("select score, time_spent_seconds from public.test_sessions where id = $1", [session])).rows, [{ score: 1, time_spent_seconds: 40 }]);
   await db.exec(`reset role; set role authenticated; set request.jwt.claim.sub = '${other}';`);
   assert.equal((await db.query("select question_id from public.test_answers")).rows.length, 0);
+  await db.exec(`set request.jwt.claim.sub = '${uid}';`);
+  const practice = await db.query("insert into public.practice_sessions(user_id,total) values ($1,1) returning id", [uid]);
+  const practiceId = practice.rows[0].id;
+  await db.exec("reset role; set role service_role;");
+  assert.equal((await db.query("select user_id from public.practice_sessions where id = $1", [practiceId])).rows[0].user_id, uid);
+  await db.query("insert into public.practice_answers(session_id,user_id,question_id,is_correct,time_spent_seconds) values ($1,$2,$3,true,60) on conflict (session_id,question_id) do update set time_spent_seconds = excluded.time_spent_seconds", [practiceId, uid, question]);
+  await db.exec(`reset role; set role authenticated; set request.jwt.claim.sub = '${uid}';`);
+  assert.deepEqual((await db.query("select time_spent_seconds from public.practice_answers")).rows, [{ time_spent_seconds: 60 }]);
+  await db.exec(`set request.jwt.claim.sub = '${other}';`);
+  assert.equal((await db.query("select time_spent_seconds from public.practice_answers")).rows.length, 0);
   console.log("database audit: migrations, profile, bookmarking, RLS, and atomic grading passed");
 } finally {
   await db.close();
