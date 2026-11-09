@@ -229,6 +229,8 @@ export function getSubtopicForTopic(
     return match.subtopic;
   }
 
+  // A domain name or failed import is not evidence that a question is vocabulary.
+  if (section === "reading-writing") return { title: "Uncategorized", aliases: [] };
   return getCategoryForTopic(section, topic).subtopics[0];
 }
 
@@ -269,13 +271,14 @@ export function getMastery(stats: QuestionGroupStats) {
 }
 
 function getSubtopicMatch(section: Question["section"], topic: string) {
-  const normalizedTopic = normalize(topic);
+  const normalizeLabel = section === "reading-writing" ? normalizeVerbalTopic : normalize;
+  const normalizedTopic = normalizeLabel(topic);
   const categories = getCategoriesForSection(section);
 
   for (const category of categories) {
     for (const currentSubtopic of category.subtopics) {
       const labels = [currentSubtopic.title, ...currentSubtopic.aliases];
-      const hasMatch = labels.some((label) => normalize(label) === normalizedTopic);
+      const hasMatch = labels.some((label) => normalizeLabel(label) === normalizedTopic);
 
       if (hasMatch) {
         return { category, subtopic: currentSubtopic };
@@ -302,4 +305,8 @@ function subtopic(title: string, aliases: string[] = []): QuestionBankSubtopic {
 
 function normalize(value: string) {
   return value.toLowerCase().replace(/&/g, "and").replace(/\s+/g, " ").trim();
+}
+
+function normalizeVerbalTopic(value: string) {
+  return value.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, " ").trim();
 }

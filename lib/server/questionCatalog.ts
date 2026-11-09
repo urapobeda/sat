@@ -15,6 +15,8 @@ export async function getInitialQuestionCatalog(): Promise<QuestionSummary[] | n
     const supabase = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: {
+        // Bump after the verified verbal metadata repair to avoid old cached rows.
+        headers: { "x-sat-catalog-version": "verbal-topics-v2" },
         fetch: (input, init) => fetch(input, {
           ...init,
           cache: "force-cache",

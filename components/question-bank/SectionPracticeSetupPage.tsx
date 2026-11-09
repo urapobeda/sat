@@ -15,6 +15,7 @@ import {
   type QuestionProgressLookup
 } from "@/lib/questionBankStructure";
 import { normalizeTopic } from "@/lib/questions";
+import { filterQuestionCatalog, QUESTION_DIFFICULTIES } from "@/lib/questionBankFilters";
 import {
   getCurrentUser,
   getQuestionProgressLookup,
@@ -22,7 +23,7 @@ import {
   getQuestionDetails,
   primeQuestionCatalog
 } from "@/lib/supabase/queries";
-import type { DifficultyFilter, QuestionSummary } from "@/types/sat";
+import type { QuestionDifficulty, QuestionSummary } from "@/types/sat";
 
 const SECTION_TITLES: Record<"math" | "reading-writing", string> = {
   math: "Math",
@@ -40,7 +41,7 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
   const sectionKey = section === "math" ? "math" : "reading-writing";
   const sectionTitle = SECTION_TITLES[sectionKey];
 
-  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>("all");
+  const [difficultyFilter, setDifficultyFilter] = useState<QuestionDifficulty[]>([...QUESTION_DIFFICULTIES]);
   const [questions, setQuestions] = useState<QuestionSummary[]>(() => (initialCatalog ?? []).filter((q) => q.section === sectionKey));
   const [progress, setProgress] = useState<QuestionProgressLookup>(EMPTY_PROGRESS);
   const [selectedTopics, setSelectedTopics] = useState<Set<string>>(new Set());
@@ -102,11 +103,8 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
 
   const difficultyQuestions = useMemo(
     () =>
-      questions.filter(
-        (question) =>
-          difficultyFilter === "all" || question.difficulty === difficultyFilter
-      ),
-    [questions, difficultyFilter]
+      filterQuestionCatalog(questions, { section: sectionKey, difficulties: difficultyFilter }),
+    [questions, difficultyFilter, sectionKey]
   );
 
   const categories = getCategoriesForSection(sectionKey);
@@ -143,8 +141,10 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
     const params = new URLSearchParams();
     params.set("section", sectionKey);
 
-    if (difficultyFilter !== "all") {
-      params.set("difficulty", difficultyFilter);
+    if (difficultyFilter.length === 1) {
+      params.set("difficulty", difficultyFilter[0]);
+    } else if (difficultyFilter.length < QUESTION_DIFFICULTIES.length) {
+      params.set("difficulties", difficultyFilter.join(","));
     }
 
     if (selectedCount > 0) {
@@ -190,7 +190,8 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
           </h1>
         </div>
 
-        <DifficultyTabs onChange={setDifficultyFilter} value={difficultyFilter} />
+        <DifficultyTabs multiple={sectionKey === "reading-writing"} onChange={setDifficultyFilter} value={difficultyFilter} />
+        {sectionKey === "reading-writing" ? <p className="text-xs text-slate-500">Choose one or more difficulty levels.</p> : null}
 
         <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>

@@ -8,13 +8,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/adaptive-routing.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/sat-score-estimator.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/security-boundary.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/question-pagination.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/practice-timing.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/practice-answer-route.test.mjs",
+    "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/adaptive-routing.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/sat-score-estimator.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/security-boundary.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/question-pagination.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/practice-timing.test.ts && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/practice-answer-route.test.mjs && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/question-bank-filters.test.ts",
     "questions:extract-pdf": "python scripts/extract-question-bank-pdfs.py",
     "questions:import-supabase": "node scripts/import-questions-supabase.mjs",
     "questions:sql": "node scripts/generate-questions-sql.mjs",
     "questions:math-extract": "python scripts/extract-math-questions.py",
     "questions:math-convert": "node scripts/convert-math-questions.mjs",
-    "questions:flashsat-prepare": "node scripts/prepare-flashsat-math.mjs"
+    "questions:flashsat-prepare": "node scripts/prepare-flashsat-math.mjs",
+    "questions:repair-verbal-topics": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/repair-verbal-topics.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.107.0",

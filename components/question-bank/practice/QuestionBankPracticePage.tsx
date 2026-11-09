@@ -17,10 +17,9 @@ import { Layout } from "@/components/Layout";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
 import { ResultsCard } from "@/components/quiz/ResultsCard";
 import { Timer, formatTime } from "@/components/quiz/Timer";
-import { getQuestionSubtopic } from "@/lib/questionBankStructure";
+import { filterQuestionCatalog, parseQuestionDifficulties } from "@/lib/questionBankFilters";
 import {
   formatSection,
-  normalizeTopic,
   getWeakTopics
 } from "@/lib/questions";
 import {
@@ -33,7 +32,7 @@ import { getSupabaseAuthHeaders } from "@/lib/supabase/authHeaders";
 import { QuestionStopwatch } from "@/lib/practiceTiming";
 import type { User } from "@supabase/supabase-js";
 import type {
-  DifficultyFilter,
+  QuestionDifficulty,
   Question,
   QuestionSummary,
   QuestionFeedback,
@@ -43,7 +42,8 @@ import type {
 export function QuestionBankPracticePage() {
   const searchParams = useSearchParams();
   const section = parseSection(searchParams.get("section"));
-  const difficulty = parseDifficulty(searchParams.get("difficulty"));
+  const difficultyParam = searchParams.get("difficulties") ?? searchParams.get("difficulty");
+  const difficulties = useMemo(() => parseQuestionDifficulties(difficultyParam), [difficultyParam]);
   const topic = searchParams.get("topic");
   const topicsParam = searchParams.get("topics");
   const topics = useMemo(
@@ -128,7 +128,7 @@ export function QuestionBankPracticePage() {
 
       try {
         const [loadedQuestions, user] = await Promise.all([
-          loadQuestionsForPractice({ difficulty, section, topic, topics }).then(async (catalog) => {
+          loadQuestionsForPractice({ difficulties, section, topic, topics }).then(async (catalog) => {
             const firstQuestions = await getQuestionDetails(catalog.slice(0, 5).map((q) => q.id));
             return { catalog, firstQuestions };
           }),
@@ -169,7 +169,7 @@ export function QuestionBankPracticePage() {
     async function createSession(user: User, loadedQuestions: QuestionSummary[]) {
       try {
         const session = await createPracticeSession({
-          difficulty: difficulty === "all" ? null : difficulty,
+          difficulty: difficulties.length === 1 ? difficulties[0] : null,
           section: section === "all" ? null : section,
           topic: topics.length > 0 ? null : loadedQuestions[0]?.topic ?? topic,
           total: loadedQuestions.length,
@@ -193,7 +193,7 @@ export function QuestionBankPracticePage() {
     return () => {
       isMounted = false;
     };
-  }, [difficulty, section, topic, topics]);
+  }, [difficulties, section, topic, topics]);
 
   // Keep the next questions ready while the student works on the current one.
   useEffect(() => {
@@ -352,7 +352,7 @@ export function QuestionBankPracticePage() {
     setIsLoading(true);
     try {
       const session = await createPracticeSession({
-        difficulty: difficulty === "all" ? null : difficulty,
+        difficulty: difficulties.length === 1 ? difficulties[0] : null,
         section: section === "all" ? null : section,
         topic: practiceQuestions[0]?.topic ?? topic,
         total: practiceQuestions.length,
@@ -564,51 +564,16 @@ function parseSection(value: string | null): SectionFilter {
   return value === "math" || value === "reading-writing" ? value : "all";
 }
 
-function parseDifficulty(value: string | null): DifficultyFilter {
-  return value === "easy" || value === "medium" || value === "hard"
-    ? value
-    : "all";
-}
-
 async function loadQuestionsForPractice({
-  difficulty,
+  difficulties,
   section,
   topic,
   topics
 }: {
-  difficulty: DifficultyFilter;
+  difficulties: QuestionDifficulty[];
   section: SectionFilter;
   topic: string | null;
   topics: string[];
 }) {
-  const sectionQuestions = (await getQuestionCatalog()).filter((q) =>
-    (section === "all" || q.section === section) &&
-    (difficulty === "all" || q.difficulty === difficulty));
-  if (topics.length > 0) {
-    const normalizedTopics = new Set(topics.map((item) => normalizeTopic(item)));
-
-    return sectionQuestions.filter(
-      (question) =>
-        normalizedTopics.has(normalizeTopic(question.topic)) ||
-        normalizedTopics.has(normalizeTopic(getQuestionSubtopic(question)))
-    );
-  }
-
-  if (!topic) {
-    return sectionQuestions;
-  }
-
-  const loadedQuestions = sectionQuestions.filter((q) => normalizeTopic(q.topic) === normalizeTopic(topic));
-
-  if (loadedQuestions.length > 0) {
-    return loadedQuestions;
-  }
-
-  const normalizedTopic = normalizeTopic(topic);
-
-  return sectionQuestions.filter(
-    (question) =>
-      normalizeTopic(question.topic) === normalizedTopic ||
-      normalizeTopic(getQuestionSubtopic(question)) === normalizedTopic
-  );
+  return filterQuestionCatalog(await getQuestionCatalog(), { section, difficulties, topic, topics });
 }

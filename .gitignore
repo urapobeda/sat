@@ -15,3 +15,4 @@ pnpm-debug.log*
 
 # Math import working files (thousands of images; not for git)
 data/math/
+data/verbal/

@@ -292,7 +292,7 @@ def parse_question(
         "source_name": source_name,
         "section": section,
         "category": category or "",
-        "topic": normalize_topic_title(topic or category or "Uncategorized"),
+        "topic": normalize_topic_title(topic or (category if section != "reading-writing" else None) or "Uncategorized"),
         "difficulty": difficulty or "medium",
         "question": clean_text(question_text),
         "choices": choices,
@@ -309,27 +309,30 @@ def parse_question(
 
 def parse_metadata(text: str, section: str) -> tuple[str | None, str | None, str | None]:
     header = re.split(r"\nQuestion\n", text, maxsplit=1)[0]
+    header = normalize_space(fix_text(header))
+    compact_header = metadata_key(header)
     difficulty = next(
         (value for label, value in DIFFICULTIES.items() if re.search(rf"\b{label}\b", header)),
         None,
     )
 
     category = next(
-        (title for title in QUESTION_BANK_STRUCTURE[section] if title in header),
+        (title for title in QUESTION_BANK_STRUCTURE[section] if metadata_key(title) in compact_header),
         None,
     )
 
-    if not category:
-        return None, None, difficulty
+    for domain, topics in QUESTION_BANK_STRUCTURE[section].items():
+        if category and domain != category:
+            continue
+        for title in topics:
+            if metadata_key(title) in compact_header:
+                return domain, title, difficulty
+    return category, None, difficulty
 
-    known_topics = QUESTION_BANK_STRUCTURE[section][category]
-    normalized_header = normalize_space(header).lower()
-    topic = next(
-        (title for title in known_topics if title.lower() in normalized_header),
-        None,
-    )
 
-    return category, topic, difficulty
+def metadata_key(text: str) -> str:
+    # PDF header cells can wrap in the middle of a word (e.g. "Pur pose").
+    return re.sub(r"[^a-z0-9]", "", text.lower().replace("&", "and"))
 
 
 def parse_choices(answer_block: str) -> list[dict]:
@@ -452,6 +455,11 @@ def normalize_topic_title(text: str) -> str:
 
     if not text:
         return "Uncategorized"
+
+    for topics in QUESTION_BANK_STRUCTURE["reading-writing"].values():
+        for title in topics:
+            if metadata_key(title) == metadata_key(text):
+                return title
 
     words = {"and", "in", "of", "or", "the", "to"}
     return " ".join(
