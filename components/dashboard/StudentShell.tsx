@@ -8,9 +8,9 @@ import {
   FolderOpen,
   Home,
   NotebookPen,
-  Settings,
   Video
 } from "lucide-react";
+import { StudentAccount, StudentAccountProvider } from "@/components/dashboard/StudentAccount";
 import { BearIcon } from "@/components/dashboard/BearIcon";
 
 // Draft redesign — student/teacher workflow (homework, schedule, lesson
@@ -70,79 +70,71 @@ export function StudentShell({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="flex">
-        <aside className="hidden w-72 shrink-0 flex-col overflow-y-auto bg-slate-900 p-6 lg:sticky lg:top-0 lg:flex lg:h-screen">
-          <div className="flex items-center gap-3 px-1">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-950/40">
-              <BearIcon size={24} />
-            </span>
-            <div>
-              <p className="text-xl font-bold text-white">sat/hub</p>
-              <p className="text-xs font-semibold text-slate-400">
-                SAT · IELTS · English
-              </p>
+    <StudentAccountProvider>
+      <div className="min-h-screen bg-slate-50">
+        <header className="bg-slate-900 px-6 py-3 lg:hidden">
+          <StudentAccount />
+        </header>
+        <div className="flex">
+          <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto bg-slate-900 px-4 py-6 lg:sticky lg:top-0 lg:flex lg:h-screen">
+            <div className="flex items-center gap-3 px-1">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-950/40">
+                <BearIcon size={24} />
+              </span>
+              <div>
+                <p className="text-xl font-bold text-white">sat/hub</p>
+                <p className="text-xs font-semibold text-slate-400">
+                  SAT · IELTS · English
+                </p>
+              </div>
             </div>
-          </div>
 
-          <nav className="mt-8 space-y-1.5">
-            {sidebarNav.map((item) => {
-              const isActive = item.id === active;
+            <nav className="mt-8 space-y-1.5">
+              {sidebarNav.map((item) => {
+                const isActive = item.id === active;
 
-              return (
-                <Link
-                  className={[
-                    "flex items-center justify-between rounded-xl px-3.5 py-3 text-[15px] font-semibold transition",
-                    isActive
-                      ? "bg-blue-600 !text-white shadow-lg shadow-blue-950/30"
-                      : "!text-slate-300 hover:bg-white/5 hover:!text-white"
-                  ].join(" ")}
-                  href={item.href}
-                  key={item.id}
-                >
-                  <span className="flex items-center gap-3.5">
-                    <item.icon size={19} />
-                    {item.label}
-                  </span>
-                  {item.badge ? (
-                    <span
-                      className={[
-                        "rounded-full px-2 py-0.5 text-xs font-bold",
-                        item.badgeTone === "amber"
-                          ? "bg-amber-400/20 text-amber-300"
-                          : "bg-white/10 text-slate-300"
-                      ].join(" ")}
-                    >
-                      {item.badge}
+                return (
+                  <Link
+                    className={[
+                      "flex items-center justify-between rounded-xl px-2.5 py-3 text-[15px] font-semibold transition",
+                      isActive
+                        ? "bg-blue-600 !text-white shadow-lg shadow-blue-950/30"
+                        : "!text-slate-300 hover:bg-white/5 hover:!text-white"
+                    ].join(" ")}
+                    href={item.href}
+                    key={item.id}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <item.icon size={19} />
+                      {item.label}
                     </span>
-                  ) : null}
-                </Link>
-              );
-            })}
-          </nav>
+                    {item.badge ? (
+                      <span
+                        className={[
+                          "rounded-full px-2 py-0.5 text-xs font-bold",
+                          item.badgeTone === "amber"
+                            ? "bg-amber-400/20 text-amber-300"
+                            : "bg-white/10 text-slate-300"
+                        ].join(" ")}
+                      >
+                        {item.badge}
+                      </span>
+                    ) : null}
+                  </Link>
+                );
+              })}
+            </nav>
 
-          <div className="mt-auto flex items-center gap-3 border-t border-white/10 pt-5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
-              <BearIcon size={20} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-white">Aliya</p>
-              <p className="truncate text-xs text-slate-400">Student</p>
+            <div className="mt-auto border-t border-white/10 pt-5">
+              <StudentAccount />
             </div>
-            <button
-              aria-label="Settings"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
-              type="button"
-            >
-              <Settings size={18} />
-            </button>
-          </div>
-        </aside>
+          </aside>
 
-        <div className="flex-1 overflow-hidden p-6 sm:p-8 lg:p-10 xl:p-12">
-          {children}
+          <div className="flex-1 overflow-hidden p-6 sm:p-8 lg:p-10 xl:p-12">
+            {children}
+          </div>
         </div>
       </div>
-    </div>
+    </StudentAccountProvider>
   );
 }

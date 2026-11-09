@@ -3,13 +3,12 @@ import Link from "next/link";
 import { BearIcon } from "@/components/dashboard/BearIcon";
 import { HomeworkTable } from "@/components/dashboard/HomeworkTable";
 import { homeworkRows } from "@/components/dashboard/homeworkData";
+import { StudentGreeting } from "@/components/dashboard/StudentAccount";
 import { StudentShell } from "@/components/dashboard/StudentShell";
 
 // Draft redesign — student/teacher workflow (schedule, lesson recordings,
 // teacher comments) is not implemented in Supabase yet, so all content
 // below is placeholder data standing in for that future model.
-
-const STUDENT_NAME = "Aliya";
 
 const topStats = [
   { label: "SAT · Sat, Nov 7", value: "9 days" },
@@ -80,7 +79,7 @@ export function DashboardPage() {
               {getDateLine(now)}
             </p>
             <h1 className="mt-2 text-3xl font-bold text-slate-950">
-              {getGreeting(now.getHours())}, {STUDENT_NAME}! 👋
+              <StudentGreeting greeting={getGreeting(now.getHours())} />
             </h1>
             <p className="mt-2 text-base text-slate-600">
               One assignment is due today by 11:59 PM.
@@ -154,21 +153,7 @@ export function DashboardPage() {
             <h2 className="text-lg font-bold text-slate-950">
               From your teacher
             </h2>
-            <div className="mt-5 border-t border-slate-100 pt-5">
-              <div className="flex items-center justify-between text-sm">
-                <p className="font-semibold text-slate-900">
-                  Daniyar · Words in Context #4
-                </p>
-                <p className="text-xs text-slate-400">Oct 26, 9:10 PM</p>
-              </div>
-              <p className="mt-3 text-base leading-7 text-slate-600">
-                Good work, Aliya. On question 7 you picked a word based on
-                the passage&apos;s general meaning, but you need to look at
-                the contrast after &quot;however.&quot; Review the
-                explanation and do 5 similar questions in the Question
-                Bank.
-              </p>
-            </div>
+            <p className="mt-3 text-sm text-slate-600">No teacher feedback yet.</p>
           </section>
         </main>
 

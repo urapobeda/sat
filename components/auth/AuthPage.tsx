@@ -38,6 +38,12 @@ export function AuthPage({ initialMode = "signin" }: AuthPageProps) {
       return;
     }
 
+    const name = fullName.trim();
+    if (mode === "signup" && !name) {
+      setError("Enter your name.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -45,27 +51,27 @@ export function AuthPage({ initialMode = "signin" }: AuthPageProps) {
       const authResult =
         mode === "signup"
           ? await supabase.auth.signUp({
-              email,
+              email: email.trim(),
               password,
               options: {
                 data: {
-                  full_name: fullName
+                  full_name: name
                 }
               }
             })
-          : await supabase.auth.signInWithPassword({ email, password });
+          : await supabase.auth.signInWithPassword({ email: email.trim(), password });
 
       if (authResult.error) {
         throw new Error(authResult.error.message);
       }
 
-      if (authResult.data.user) {
-        await ensureProfile(authResult.data.user);
-      }
-
       if (mode === "signup" && !authResult.data.session) {
         setMessage("Check your email to confirm your account, then sign in.");
         return;
+      }
+
+      if (authResult.data.session) {
+        await ensureProfile(authResult.data.session.user);
       }
 
       router.push("/question-bank");
@@ -147,6 +153,8 @@ export function AuthPage({ initialMode = "signin" }: AuthPageProps) {
                 <span className="text-sm font-black text-slate-700">Name</span>
                 <input
                   className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  autoComplete="name"
+                  required
                   onChange={(event) => setFullName(event.target.value)}
                   placeholder="Alex Student"
                   type="text"

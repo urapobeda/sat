@@ -98,12 +98,13 @@ export async function ensureProfile(user: User) {
     email: user.email ?? null,
     full_name:
       typeof user.user_metadata?.full_name === "string"
-        ? user.user_metadata.full_name
+        ? user.user_metadata.full_name.trim() || null
         : null,
     id: user.id
   };
   const { error } = await supabase.from("profiles").upsert(profile, {
-    onConflict: "id"
+    onConflict: "id",
+    ignoreDuplicates: true
   });
 
   if (error) {
