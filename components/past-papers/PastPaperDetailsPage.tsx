@@ -23,6 +23,7 @@ import {
   formatSourceType,
   type PaperWithStats
 } from "@/lib/pastPapers";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getCurrentUser } from "@/lib/supabase/queries";
 import { getPublishedPaperBySlug, type PaperDetail } from "@/lib/supabase/pastPapers";
 
@@ -147,6 +148,8 @@ export function PastPaperDetailsPage({ slug }: PastPaperDetailsPageProps) {
 }
 
 function ActionPanel({ paper }: { paper: PaperWithStats }) {
+  if (paper.slug.startsWith("pdf-")) return <PaperPdfPanel slug={paper.slug} />;
+
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <h2 className="text-2xl font-black text-slate-950">Start Options</h2>
@@ -160,6 +163,56 @@ function ActionPanel({ paper }: { paper: PaperWithStats }) {
         <ActionButton href={`/past-papers/${paper.slug}/start?section=math`} label="Start Math Only" />
         <ActionButton href="/progress" label="Review Previous Attempt" variant="secondary" />
       </div>
+    </article>
+  );
+}
+
+function PaperPdfPanel({ slug }: { slug: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function openPdf() {
+    setLoading(true);
+    setNotice(null);
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        setNotice("Sign in to open this practice test.");
+        return;
+      }
+      const { data, error } = await getSupabaseBrowserClient()
+        .storage.from("practice-papers")
+        .createSignedUrl(slug + "/questions.pdf", 1800);
+      if (error || !data) throw new Error("PDF unavailable");
+      setUrl(data.signedUrl);
+    } catch {
+      setNotice("The PDF could not be opened. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <h2 className="text-2xl font-black text-slate-950">Practice Test PDF</h2>
+      <button
+        className="mt-4 rounded-xl bg-blue-600 px-4 py-2 font-bold text-white disabled:opacity-50"
+        type="button"
+        disabled={loading}
+        onClick={() => void openPdf()}
+      >
+        {loading ? "Opening…" : url ? "Refresh PDF link" : "View PDF"}
+      </button>
+      {notice ? <p className="mt-3 text-sm text-slate-700" role="status">{notice}</p> : null}
+      {url ? (
+        <div className="mt-4 space-y-3">
+          <a className="font-bold text-blue-700 underline" href={url} target="_blank" rel="noreferrer">
+            Open PDF in a new tab
+          </a>
+          <iframe className="h-[75vh] w-full rounded-xl border border-slate-200" src={url} title="Practice test questions" />
+        </div>
+      ) : null}
     </article>
   );
 }

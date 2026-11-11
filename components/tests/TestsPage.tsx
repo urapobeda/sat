@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Trophy
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { StudentShell } from "@/components/dashboard/StudentShell";
 import { ScoreProgressChart } from "@/components/tests/ScoreProgressChart";
@@ -141,6 +142,9 @@ export function TestsPage() {
             <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg lg:max-w-xl">
               Build exam confidence with timed SAT-style questions and review your saved attempts.
             </p>
+            <Link className="mt-4 inline-flex rounded-xl bg-blue-600 px-4 py-2 font-bold text-white" href="/past-papers">
+              Browse Past Papers
+            </Link>
           </div>
 
           <div className="hidden h-24 w-24 shrink-0 items-center justify-center rounded-3xl bg-white text-blue-600 shadow-lg shadow-blue-900/10 ring-1 ring-blue-100 lg:flex">
