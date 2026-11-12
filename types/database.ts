@@ -1,3 +1,4 @@
+import type { PaperItem, PaperSolution, PaperModuleRun } from "./../lib/paperRunner";
 export type Choice = {
   label: string;
   text: string;
@@ -193,6 +194,24 @@ export type PaperBookmark = {
 export type Database = {
   public: {
     Tables: {
+      paper_items: {
+        Row: PaperItem;
+        Insert: PaperItem;
+        Update: Partial<PaperItem>;
+        Relationships: [];
+      };
+      paper_solutions: {
+        Row: PaperSolution;
+        Insert: PaperSolution;
+        Update: Partial<PaperSolution>;
+        Relationships: [];
+      };
+      paper_module_runs: {
+        Row: PaperModuleRun;
+        Insert: Partial<PaperModuleRun> & Pick<PaperModuleRun, "attempt_id" | "module_id" | "ordinal">;
+        Update: Partial<PaperModuleRun>;
+        Relationships: [];
+      };
       practice_answers: {
         Insert: Partial<PracticeAnswer> &
           Pick<PracticeAnswer, "question_id" | "session_id" | "user_id">;
@@ -337,6 +356,18 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      open_paper_attempt: {
+        Args: { p_user: string; p_slug: string; p_section: string };
+        Returns: string;
+      };
+      update_paper_attempt: {
+        Args: {
+          p_user: string; p_attempt: string; p_module: string; p_revision: number;
+          p_answers: Record<string, string>; p_flags: Record<string, boolean>;
+          p_index: number; p_submit: boolean; p_graded: Record<string, boolean>;
+        };
+        Returns: boolean;
+      };
       finalize_verified_test: {
         Args: {
           p_session: string;
