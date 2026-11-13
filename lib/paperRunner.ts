@@ -12,6 +12,28 @@ export type PaperSolution = {
   accepted_answers: string[];
 };
 
+/** Decimal entries fill the available five positive / six signed characters.
+ * https://satsuite.collegeboard.org/media/pdf/english-sat-test-directions-bb.pdf
+ */
+export function paperAcceptedAnswers(source: string[]) {
+  const accepted = new Set(source);
+  for (const answer of source) {
+    const fraction = answer.match(/^(-?\d+)\/(\d+)$/);
+    if (!fraction || Number(fraction[2]) === 0) continue;
+    const value = Number(fraction[1]) / Number(fraction[2]);
+    const magnitude = Math.abs(value);
+    const wholeDigits = magnitude >= 1 ? Math.floor(Math.log10(magnitude)) + 1 : 1;
+    const decimalPlaces = magnitude < 1 ? [3, 4] : [Math.max(0, 4 - wholeDigits)];
+    for (const places of decimalPlaces) {
+      const factor = 10 ** places;
+      const sign = value < 0 ? -1 : 1;
+      accepted.add(String(sign * Math.trunc(magnitude * factor) / factor));
+      accepted.add(String(sign * Math.round(magnitude * factor) / factor));
+    }
+  }
+  return [...accepted];
+}
+
 export type PaperModuleRun = {
   attempt_id: string;
   module_id: string;

@@ -22,6 +22,7 @@ import {
   formatPaperDifficulty,
   formatPaperMode,
   formatPaperType,
+  getBestPaperAccuracy,
   formatSourceType,
   sortPapers,
   type PaperSort,
@@ -358,7 +359,7 @@ function PaperCard({
                 {paper.status.replace("-", " ")}
               </p>
               <p className="mt-1 text-sm font-bold text-slate-700">
-                Best score: {paper.bestScore ?? "-"} / 1600
+                {paper.slug.startsWith("pdf-") ? `Best accuracy ${getBestPaperAccuracy(paper) ?? 0}%` : `Best score ${paper.bestScore ?? "-"} / 1600`}
               </p>
             </div>
             <p className="text-xs font-bold text-slate-500">{latestAttempt}</p>

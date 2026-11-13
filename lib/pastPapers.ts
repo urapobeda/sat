@@ -42,7 +42,7 @@ export function buildPaperWithStats({
   const questionCount =
     modules.reduce((sum, module) => sum + module.question_count, 0) || 0;
   const progressPercentage = inProgressAttempt
-    ? getAttemptProgress(inProgressAttempt, questionCount)
+    ? getAttemptProgress(inProgressAttempt, getPaperAttemptTotal(inProgressAttempt, modules))
     : completedAttempts.length > 0
       ? 100
       : 0;
@@ -182,4 +182,21 @@ function getAttemptProgress(attempt: ExamAttempt, questionCount: number) {
   }
 
   return Math.min(Math.round((attempt.current_question_index / questionCount) * 100), 99);
+}
+
+
+export function getPaperAttemptTotal(attempt: ExamAttempt, modules: ExamModule[]) {
+  return modules
+    .filter((part) => !attempt.selected_section || attempt.selected_section === "full" || part.section === attempt.selected_section)
+    .reduce((sum, part) => sum + part.question_count, 0);
+}
+
+export function getPaperAttemptAccuracy(attempt: ExamAttempt, modules: ExamModule[]) {
+  const total = getPaperAttemptTotal(attempt, modules);
+  return total > 0 ? Math.round(((attempt.raw_score ?? 0) / total) * 100) : 0;
+}
+
+export function getBestPaperAccuracy(paper: PaperWithStats) {
+  const completed = paper.attempts.filter((attempt) => attempt.status === "completed" && attempt.raw_score !== null);
+  return completed.length ? Math.max(...completed.map((attempt) => getPaperAttemptAccuracy(attempt, paper.modules))) : null;
 }

@@ -35,7 +35,8 @@ alter table public.paper_solutions enable row level security;
 alter table public.paper_module_runs enable row level security;
 revoke all on public.paper_items, public.paper_solutions, public.paper_module_runs from public, anon, authenticated;
 grant all on public.paper_items, public.paper_solutions, public.paper_module_runs to service_role;
-grant select on public.paper_module_runs to authenticated;
+grant select (attempt_id, module_id, ordinal, answers, flags, current_index, revision, started_at, deadline, completed_at)
+on public.paper_module_runs to authenticated;
 drop policy if exists "Owners read module runs" on public.paper_module_runs;
 create policy "Owners read module runs" on public.paper_module_runs for select to authenticated
 using (exists(select 1 from public.exam_attempts a where a.id = attempt_id and a.user_id = auth.uid()));

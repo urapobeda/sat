@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { PaperRunnerSnapshot } from "@/lib/paperRunner";
+import { paperAcceptedAnswers, type PaperRunnerSnapshot } from "@/lib/paperRunner";
 import { isAnswerCorrect } from "@/lib/server/questionSolutions";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -22,7 +22,11 @@ export async function loadPaperAttempt(userId: string, attemptId: string): Promi
     completed: attempt.status === "completed", items: [], review: [],
     modules: modules.data.flatMap((entry) => {
       const run = runByModule.get(entry.id);
-      return run ? [{ ...entry, run }] : [];
+      return run ? [{ ...entry, run: {
+        ...run,
+        score: attempt.status === "completed" ? run.score : null,
+        graded: attempt.status === "completed" ? run.graded : null
+      } }] : [];
     })
   };
   if (currentId) {
@@ -61,7 +65,7 @@ export async function gradePaperModule(moduleId: string, answers: Record<string,
   if (solutionError || solutions.length !== items.length) throw new Error("Solutions unavailable");
   const byId = new Map(solutions.map((solution) => [solution.item_id, solution.accepted_answers]));
   return Object.fromEntries(items.map((item) => {
-    const accepted = byId.get(item.id)!;
+    const accepted = paperAcceptedAnswers(byId.get(item.id)!);
     const letter = item.question_type === "multiple-choice" ? accepted[0] : null;
     return [item.id, isAnswerCorrect({
       questionType: item.question_type, acceptedAnswers: accepted,

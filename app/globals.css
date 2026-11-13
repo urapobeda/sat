@@ -366,3 +366,7 @@ a {
 .dark .hub-icon { background: #243c60; color: #b9d6ff; }
 .hub-text-link { color: #1d53b9 !important; }
 .dark .hub-text-link { color: #a9ccff !important; }
+
+.paper-answer { background: var(--hub-card); color: var(--foreground); }
+.paper-answer:hover, .paper-answer[aria-pressed="true"] { background: var(--hub-canvas); }
+.paper-answer[aria-pressed="true"] { box-shadow: inset 0 0 0 1px #2563eb; }

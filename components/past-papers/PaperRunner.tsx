@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { Bookmark, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { getSupabaseAuthHeaders } from "@/lib/supabase/authHeaders";
 import { formatTime } from "@/components/quiz/Timer";
@@ -9,6 +9,25 @@ import type { PaperRunnerSnapshot } from "@/lib/paperRunner";
 
 type Draft = { answers: Record<string, string>; flags: Record<string, boolean>; index: number };
 const emptyDraft = (): Draft => ({ answers: {}, flags: {}, index: 0 });
+
+function QuestionImage({ url, description }: { url: string; description: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div>
+      <button type="button" className="mb-2 cursor-pointer text-sm font-medium text-blue-700 underline" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+        {expanded ? "Fit question" : "Enlarge question"}
+      </button>
+      {!loaded && !failed ? <p className="animate-pulse rounded-xl bg-slate-50 p-6 text-sm text-slate-500" role="status">Loading question…</p> : null}
+      {failed ? <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900" role="alert">The question image could not be loaded. Reload the saved attempt to try again.</p> : null}
+      <div className={expanded ? "overflow-auto rounded-lg border border-slate-200" : undefined}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- signed source image preserves formulas and diagrams */}
+        <img src={url} alt={description} className="mx-auto h-auto w-full max-w-[900px]" style={expanded ? { minWidth: 900, maxWidth: "none" } : undefined} onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />
+      </div>
+    </div>
+  );
+}
 
 async function paperRequest<T>(payload: object): Promise<T> {
   const response = await fetch("/api/papers/attempts", {
@@ -48,7 +67,7 @@ export function PaperRunner({ slug, section, attemptId }: { slug: string; sectio
   }
 
   function display(state: PaperRunnerSnapshot) {
-    active.current = state;
+    active.current = structuredClone(state);
     const location = new URL(window.location.href);
     location.searchParams.set("attempt", state.attemptId);
     window.history.replaceState(null, "", location);
@@ -68,7 +87,7 @@ export function PaperRunner({ slug, section, attemptId }: { slug: string; sectio
         // Ignore invalid drafts and restore the server's saved attempt.
       }
     }
-    latest.current = value;
+    latest.current = structuredClone(value);
     setDraft(value);
     setSnapshot(state);
     setSeconds(entry?.run.deadline ? Math.max(0, Math.ceil((Date.parse(entry.run.deadline) - Date.now()) / 1000)) : 0);
@@ -85,8 +104,6 @@ export function PaperRunner({ slug, section, attemptId }: { slug: string; sectio
       mounted.current = false;
       if (debounce.current) clearTimeout(debounce.current);
     };
-    // display restores refs and local drafts from the returned server snapshot.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, section, attemptId]);
 
   async function save() {
@@ -110,9 +127,9 @@ export function PaperRunner({ slug, section, attemptId }: { slug: string; sectio
     }
   }
 
-  function change(value: Draft) {
+  function handleDraftChange(value: Draft) {
     if (submission.current || seconds === 0) return;
-    latest.current = value;
+    latest.current = structuredClone(value);
     setDraft(value);
     backup(value);
     if (debounce.current) clearTimeout(debounce.current);
@@ -164,6 +181,10 @@ export function PaperRunner({ slug, section, attemptId }: { slug: string; sectio
   }, [deadline, current?.id]);
 
   const item = snapshot?.items[draft.index];
+  function handleSelectChoice(event: MouseEvent<HTMLButtonElement>) {
+    if (!item) return;
+    handleDraftChange({ ...draft, answers: { ...draft.answers, [item.id]: event.currentTarget.value } });
+  }
   return (
     <main className="min-h-screen bg-white text-slate-950">
       <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-3">
@@ -191,25 +212,25 @@ export function PaperRunner({ slug, section, attemptId }: { slug: string; sectio
           <div className="mb-4 flex items-center gap-3 rounded-lg bg-slate-100 px-4 py-3">
             <span className="rounded-md bg-slate-950 px-3 py-1 font-bold text-white">{item.position}</span>
             <button type="button" className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium disabled:cursor-default" disabled={busy || seconds === 0}
-              aria-pressed={draft.flags[item.id] ?? false} onClick={() => change({ ...draft, flags: { ...draft.flags, [item.id]: !draft.flags[item.id] } })}>
+              aria-pressed={draft.flags[item.id] ?? false} onClick={() => handleDraftChange({ ...draft, flags: { ...draft.flags, [item.id]: !draft.flags[item.id] } })}>
               <Bookmark size={17} fill={draft.flags[item.id] ? "currentColor" : "none"} /> Mark for Review
             </button>
           </div>
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
             <div className="min-w-0 space-y-4">{item.images.map((url, page) => (
-              // eslint-disable-next-line @next/next/no-img-element -- signed question images preserve source math and diagrams
-              <img key={url} src={url} alt={`Question ${item.position}, page ${page + 1}. ${item.text}`} className="mx-auto h-auto w-full max-w-[900px]" />
+              <QuestionImage key={url} url={url} description={`Question ${item.position}, page ${page + 1}. ${item.text}`} />
             ))}</div>
             <fieldset className="space-y-3" disabled={busy || seconds === 0}>
               <legend className="mb-3 font-bold">Your answer</legend>
               {item.question_type === "multiple-choice" ? ["A", "B", "C", "D"].map((label) => <button type="button" key={label}
                 aria-pressed={draft.answers[item.id] === label}
-                className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-3 text-left disabled:cursor-default ${draft.answers[item.id] === label ? "border-blue-600 bg-blue-50" : "border-slate-300 hover:bg-slate-50"}`}
-                onClick={() => change({ ...draft, answers: { ...draft.answers, [item.id]: label } })}>
+                className={`paper-answer flex w-full cursor-pointer items-center gap-3 rounded-xl border-2 px-4 py-3 text-left disabled:cursor-default ${draft.answers[item.id] === label ? "border-blue-600" : "border-slate-300"}`}
+                value={label} onClick={handleSelectChoice}>
                 <span className="flex h-8 w-8 items-center justify-center rounded-full border font-bold">{label}</span> Option {label}
               </button>) : <label className="block text-sm">Enter a number, decimal or fraction
-                <input className="mt-2 w-full rounded-xl border border-slate-400 px-4 py-3 text-lg" inputMode="decimal" autoComplete="off" value={draft.answers[item.id] ?? ""} maxLength={20}
-                  onChange={(event) => change({ ...draft, answers: { ...draft.answers, [item.id]: event.target.value.replace(/[^0-9./-]/g, "") } })} />
+                <span className="mt-1 block text-xs text-slate-500">Up to 5 characters, or 6 including a minus sign.</span>
+                <input aria-label="Enter a number, decimal or fraction" className="mt-2 w-full rounded-xl border border-slate-400 px-4 py-3 text-lg" inputMode="decimal" autoComplete="off" value={draft.answers[item.id] ?? ""} maxLength={draft.answers[item.id]?.startsWith("-") ? 6 : 5}
+                  onChange={(event) => handleDraftChange({ ...draft, answers: { ...draft.answers, [item.id]: event.target.value.replace(/[^0-9./-]/g, "") } })} />
               </label>}
             </fieldset>
           </div>
@@ -218,11 +239,11 @@ export function PaperRunner({ slug, section, attemptId }: { slug: string; sectio
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
             <details className="relative"><summary className="cursor-pointer rounded-lg bg-slate-950 px-4 py-2 text-sm text-white">Question {draft.index + 1} of {snapshot.items.length}</summary>
               <div className="absolute bottom-12 left-0 grid max-h-80 w-72 grid-cols-6 gap-2 overflow-auto rounded-xl border bg-white p-3 shadow-lg">{snapshot.items.map((q, index) => <button type="button" className={`relative cursor-pointer rounded-lg border p-2 text-sm ${draft.index === index ? "border-blue-600 ring-1 ring-blue-600" : "border-slate-200"} ${draft.answers[q.id] ? "bg-blue-50" : "bg-white"}`} key={q.id}
-                onClick={() => change({ ...draft, index })}>{index + 1}{draft.flags[q.id] ? <span className="absolute right-0 top-0 text-amber-600">●</span> : null}</button>)}</div>
+                onClick={() => handleDraftChange({ ...draft, index })}>{index + 1}{draft.flags[q.id] ? <span className="absolute right-0 top-0 text-amber-600">●</span> : null}</button>)}</div>
             </details>
             <div className="flex items-center gap-2">
-              <button className="inline-flex cursor-pointer items-center rounded-lg border px-3 py-2 text-sm disabled:opacity-40" type="button" disabled={draft.index === 0 || busy || seconds === 0} onClick={() => change({ ...draft, index: draft.index - 1 })}><ChevronLeft size={16} /> Previous</button>
-              {draft.index < snapshot.items.length - 1 ? <button className="inline-flex cursor-pointer items-center rounded-lg border px-3 py-2 text-sm disabled:opacity-40" disabled={busy || seconds === 0} type="button" onClick={() => change({ ...draft, index: draft.index + 1 })}>Next <ChevronRight size={16} /></button> : null}
+              <button className="inline-flex cursor-pointer items-center rounded-lg border px-3 py-2 text-sm disabled:opacity-40" type="button" disabled={draft.index === 0 || busy || seconds === 0} onClick={() => handleDraftChange({ ...draft, index: draft.index - 1 })}><ChevronLeft size={16} /> Previous</button>
+              {draft.index < snapshot.items.length - 1 ? <button className="inline-flex cursor-pointer items-center rounded-lg border px-3 py-2 text-sm disabled:opacity-40" disabled={busy || seconds === 0} type="button" onClick={() => handleDraftChange({ ...draft, index: draft.index + 1 })}>Next <ChevronRight size={16} /></button> : null}
               <button className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" type="button" disabled={busy} onClick={() => void submit()}>{busy ? "Submitting…" : "Submit module"}</button>
             </div>
           </div>

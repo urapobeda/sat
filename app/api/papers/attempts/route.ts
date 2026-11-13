@@ -36,7 +36,10 @@ export async function POST(request: NextRequest) {
       .select("completed_at").eq("attempt_id", attempt.id).eq("module_id", input.moduleId).maybeSingle();
     if (currentError) throw currentError;
     if (!current) return NextResponse.json({ error: "Module unavailable." }, { status: 404 });
-    if (current.completed_at) return NextResponse.json(await loadPaperAttempt(userId, input.attemptId));
+    if (current.completed_at) {
+      if (input.action === "save") return NextResponse.json({ error: "This module was submitted in another tab. Reload to continue." }, { status: 409 });
+      return NextResponse.json(await loadPaperAttempt(userId, input.attemptId));
+    }
     if (attempt.current_module_id !== input.moduleId) return NextResponse.json({ error: "This module is locked." }, { status: 409 });
     const args = {
       p_user: userId, p_attempt: input.attemptId, p_module: input.moduleId,
@@ -50,6 +53,7 @@ export async function POST(request: NextRequest) {
       const { data: run, error } = await client.from("paper_module_runs").select("revision,answers,flags,current_index,deadline")
         .eq("attempt_id", input.attemptId).eq("module_id", input.moduleId).single();
       if (error) throw error;
+      if (run.revision > input.revision + 1) return NextResponse.json({ error: "This attempt changed in another tab. Reload to continue." }, { status: 409 });
       return NextResponse.json(run, { headers: { "Cache-Control": "no-store" } });
     }
     const { data: run, error } = await client.from("paper_module_runs").select("*")

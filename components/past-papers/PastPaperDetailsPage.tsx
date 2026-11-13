@@ -17,6 +17,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { ProgressBar } from "@/components/quiz/ProgressBar";
 import {
+  getBestPaperAccuracy,
+  getPaperAttemptTotal,
   formatPaperDifficulty,
   formatPaperMode,
   formatPaperType,
@@ -119,7 +121,7 @@ export function PastPaperDetailsPage({ slug }: PastPaperDetailsPageProps) {
                 </h2>
                 <ProgressBar className="mt-4" value={paper.progressPercentage} />
                 <div className="mt-5 grid grid-cols-2 gap-3">
-                  <Metric label="Best Score" value={paper.bestScore ? `${paper.bestScore}` : "-"} />
+                  <Metric label={paper.slug.startsWith("pdf-") ? "Best Accuracy" : "Best Score"} value={paper.slug.startsWith("pdf-") ? `${getBestPaperAccuracy(paper) ?? 0}%` : paper.bestScore ? `${paper.bestScore}` : "-"} />
                   <Metric label="Accuracy" value={`${averageAccuracy}%`} />
                   <Metric label="Modules" value={String(paper.moduleCount)} />
                   <Metric label="Questions" value={String(paper.questionCount)} />
@@ -154,7 +156,7 @@ function ActionPanel({ paper }: { paper: PaperWithStats }) {
         Choose a section to start or resume your saved practice paper.
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <ActionButton href={`/past-papers/${paper.slug}/start`} label="Start Full Paper" />
+        <ActionButton href={`/past-papers/${paper.slug}/start`} label={paper.paper_type === "reading-writing" ? "Start Verbal Paper" : "Start Full Paper"} />
         {paper.modules.some((part) => part.section === "reading-writing") ? <ActionButton href={`/past-papers/${paper.slug}/start?section=reading-writing`} label="Start Reading & Writing Only" /> : null}
         {paper.modules.some((part) => part.section === "math") ? <ActionButton href={`/past-papers/${paper.slug}/start?section=math`} label="Start Math Only" /> : null}
         {paper.attempts.filter((attempt) => attempt.status === "completed").slice(0, 1).map((attempt) => <ActionButton key={attempt.id} href={`/past-papers/${paper.slug}/start?attempt=${attempt.id}`} label="Review Previous Attempt" variant="secondary" />)}
@@ -219,7 +221,7 @@ function AttemptsPanel({ paper }: { paper: PaperWithStats }) {
                 </p>
               </div>
               <span className="rounded-full bg-slate-50 px-3 py-2 text-sm font-black text-slate-700 ring-1 ring-slate-200">
-                {attempt.estimated_score ?? "-"} / 1600
+                {paper.slug.startsWith("pdf-") ? `${attempt.raw_score ?? 0} / ${getPaperAttemptTotal(attempt, paper.modules)} correct` : `${attempt.estimated_score ?? "-"} / 1600`}
               </span>
             </div>
           ))}
@@ -233,7 +235,7 @@ function InfoPanel({ paper }: { paper: PaperWithStats }) {
   const items = [
     ["Source", paper.source_name ?? formatSourceType(paper.source_type)],
     ["License", paper.license_notes ?? "No license notes"],
-    ["Scoring", "400-1600 estimated SAT score"],
+    ["Scoring", paper.slug.startsWith("pdf-") ? "Correct answers by module" : "400-1600 estimated SAT score"],
     ["Adaptive", paper.mode === "adaptive" ? "Enabled" : "No"],
     ["Duration", `${paper.estimated_minutes ?? 0} minutes`]
   ];
@@ -263,7 +265,7 @@ function BeforeStartPanel({ paper }: { paper: PaperWithStats }) {
     "Timer runs continuously in locked test mode.",
     "Breaks are not included in module time.",
     paper.paper_type === "math" || paper.paper_type === "full-length"
-      ? "Calculator and reference sheet are available for Math modules."
+      ? "You may use a calculator for Math modules."
       : "Use annotations and careful passage evidence for Reading & Writing.",
     "Answers and explanations stay hidden until completion.",
     "Module navigation locks after submission."
@@ -396,16 +398,17 @@ function getAverageAccuracy(paper: PaperWithStats | null) {
   }
 
   const scoredAttempts = paper.attempts.filter(
-    (attempt) => typeof attempt.raw_score === "number"
+    (attempt) => attempt.status === "completed" && typeof attempt.raw_score === "number"
   );
 
-  if (scoredAttempts.length === 0 || paper.questionCount === 0) {
+  const totalQuestions = scoredAttempts.reduce((total, attempt) => total + getPaperAttemptTotal(attempt, paper.modules), 0);
+  if (scoredAttempts.length === 0 || totalQuestions === 0) {
     return 0;
   }
 
   return Math.round(
     scoredAttempts.reduce((sum, attempt) => sum + (attempt.raw_score ?? 0), 0) /
-      (scoredAttempts.length * paper.questionCount) *
+      totalQuestions *
       100
   );
 }

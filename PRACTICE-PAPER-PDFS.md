@@ -1,50 +1,74 @@
-# Practice test PDFs
+# Interactive practice papers
 
-The Practice Tests page links to Past Papers. Signed-in students can open a
-published paper's question PDF from its details page. Answer PDFs and reference
-PDFs are stored privately for administrators. These papers use PDF viewing.
+Practice Tests → Past Papers opens timed, interactive papers. Each question has
+on-site answer controls. Module drafts and submitted results are saved in
+Supabase. Correct keys are returned after the whole attempt is completed.
 
-1. In the target project's SQL Editor, check whether the existing Past Papers
-   schema is present:
+The source question layouts are preserved as individual WebP images. The runner
+supports A–D choices, numeric/fraction responses, review flags, navigation,
+module deadlines, refresh/resume, and answer review. Math formulas and figures
+are preserved in the question images.
 
-   ```sql
-   select to_regclass('public.exam_papers'), to_regclass('public.exam_modules');
-   ```
+## Database
 
-2. If the Past Papers schema is absent, run
-   `supabase/migrations/add_past_papers.sql` first. Then run
-   `supabase/migrations/add_practice_paper_pdf_storage.sql`. Verify that
-     `practice-papers` is private:
+Apply add_past_papers.sql first if the paper schema is missing, then
+supabase/migrations/add_interactive_papers.sql.
 
-   ```sql
-   select id, public from storage.buckets where id = 'practice-papers';
-   ```
+The interactive migration has already been approved and applied to the current
+Supabase project. It adds paper_items, paper_solutions and paper_module_runs.
+Students cannot write scores or retrieve solution keys directly.
 
-3. Prepare the organized archive using Python with `pypdfium2` installed:
+## Data preparation
 
-   ```powershell
-   python scripts/prepare-practice-paper-pdfs.py "PATH_TO_ORGANIZED_ZIP" "UPLOAD_FOLDER" --d7-dir "PATH_TO_D7_PDFS"
-   node scripts/import-practice-paper-pdfs.mjs "UPLOAD_FOLDER" --dry-run
-   node scripts/import-practice-paper-pdfs.mjs "UPLOAD_FOLDER"
-   ```
+Run from the repository root using Python with pypdfium2 and Pillow installed.
 
-   The last command stages the files and database rows as unpublished. Run from
-   the repository root with the existing server-only Supabase credentials in
-   `.env.local`. Keep the upload folder outside the repository.
+~~~powershell
+python scripts/prepare-interactive-papers.py "C:/Users/zumad/Documents/Codex/2026-11-08/referenced-chatgpt-conversation-this-is-an/sat-practice-tests-organized.zip" data/math/interactive-papers --d7-dir "C:/Users/zumad/Downloads/Telegram Desktop" --d7-keys data/math/papers-work/d7-verified-keys.json
+node scripts/import-interactive-papers.mjs data/math/interactive-papers --dry-run
+node scripts/import-interactive-papers.mjs data/math/interactive-papers
+~~~
 
-4. After confirming permission to publish the TalimSAT and D7SAT sources, set
-   `PRACTICE_PAPER_LICENSE_NOTES` in the shell to the actual permission details
-   and repeat the import with `--publish`. Deploy the application changes.
+The preparation output contains private keys. Keep it outside public assets and
+version control. The importer uses the existing server-side Supabase credentials.
 
-   ```sql
-   select is_published, count(*) from public.exam_papers
-   where slug like 'pdf-%' group by is_published;
-   ```
+Existing paper slugs and module IDs are reused. Existing question content and
+keys must match on retry. Images use content-based names. Student attempts are
+preserved. Existing publication status is retained. New papers are staged as
+unpublished. To publish staged papers, supply actual source permission details
+using PRACTICE_PAPER_LICENSE_NOTES and pass --publish.
 
-   Sign in as a student, open one full-length paper and one Verbal only paper,
-   and verify that their question PDFs open. A direct unsigned URL and a
-   student request for an answer PDF should both be denied.
+For the seven scanned D7SAT files, keys were transcribed from their answer-key
+pages. Each of these tests uses its own question pages and keys. The May V1
+module 2 question 13 and May V3 module 2 Math question 20 span two source pages.
+The 2026 March V2 paper remains separate.
 
-To roll back visibility, set `is_published = false` on the specific affected
-paper slugs. Previously issued PDF links may remain valid until they expire
-(up to 30 minutes). This preserves stored files and student data.
+## Verification
+
+~~~powershell
+npm run lint
+npx tsc --noEmit
+npm run test:unit
+npm run build
+~~~
+
+scripts/paper-attempts-sql.test.mjs additionally exercises the real migration
+against a temporary PostgreSQL database using PGlite. Set PGLITE_PATH to an
+external installation's dist/index.js before running it, or install PGlite in
+your local test environment.
+
+~~~sql
+select count(*) from public.paper_items;
+select count(*) from public.paper_solutions;
+select is_published, count(*) from public.exam_papers
+where slug like 'pdf-%' group by is_published;
+~~~
+
+Verify browser flows with a dedicated test attempt. Leave an existing student's
+attempt untouched. Check module save, refresh, review marks, wrong/correct
+answers, module submission, resume, and completed answer review.
+
+## Rollback
+
+To hide a specific imported paper, set is_published=false for that slug.
+Retain the new tables, files and attempts to preserve student history.
+Rolling back the app code may restore PDF viewing while these records remain.
