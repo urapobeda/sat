@@ -196,7 +196,7 @@ export function StudyPlanPage() {
     return (
       <Layout active="study-plan">
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 text-sm font-black text-blue-600">
+          <div className="flex items-center gap-3 text-sm font-semibold text-blue-600">
             <Loader2 className="animate-spin" size={20} />
             Building your SAT Study Plan...
           </div>
@@ -227,14 +227,14 @@ export function StudyPlanPage() {
       <Layout active="study-plan">
         <section className="rounded-3xl border border-rose-100 bg-rose-50 p-6 text-center shadow-sm">
           <RotateCcw className="mx-auto text-rose-600" size={30} />
-          <h1 className="mt-3 text-2xl font-black text-rose-900">
+          <h1 className="mt-3 text-2xl font-bold text-rose-900">
             Study Plan unavailable
           </h1>
-          <p className="mx-auto mt-2 max-w-xl text-sm font-bold leading-6 text-rose-700">
+          <p className="mx-auto mt-2 max-w-xl text-sm font-medium leading-6 text-rose-700">
             {error}
           </p>
           <button
-            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-rose-600 px-5 text-sm font-black text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
+            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
             onClick={() => {
               void loadStudyPlan();
             }}
@@ -252,19 +252,19 @@ export function StudyPlanPage() {
       <section className="hub-card relative overflow-hidden p-5 sm:p-7">
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-600">
+            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
               Study Plan
             </p>
-            <h1 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl">
+            <h1 className="mt-3 text-3xl font-bold leading-tight text-slate-950">
               Your SAT study plan
             </h1>
-            <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
+            <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
               Your weekly goals, countdown, recommendations, and calendar adapt
               automatically as you practice.
             </p>
           </div>
           <button
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
             onClick={() => setIsEditing((value) => !value)}
             type="button"
           >
@@ -275,12 +275,12 @@ export function StudyPlanPage() {
       </section>
 
       {successMessage ? (
-        <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-sm font-black text-emerald-700">
+        <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700">
           {successMessage}
         </div>
       ) : null}
       {error && studyPlan ? (
-        <div className="mt-6 rounded-2xl border border-rose-100 bg-rose-50 px-5 py-4 text-sm font-black text-rose-700">
+        <div className="mt-6 rounded-2xl border border-rose-100 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">
           {error}
         </div>
       ) : null}
@@ -293,13 +293,13 @@ export function StudyPlanPage() {
               <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-600">
+                    <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
                       Target Score
                     </p>
                     {isEditing ? (
                       <div className="mt-3 flex flex-col gap-3 sm:flex-row">
                         <input
-                          className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 text-lg font-black text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                          className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 text-lg font-semibold text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                           max={1600}
                           min={400}
                           onChange={(event) => setTargetScore(event.target.value)}
@@ -307,7 +307,7 @@ export function StudyPlanPage() {
                           value={targetScore}
                         />
                         <button
-                          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                           disabled={isSaving}
                           onClick={saveTargetScore}
                           type="button"
@@ -316,7 +316,7 @@ export function StudyPlanPage() {
                         </button>
                       </div>
                     ) : (
-                      <p className="mt-2 text-4xl font-black text-slate-950">
+                      <p className="mt-2 text-4xl font-bold text-slate-950">
                         {target}
                       </p>
                     )}
@@ -324,7 +324,7 @@ export function StudyPlanPage() {
                   <Target className="text-blue-600" size={34} />
                 </div>
                 <div className="mt-5">
-                  <div className="flex items-center justify-between text-sm font-bold text-slate-600">
+                  <div className="flex items-center justify-between text-sm font-medium text-slate-600">
                     <span>Current Estimated</span>
                     <span className="text-slate-950">
                       {currentEstimatedScore || "Not enough data"}
@@ -347,7 +347,7 @@ export function StudyPlanPage() {
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="text-emerald-500" size={24} />
-            <h2 className="text-xl font-black text-slate-950">Today&apos;s Tasks</h2>
+            <h2 className="text-xl font-semibold text-slate-950">Today&apos;s Tasks</h2>
           </div>
           <div className="mt-5 space-y-3">
             {buildTodayTasks(recommendedTopics, todayCompleted, dailyGoal).map((task) => (
@@ -355,7 +355,7 @@ export function StudyPlanPage() {
             ))}
           </div>
           <div className="mt-5 rounded-2xl bg-blue-50 p-4">
-            <div className="flex items-center justify-between text-sm font-bold text-slate-600">
+            <div className="flex items-center justify-between text-sm font-medium text-slate-600">
               <span>Today&apos;s Goal</span>
               <span className="text-slate-950">
                 {todayCompleted} / {dailyGoal} questions
@@ -376,7 +376,7 @@ export function StudyPlanPage() {
       </section>
 
       <section className="mt-6">
-        <h2 className="text-2xl font-black text-slate-950">Upcoming Tasks</h2>
+        <h2 className="text-2xl font-bold text-slate-950">Upcoming Tasks</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <UpcomingTask
             href={`/question-bank/practice?topic=${encodeURIComponent(recommendedTopics[0] ?? "Algebra")}`}
@@ -417,11 +417,11 @@ function GoalCard({
 }) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5">
-      <p className="text-sm font-black uppercase tracking-[0.12em] text-violet-600">
+      <p className="text-sm font-semibold uppercase tracking-[0.12em] text-violet-600">
         {label}
       </p>
-      <h3 className="mt-2 text-2xl font-black text-slate-950">{title}</h3>
-      <p className="mt-2 text-sm font-bold text-slate-600">{subtitle}</p>
+      <h3 className="mt-2 text-2xl font-bold text-slate-950">{title}</h3>
+      <p className="mt-2 text-sm font-medium text-slate-600">{subtitle}</p>
       <ProgressBar className="mt-4" tone="bg-violet-600" value={progress} />
     </div>
   );
@@ -432,13 +432,13 @@ function TaskRow({ completed, label }: { completed: boolean; label: string }) {
     <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 px-4 py-3">
       <span
         className={[
-          "flex h-7 w-7 items-center justify-center rounded-full text-sm font-black",
+          "flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold",
           completed ? "bg-emerald-500 text-white" : "bg-white text-slate-400 ring-1 ring-slate-200"
         ].join(" ")}
       >
         {completed ? <CheckCircle2 size={16} /> : null}
       </span>
-      <span className="font-bold text-slate-700">{label}</span>
+      <span className="font-medium text-slate-700">{label}</span>
     </div>
   );
 }
@@ -456,7 +456,7 @@ function StudyCalendar({ attempts }: { attempts: RecentAttempt[] }) {
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex items-center gap-3">
         <CalendarDays className="text-blue-600" size={24} />
-        <h2 className="text-xl font-black text-slate-950">Study Calendar</h2>
+        <h2 className="text-xl font-semibold text-slate-950">Study Calendar</h2>
       </div>
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-7">
         {days.map((date) => {
@@ -474,11 +474,11 @@ function StudyCalendar({ attempts }: { attempts: RecentAttempt[] }) {
               ].join(" ")}
               key={date.toISOString()}
             >
-              <p className="text-xs font-black uppercase">
+              <p className="text-xs font-semibold uppercase">
                 {new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date)}
               </p>
-              <p className="mt-1 text-2xl font-black">{date.getDate()}</p>
-              <p className="mt-1 text-xs font-bold">{status}</p>
+              <p className="mt-1 text-2xl font-bold">{date.getDate()}</p>
+              <p className="mt-1 text-xs font-medium">{status}</p>
             </div>
           );
         })}
@@ -500,7 +500,7 @@ function Recommendations({
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex items-center gap-3">
         <Sparkles className="text-violet-600" size={24} />
-        <h2 className="text-xl font-black text-slate-950">
+        <h2 className="text-xl font-semibold text-slate-950">
           Personalized Recommendations
         </h2>
       </div>
@@ -542,11 +542,11 @@ function TopicList({
 }) {
   return (
     <div className="rounded-2xl bg-slate-50 p-4">
-      <h3 className="text-sm font-black text-slate-950">{title}</h3>
+      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
       <div className="mt-3 flex flex-wrap gap-2">
         {items.length > 0 ? (
           items.map((item) => (
-            <span className={`rounded-full px-3 py-1.5 text-xs font-black ${tone}`} key={item}>
+            <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${tone}`} key={item}>
               {item}
             </span>
           ))
@@ -575,8 +575,8 @@ function UpcomingTask({
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
         {icon}
       </div>
-      <h3 className="mt-4 font-black text-slate-950">{title}</h3>
-      <p className="mt-2 inline-flex items-center gap-2 text-sm font-black text-blue-600">
+      <h3 className="mt-4 font-semibold text-slate-950">{title}</h3>
+      <p className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-blue-600">
         Start task <ArrowRight size={16} />
       </p>
     </Link>

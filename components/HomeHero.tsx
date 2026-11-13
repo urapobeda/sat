@@ -21,7 +21,7 @@ export function HomeHero() {
 
       <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
         <div className="relative z-10 max-w-2xl">
-          <h1 className="text-4xl font-black leading-tight tracking-normal text-slate-950 sm:text-5xl lg:text-6xl">
+          <h1 className="text-4xl font-bold leading-tight tracking-normal text-slate-950 sm:text-5xl lg:text-6xl">
             Ace the <span className="text-blue-600">SAT.</span>
             <br />
             Reach Your Dream.
@@ -55,7 +55,7 @@ export function HomeHero() {
                 className="rounded-2xl border border-blue-100 bg-white/80 px-4 py-3 shadow-sm"
                 key={stat.label}
               >
-                <p className="text-lg font-black text-slate-950">{stat.value}</p>
+                <p className="text-lg font-semibold text-slate-950">{stat.value}</p>
                 <p className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">
                   {stat.label}
                 </p>

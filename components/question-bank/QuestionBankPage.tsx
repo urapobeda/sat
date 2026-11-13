@@ -365,7 +365,7 @@ function QuestionBankError({
   return (
     <div className="rounded-3xl border border-rose-100 bg-rose-50 p-6 text-center shadow-sm">
       <Search className="mx-auto text-rose-600" size={30} />
-      <h2 className="mt-3 text-xl font-black text-rose-900">
+      <h2 className="mt-3 text-xl font-semibold text-rose-900">
         Questions could not be loaded. Please try again.
       </h2>
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-rose-700">
@@ -376,7 +376,7 @@ function QuestionBankError({
         supabase/repair-question-bank-access.sql in Supabase SQL Editor.
       </p>
       <button
-        className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-black text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
+        className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
         onClick={onRetry}
         type="button"
       >

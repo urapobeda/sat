@@ -69,7 +69,7 @@ export function PastPaperDetailsPage({ slug }: PastPaperDetailsPageProps) {
   return (
     <Layout active="tests">
       <Link
-        className="inline-flex items-center gap-2 text-sm font-black text-blue-600 transition hover:text-blue-700"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 transition hover:text-blue-700"
         href="/past-papers"
       >
         <ArrowLeft size={17} />
@@ -78,7 +78,7 @@ export function PastPaperDetailsPage({ slug }: PastPaperDetailsPageProps) {
 
       {isLoading ? (
         <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 text-sm font-black text-blue-600">
+          <div className="flex items-center gap-3 text-sm font-semibold text-blue-600">
             <Loader2 className="animate-spin" size={20} />
             Loading paper details from Supabase...
           </div>
@@ -93,13 +93,13 @@ export function PastPaperDetailsPage({ slug }: PastPaperDetailsPageProps) {
           <section className="mt-6 overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-white shadow-soft">
             <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_360px]">
               <div>
-                <div className="flex flex-wrap gap-2 text-xs font-black">
+                <div className="flex flex-wrap gap-2 text-xs font-semibold">
                   <Badge>{formatPaperType(paper.paper_type)}</Badge>
                   <Badge>{formatPaperMode(paper.mode)}</Badge>
                   <Badge>{formatPaperDifficulty(paper.difficulty)}</Badge>
                   <Badge>{paper.year ?? "No year"}</Badge>
                 </div>
-                <h1 className="mt-5 text-4xl font-black leading-tight text-slate-950 sm:text-5xl">
+                <h1 className="mt-5 text-4xl font-bold leading-tight text-slate-950 sm:text-5xl">
                   {paper.title}
                 </h1>
                 <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
@@ -113,10 +113,10 @@ export function PastPaperDetailsPage({ slug }: PastPaperDetailsPageProps) {
               </div>
 
               <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-600">
+                <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
                   Paper Status
                 </p>
-                <h2 className="mt-2 text-2xl font-black text-slate-950">
+                <h2 className="mt-2 text-2xl font-bold text-slate-950">
                   {paper.status.replace("-", " ")}
                 </h2>
                 <ProgressBar className="mt-4" value={paper.progressPercentage} />
@@ -151,7 +151,7 @@ export function PastPaperDetailsPage({ slug }: PastPaperDetailsPageProps) {
 function ActionPanel({ paper }: { paper: PaperWithStats }) {
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <h2 className="text-2xl font-black text-slate-950">Start Options</h2>
+      <h2 className="text-2xl font-bold text-slate-950">Start Options</h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">
         Choose a section to start or resume your saved practice paper.
       </p>
@@ -168,7 +168,7 @@ function ActionPanel({ paper }: { paper: PaperWithStats }) {
 function ModulePanel({ paper }: { paper: PaperWithStats }) {
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <h2 className="text-2xl font-black text-slate-950">Modules</h2>
+      <h2 className="text-2xl font-bold text-slate-950">Modules</h2>
       <div className="mt-5 space-y-3">
         {paper.modules.map((module) => (
           <div
@@ -176,7 +176,7 @@ function ModulePanel({ paper }: { paper: PaperWithStats }) {
             key={module.id}
           >
             <div>
-              <p className="font-black text-slate-950">
+              <p className="font-semibold text-slate-950">
                 {module.section === "math" ? "Math" : "Reading & Writing"} Module{" "}
                 {module.module_number}
               </p>
@@ -184,7 +184,7 @@ function ModulePanel({ paper }: { paper: PaperWithStats }) {
                 Route: {module.route_type ?? "base"} / {module.question_count} questions
               </p>
             </div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-200">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
               <Clock3 size={15} />
               {Math.round(module.duration_seconds / 60)} min
             </span>
@@ -198,7 +198,7 @@ function ModulePanel({ paper }: { paper: PaperWithStats }) {
 function AttemptsPanel({ paper }: { paper: PaperWithStats }) {
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <h2 className="text-2xl font-black text-slate-950">Previous Attempts</h2>
+      <h2 className="text-2xl font-bold text-slate-950">Previous Attempts</h2>
       {paper.attempts.length === 0 ? (
         <p className="mt-3 rounded-2xl bg-blue-50 p-4 text-sm font-bold text-slate-600">
           No attempts yet. Start this paper to build score history.
@@ -211,7 +211,7 @@ function AttemptsPanel({ paper }: { paper: PaperWithStats }) {
               key={attempt.id}
             >
               <div>
-                <p className="font-black text-slate-950">
+                <p className="font-semibold text-slate-950">
                   {attempt.status.replace("-", " ")}
                 </p>
                 <p className="text-sm font-bold text-slate-500">
@@ -220,7 +220,7 @@ function AttemptsPanel({ paper }: { paper: PaperWithStats }) {
                   )}
                 </p>
               </div>
-              <span className="rounded-full bg-slate-50 px-3 py-2 text-sm font-black text-slate-700 ring-1 ring-slate-200">
+              <span className="rounded-full bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
                 {paper.slug.startsWith("pdf-") ? `${attempt.raw_score ?? 0} / ${getPaperAttemptTotal(attempt, paper.modules)} correct` : `${attempt.estimated_score ?? "-"} / 1600`}
               </span>
             </div>
@@ -242,7 +242,7 @@ function InfoPanel({ paper }: { paper: PaperWithStats }) {
 
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-xl font-black text-slate-950">Test Information</h2>
+      <h2 className="text-xl font-semibold text-slate-950">Test Information</h2>
       <div className="mt-4 space-y-4">
         {items.map(([label, value]) => (
           <div className="flex items-start gap-3" key={label}>
@@ -250,7 +250,7 @@ function InfoPanel({ paper }: { paper: PaperWithStats }) {
               <ShieldCheck size={17} />
             </span>
             <div>
-              <p className="font-black text-slate-950">{label}</p>
+              <p className="font-semibold text-slate-950">{label}</p>
               <p className="text-sm leading-5 text-slate-600">{value}</p>
             </div>
           </div>
@@ -273,7 +273,7 @@ function BeforeStartPanel({ paper }: { paper: PaperWithStats }) {
 
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-xl font-black text-slate-950">Before You Start</h2>
+      <h2 className="text-xl font-semibold text-slate-950">Before You Start</h2>
       <div className="mt-4 space-y-3">
         {rules.map((rule) => (
           <div className="flex gap-3 text-sm font-bold leading-6 text-slate-600" key={rule}>
@@ -290,7 +290,7 @@ function RecommendationsPanel({ weakSkills }: { weakSkills: string[] }) {
   return (
     <article className="rounded-3xl border border-violet-100 bg-gradient-to-br from-violet-600 to-blue-600 p-5 text-white shadow-lg shadow-violet-600/20">
       <Sparkles size={28} />
-      <h2 className="mt-4 text-xl font-black">Recommended Review</h2>
+      <h2 className="mt-4 text-xl font-semibold">Recommended Review</h2>
       {weakSkills.length === 0 ? (
         <p className="mt-2 text-sm font-bold leading-6 text-white/85">
           Complete attempts to unlock skill-level recommendations.
@@ -298,7 +298,7 @@ function RecommendationsPanel({ weakSkills }: { weakSkills: string[] }) {
       ) : (
         <div className="mt-4 space-y-2">
           {weakSkills.map((skill) => (
-            <p className="rounded-2xl bg-white/15 px-3 py-2 text-sm font-black" key={skill}>
+            <p className="rounded-2xl bg-white/15 px-3 py-2 text-sm font-semibold" key={skill}>
               {skill}
             </p>
           ))}
@@ -320,7 +320,7 @@ function ActionButton({
   return (
     <Link
       className={[
-        "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-black transition",
+        "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition",
         variant === "primary"
           ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700"
           : "border border-slate-200 bg-white text-slate-900 shadow-sm hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
@@ -336,7 +336,7 @@ function ActionButton({
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-slate-50 px-3 py-3 text-center ring-1 ring-slate-100">
-      <p className="text-xl font-black text-slate-950">{value}</p>
+      <p className="text-xl font-semibold text-slate-950">{value}</p>
       <p className="mt-1 text-xs font-bold text-slate-500">{label}</p>
     </div>
   );
@@ -360,14 +360,14 @@ function ErrorCard({
   return (
     <div className="mt-6 rounded-3xl border border-rose-100 bg-rose-50 p-6 text-center shadow-sm">
       <RotateCcw className="mx-auto text-rose-600" size={30} />
-      <h2 className="mt-3 text-xl font-black text-rose-900">
+      <h2 className="mt-3 text-xl font-semibold text-rose-900">
         Paper details could not be loaded.
       </h2>
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-rose-700">
         {message}
       </p>
       <button
-        className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-black text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
+        className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
         onClick={onRetry}
         type="button"
       >
@@ -381,7 +381,7 @@ function EmptyCard() {
   return (
     <div className="mt-6 rounded-3xl border border-blue-100 bg-blue-50/70 p-8 text-center shadow-sm">
       <FileText className="mx-auto text-blue-600" size={34} />
-      <h2 className="mt-4 text-2xl font-black text-slate-950">
+      <h2 className="mt-4 text-2xl font-bold text-slate-950">
         Paper not found
       </h2>
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">

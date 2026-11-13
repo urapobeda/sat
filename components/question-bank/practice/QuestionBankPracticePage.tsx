@@ -417,7 +417,7 @@ export function QuestionBankPracticePage() {
     >
       {waitingForQuestion ? (
         <section className="mx-auto mt-6 w-full max-w-3xl px-5 py-6">
-          <div className="flex items-center gap-3 text-sm font-black text-blue-600">
+          <div className="flex items-center gap-3 text-sm font-semibold text-blue-600">
             <Loader2 className="animate-spin" size={20} />
             Loading practice questions…
           </div>
@@ -455,10 +455,10 @@ export function QuestionBankPracticePage() {
             <article className="rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-violet-50/60 p-5 shadow-sm sm:p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-600">
+                  <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
                     AI Review
                   </p>
-                  <h2 className="mt-2 text-2xl font-black text-slate-950">
+                  <h2 className="mt-2 text-2xl font-bold text-slate-950">
                     Review this session with AI
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -467,7 +467,7 @@ export function QuestionBankPracticePage() {
                   </p>
                 </div>
                 <button
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
                   onClick={() => {
                     const missedQuestion =
                       practiceQuestions.find(

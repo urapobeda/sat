@@ -13,7 +13,7 @@ export function MistakeReviewCard() {
             <p className="text-sm font-semibold uppercase tracking-[0.14em] text-amber-700">
               Mistake Review
             </p>
-            <h2 className="mt-1 text-2xl font-extrabold text-slate-950">
+            <h2 className="mt-1 text-2xl font-bold text-slate-950">
               Turn missed questions into score gains
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">

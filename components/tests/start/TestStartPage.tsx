@@ -275,7 +275,7 @@ export function TestStartPage() {
     <main className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
       <section className="hub-card p-4 sm:p-5">
         <Link
-          className="inline-flex items-center gap-2 text-sm font-black text-blue-600 transition hover:text-blue-700"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 transition hover:text-blue-700"
           href="/tests"
           onNavigate={(event) => { if (activeTest && !confirmLeavingStudy()) event.preventDefault(); }}
         >
@@ -299,7 +299,7 @@ export function TestStartPage() {
           </div>
           <div className="flex flex-wrap gap-3">
             <Timer seconds={remainingSeconds} />
-            <span className="inline-flex min-h-9 items-center rounded-full bg-white px-4 text-sm font-black text-slate-700 shadow-sm ring-1 ring-slate-200">
+            <span className="inline-flex min-h-9 items-center rounded-full bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200">
               {answeredCount} / {testQuestions.length} answered
             </span>
           </div>
@@ -308,7 +308,7 @@ export function TestStartPage() {
 
       {isLoading ? (
         <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3 text-sm font-black text-blue-600">
+          <div className="flex items-center gap-3 text-sm font-semibold text-blue-600">
             <Loader2 className="animate-spin" size={20} />
             Loading full SAT test from Supabase...
           </div>
@@ -338,10 +338,10 @@ export function TestStartPage() {
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
               <Trophy size={34} />
             </div>
-            <p className="mt-5 text-sm font-black uppercase tracking-[0.12em] text-blue-600">
+            <p className="mt-5 text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
               {timeUp ? "Time is up" : "Test submitted"}
             </p>
-            <h2 className="mt-2 text-3xl font-black text-slate-950">
+            <h2 className="mt-2 text-3xl font-bold text-slate-950">
               Unofficial SAT Score Estimate: {estimatedScore}
             </h2>
             <p className="mt-2 text-lg font-bold text-slate-600">
@@ -358,14 +358,14 @@ export function TestStartPage() {
 
             <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
                 href="/tests/start"
               >
                 Start New Test
                 <ArrowRight size={18} />
               </Link>
               <button
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:shadow-xl"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:shadow-xl"
                 onClick={() => {
                   const missedQuestion =
                     completionResult?.reviewQuestions.find(
@@ -382,7 +382,7 @@ export function TestStartPage() {
                 Review with AI
               </button>
               <Link
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                 href="/progress"
               >
                 View Progress
@@ -424,7 +424,7 @@ export function TestStartPage() {
 
             <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto_1fr] sm:items-center">
               <button
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-5 py-3 text-sm font-black text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-5 py-3 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-400"
                 disabled={currentIndex === 0}
                 onClick={goPrevious}
                 type="button"
@@ -435,7 +435,7 @@ export function TestStartPage() {
 
               <button
                 className={[
-                  "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-sm transition",
+                  "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-semibold shadow-sm transition",
                   flaggedQuestions[currentQuestion.id]
                     ? "border-orange-200 bg-orange-50 text-orange-700"
                     : "border-slate-200 bg-white text-slate-700 hover:border-orange-200 hover:bg-orange-50"
@@ -448,7 +448,7 @@ export function TestStartPage() {
               </button>
 
               <button
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-5 py-3 text-sm font-black text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-5 py-3 text-sm font-semibold text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                 disabled={isSavingResult}
                 onClick={() => submitDialog.current?.showModal()}
                 type="button"
@@ -458,7 +458,7 @@ export function TestStartPage() {
               </button>
 
               <button
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 sm:justify-self-end"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 sm:justify-self-end"
                 disabled={currentIndex === testQuestions.length - 1}
                 onClick={goNext}
                 type="button"
@@ -471,7 +471,7 @@ export function TestStartPage() {
 
           <aside className="space-y-4">
             <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-black text-slate-950">Question Navigator</h2>
+              <h2 className="text-lg font-semibold text-slate-950">Question Navigator</h2>
               <p className="mt-1 text-sm text-slate-600">
                 Jump between questions before submitting.
               </p>
@@ -484,7 +484,7 @@ export function TestStartPage() {
                   return (
                     <button
                       className={[
-                        "relative flex h-11 items-center justify-center rounded-xl border text-sm font-black transition",
+                        "relative flex h-11 items-center justify-center rounded-xl border text-sm font-semibold transition",
                         isCurrent
                           ? "border-blue-500 bg-blue-600 text-white shadow-lg shadow-blue-600/20"
                           : isAnswered
@@ -506,7 +506,7 @@ export function TestStartPage() {
             </article>
 
             <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-black text-slate-950">Test Progress</h2>
+              <h2 className="text-lg font-semibold text-slate-950">Test Progress</h2>
               <ProgressBar
                 className="mt-4"
                 value={(answeredCount / Math.max(testQuestions.length, 1)) * 100}
@@ -550,10 +550,10 @@ export function TestStartPage() {
 function ResultMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-slate-50 p-4">
-      <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">
+      <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-black text-slate-950">{value}</p>
+      <p className="mt-1 text-2xl font-bold text-slate-950">{value}</p>
     </div>
   );
 }
@@ -570,12 +570,12 @@ function ErrorState({
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-rose-600">
         <CheckCircle2 size={28} />
       </div>
-      <h2 className="mt-4 text-xl font-black text-rose-900">Test is unavailable</h2>
+      <h2 className="mt-4 text-xl font-semibold text-rose-900">Test is unavailable</h2>
       <p className="mx-auto mt-2 max-w-xl text-sm font-bold leading-6 text-rose-700">
         {message}
       </p>
       <button
-        className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-rose-600 px-5 text-sm font-black text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
+        className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
         onClick={onRetry}
         type="button"
       >

@@ -20,11 +20,11 @@ export function ScoreProgressChart({ scores }: ScoreProgressChartProps) {
 
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <h2 className="text-xl font-black text-slate-950">Score Progress</h2>
+      <h2 className="text-xl font-semibold text-slate-950">Score Progress</h2>
 
       {scoreValues.length === 0 ? (
         <div className="mt-5 rounded-2xl bg-slate-50 p-6 text-center">
-          <p className="font-black text-slate-950">No score history yet</p>
+          <p className="font-semibold text-slate-950">No score history yet</p>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             Complete a full SAT test to see your real score trend.
           </p>

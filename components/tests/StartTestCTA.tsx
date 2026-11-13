@@ -10,7 +10,7 @@ export function StartTestCTA() {
             <Target size={29} />
           </span>
           <div>
-            <h2 className="start-test-cta-title text-xl font-black text-slate-950">
+            <h2 className="start-test-cta-title text-xl font-semibold text-slate-950">
               Ready for your next challenge?
             </h2>
             <p className="start-test-cta-copy mt-2 max-w-2xl text-sm leading-6 text-slate-600">
@@ -21,7 +21,7 @@ export function StartTestCTA() {
         </div>
 
         <Link
-          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black !text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700 sm:w-auto"
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold !text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700 sm:w-auto"
           href="/tests/start"
         >
           Start New Test

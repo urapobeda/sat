@@ -80,7 +80,7 @@ export function UserDashboard() {
   if (isLoading) {
     return (
       <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-3 text-sm font-black text-blue-600">
+        <div className="flex items-center gap-3 text-sm font-semibold text-blue-600">
           <Loader2 className="animate-spin" size={20} />
           Loading your dashboard...
         </div>
@@ -104,10 +104,10 @@ export function UserDashboard() {
     <section className="mt-6 rounded-3xl border border-blue-100 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-600">
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
             Student Dashboard
           </p>
-          <h2 className="mt-2 text-2xl font-black text-slate-950">
+          <h2 className="mt-2 text-2xl font-bold text-slate-950">
             Welcome back, {profile?.full_name || profile?.email || "Student"}
           </h2>
           <p className="mt-1 text-sm leading-6 text-slate-600">
@@ -115,10 +115,10 @@ export function UserDashboard() {
           </p>
         </div>
         <div className="rounded-2xl bg-blue-50 px-5 py-4">
-          <p className="text-xs font-black uppercase tracking-[0.1em] text-blue-600">
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-blue-600">
             Weekly Goal
           </p>
-          <p className="mt-1 text-2xl font-black text-slate-950">
+          <p className="mt-1 text-2xl font-bold text-slate-950">
             {weeklyCompleted} / 5 sessions
           </p>
           <ProgressBar className="mt-3 w-48" value={(weeklyCompleted / 5) * 100} />
@@ -182,7 +182,7 @@ function DashboardMetric({
       <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${tone}`}>
         {icon}
       </div>
-      <p className="mt-4 text-2xl font-black text-slate-950">{value}</p>
+      <p className="mt-4 text-2xl font-bold text-slate-950">{value}</p>
       <p className="mt-1 text-sm font-bold text-slate-500">{label}</p>
     </article>
   );
@@ -197,7 +197,7 @@ function RecentList({
 }) {
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4">
-      <h3 className="font-black text-slate-950">{title}</h3>
+      <h3 className="font-semibold text-slate-950">{title}</h3>
       <div className="mt-3 space-y-2">
         {attempts.slice(0, 3).length > 0 ? (
           attempts.slice(0, 3).map((attempt) => (
@@ -208,7 +208,7 @@ function RecentList({
               <span className="font-bold text-slate-600">
                 {formatDate(attempt.date)}
               </span>
-              <span className="font-black text-blue-600">{attempt.percentage}%</span>
+              <span className="font-semibold text-blue-600">{attempt.percentage}%</span>
             </div>
           ))
         ) : (

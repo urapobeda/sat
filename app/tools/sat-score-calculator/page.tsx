@@ -203,10 +203,10 @@ export default function SatScoreCalculatorRoute() {
       <section className="overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-white p-6 shadow-soft sm:p-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.14em] text-blue-600">
+            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-blue-600">
               Tools
             </p>
-            <h1 className="mt-3 text-4xl font-black leading-tight text-slate-950 sm:text-5xl">
+            <h1 className="mt-3 text-4xl font-bold leading-tight text-slate-950 sm:text-5xl">
               SAT Score Estimator
             </h1>
             <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
@@ -271,7 +271,7 @@ export default function SatScoreCalculatorRoute() {
       </section>
 
       {toast ? (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm font-black text-emerald-700 shadow-2xl shadow-slate-950/10">
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 shadow-2xl shadow-slate-950/10">
           {toast}
         </div>
       ) : null}
@@ -313,13 +313,13 @@ function SectionInputPanel({
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
             Digital SAT Section
           </p>
-          <h2 className="mt-1 text-2xl font-black text-slate-950">{title}</h2>
+          <h2 className="mt-1 text-2xl font-bold text-slate-950">{title}</h2>
         </div>
         <span
-          className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.1em] ${accentClasses
+          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] ${accentClasses
             .split(" ")
             .slice(2)
             .join(" ")}`}
@@ -346,7 +346,7 @@ function SectionInputPanel({
       <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-black text-slate-950">
+            <p className="text-sm font-semibold text-slate-950">
               Module 2 Route
             </p>
             <p className="mt-1 text-xs leading-5 text-slate-500">
@@ -355,7 +355,7 @@ function SectionInputPanel({
           </div>
           <div className="flex flex-col gap-2 sm:items-end">
             <span
-              className={`rounded-full bg-gradient-to-r px-4 py-2 text-sm font-black capitalize text-white ${accentClasses
+              className={`rounded-full bg-gradient-to-r px-4 py-2 text-sm font-semibold capitalize text-white ${accentClasses
                 .split(" ")
                 .slice(0, 2)
                 .join(" ")}`}
@@ -375,7 +375,7 @@ function SectionInputPanel({
 
         <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-xs leading-5 text-slate-500 ring-1 ring-slate-100">
           Based on Module 1, this section is currently routed to{" "}
-          <span className="font-black capitalize text-blue-700">{autoRoute}</span>.
+          <span className="font-semibold capitalize text-blue-700">{autoRoute}</span>.
         </div>
 
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
@@ -383,7 +383,7 @@ function SectionInputPanel({
             <button
               aria-pressed={route === option}
               className={[
-                "min-h-11 rounded-xl border px-4 text-sm font-black capitalize transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500",
+                "min-h-11 rounded-xl border px-4 text-sm font-semibold capitalize transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500",
                 route === option
                   ? `border-transparent bg-gradient-to-r ${accentClasses
                       .split(" ")
@@ -422,14 +422,14 @@ function ModuleInputCard({
     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <label className="font-black text-slate-950" htmlFor={label}>
+          <label className="font-semibold text-slate-950" htmlFor={label}>
             {label}
           </label>
           <p className="mt-1 text-xs font-semibold text-slate-500">
             {value} correct / {max} total - {incorrect} incorrect
           </p>
         </div>
-        <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-blue-700 ring-1 ring-blue-100">
+        <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-blue-700 ring-1 ring-blue-100">
           {accuracy}%
         </span>
       </div>
@@ -445,7 +445,7 @@ function ModuleInputCard({
         </button>
         <input
           aria-describedby={`${label}-summary`}
-          className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-center text-lg font-black text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+          className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-center text-lg font-semibold text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
           id={label}
           inputMode="numeric"
           max={max}
@@ -502,20 +502,20 @@ function ResultsPanel({
             <TrendingUp size={24} />
           </span>
           <div>
-            <p className="text-sm font-black text-slate-500">
+            <p className="text-sm font-semibold text-slate-500">
               Estimated SAT Score
             </p>
-            <h2 className="text-5xl font-black tracking-normal text-slate-950">
+            <h2 className="text-5xl font-bold tracking-normal text-slate-950">
               {result.totalEstimatedScore}
             </h2>
           </div>
         </div>
 
         <div className="mt-5 rounded-2xl bg-blue-50 px-4 py-3">
-          <p className="text-xs font-black uppercase tracking-[0.12em] text-blue-600">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-600">
             Estimated Range
           </p>
-          <p className="mt-1 text-2xl font-black text-slate-950">
+          <p className="mt-1 text-2xl font-bold text-slate-950">
             {result.totalLowerBound}-{result.totalUpperBound}
           </p>
         </div>
@@ -565,15 +565,15 @@ function SectionResultCard({
     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-black text-slate-950">{title}</h3>
+          <h3 className="font-semibold text-slate-950">{title}</h3>
           <p className="mt-1 text-sm text-slate-500">
             Estimated:{" "}
-            <span className="font-black text-slate-950">
+            <span className="font-semibold text-slate-950">
               {value.estimatedScore}
             </span>
           </p>
         </div>
-        <span className="rounded-full bg-white px-3 py-1 text-xs font-black capitalize text-blue-700 ring-1 ring-blue-100">
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold capitalize text-blue-700 ring-1 ring-blue-100">
           {value.route}
         </span>
       </div>
@@ -601,7 +601,7 @@ function Breakdown({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
         {label}
       </p>
-      <p className="mt-1 font-black capitalize text-slate-950">{value}</p>
+      <p className="mt-1 font-semibold capitalize text-slate-950">{value}</p>
     </div>
   );
 }
@@ -617,7 +617,7 @@ function ActionButton({
 }) {
   return (
     <button
-      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-3 text-sm font-black text-blue-700 transition hover:border-blue-200 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-3 text-sm font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
       onClick={onClick}
       type="button"
     >

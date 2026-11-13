@@ -31,7 +31,7 @@ export function TestRow({ test }: TestRowProps) {
           <FileText size={24} />
         </span>
         <div className="min-w-0">
-          <h3 className="text-base font-black text-slate-950">{test.title}</h3>
+          <h3 className="text-base font-semibold text-slate-950">{test.title}</h3>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm font-semibold text-slate-500">
             <span>{test.sections} sections</span>
             <span className="hidden text-slate-300 sm:inline">.</span>
@@ -46,7 +46,7 @@ export function TestRow({ test }: TestRowProps) {
         <div className="sm:text-left">
           {isInProgress ? (
             <>
-              <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
+              <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
                 In Progress
               </span>
               <p className="mt-2 text-sm font-semibold text-slate-500">
@@ -57,12 +57,12 @@ export function TestRow({ test }: TestRowProps) {
             <>
               <p
                 className={[
-                  "text-2xl font-black",
+                  "text-2xl font-bold",
                   isBestScore ? "text-emerald-600" : "text-slate-950"
                 ].join(" ")}
               >
                 {test.score}
-                <span className="ml-1 text-sm font-black text-slate-500">
+                <span className="ml-1 text-sm font-semibold text-slate-500">
                   /1600
                 </span>
               </p>
@@ -75,7 +75,7 @@ export function TestRow({ test }: TestRowProps) {
 
         <Link
           className={[
-            "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition-all duration-300",
+            "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-300",
             isInProgress
               ? "bg-blue-600 !text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700"
               : "border border-slate-200 bg-white text-slate-900 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"

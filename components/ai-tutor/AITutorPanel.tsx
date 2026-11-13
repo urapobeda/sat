@@ -160,10 +160,10 @@ export function AITutorPanel({
                 <Sparkles size={22} />
               </span>
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.12em] text-blue-600">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-600">
                   AI Tutor
                 </p>
-                <h2 className="mt-1 text-xl font-black text-slate-950">
+                <h2 className="mt-1 text-xl font-semibold text-slate-950">
                   SAT question coach
                 </h2>
                 <p className="mt-1 text-sm leading-5 text-slate-600">{subtitle}</p>
@@ -185,7 +185,7 @@ export function AITutorPanel({
               <AITutorMessage key={message.id} message={message} />
             ))}
             {isPending ? (
-              <div className="flex items-center gap-3 rounded-3xl border border-blue-100 bg-white px-4 py-3 text-sm font-black text-blue-700 shadow-sm">
+              <div className="flex items-center gap-3 rounded-3xl border border-blue-100 bg-white px-4 py-3 text-sm font-semibold text-blue-700 shadow-sm">
                 <Loader2 className="animate-spin" size={18} />
                 AI Tutor is thinking...
               </div>
@@ -203,7 +203,7 @@ export function AITutorPanel({
               </div>
               {error && lastRequest ? (
                 <button
-                  className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl bg-white px-3 text-xs font-black text-rose-700 shadow-sm transition hover:bg-rose-100"
+                  className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl bg-white px-3 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100"
                   disabled={isPending}
                   onClick={() => sendTutorMessage(lastRequest.action, lastRequest.message)}
                   type="button"

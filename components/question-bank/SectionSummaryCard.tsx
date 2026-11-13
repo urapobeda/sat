@@ -40,7 +40,7 @@ export function SectionSummaryCard({
           <Icon size={34} />
         </span>
         <div>
-          <h3 className="text-xl font-black text-slate-950">{title}</h3>
+          <h3 className="text-xl font-semibold text-slate-950">{title}</h3>
           <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold text-slate-600">
             <span>{questions}</span>
@@ -52,7 +52,7 @@ export function SectionSummaryCard({
 
       <div>
         <div className="flex items-end gap-2">
-          <span className="text-lg font-black text-slate-950">{mastery}%</span>
+          <span className="text-lg font-semibold text-slate-950">{mastery}%</span>
           <span className="pb-0.5 text-xs font-bold text-slate-500">Mastery</span>
         </div>
         <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-200">
@@ -64,7 +64,7 @@ export function SectionSummaryCard({
       </div>
 
       <Link
-        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-black text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 lg:justify-self-end"
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 lg:justify-self-end"
         href={`/question-bank/practice?section=${section}`}
       >
         Practice

@@ -36,13 +36,13 @@ export function AITutorMessage({ message }: AITutorMessageProps) {
       >
         {message.response ? (
           <div>
-            <p className="font-black text-slate-950">{message.response.title}</p>
+            <p className="font-semibold text-slate-950">{message.response.title}</p>
             <p className="mt-2">{message.response.message}</p>
             {message.response.steps.length > 0 ? (
               <ol className="mt-3 space-y-2">
                 {message.response.steps.map((step, index) => (
                   <li className="flex gap-2" key={`${message.id}-step-${step}`}>
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-black text-blue-700">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-700">
                       {index + 1}
                     </span>
                     <span>{step}</span>

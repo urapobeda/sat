@@ -180,10 +180,10 @@ export function PastPapersPage() {
         <div className="pointer-events-none absolute right-8 top-8 hidden h-28 w-28 rounded-3xl bg-gradient-to-br from-blue-600 to-violet-600 opacity-10 blur-2xl sm:block" />
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.14em] text-blue-600">
+            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-blue-600">
               Phase 1 Library
             </p>
-            <h1 className="mt-3 text-4xl font-black leading-tight text-slate-950 sm:text-5xl">
+            <h1 className="mt-3 text-4xl font-bold leading-tight text-slate-950 sm:text-5xl">
               Past Papers & Mock Exams
             </h1>
             <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
@@ -258,7 +258,7 @@ export function PastPapersPage() {
       </section>
 
       {successMessage ? (
-        <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700">
+        <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
           {successMessage}
         </div>
       ) : null}
@@ -317,7 +317,7 @@ function PaperCard({
     <article className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl">
       <div className="h-28 bg-gradient-to-br from-blue-600 via-violet-600 to-emerald-400 p-5 text-white">
         <div className="flex items-start justify-between gap-4">
-          <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-black backdrop-blur">
+          <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur">
             {formatPaperType(paper.paper_type)}
           </span>
           <button
@@ -335,13 +335,13 @@ function PaperCard({
       </div>
 
       <div className="p-5 sm:p-6">
-        <div className="flex flex-wrap items-center gap-2 text-xs font-black">
+        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
           <Badge>{paper.year ?? "No year"}</Badge>
           <Badge>{formatPaperMode(paper.mode)}</Badge>
           <Badge>{formatPaperDifficulty(paper.difficulty)}</Badge>
           <Badge>{formatSourceType(paper.source_type)}</Badge>
         </div>
-        <h2 className="mt-4 text-2xl font-black text-slate-950">{paper.title}</h2>
+        <h2 className="mt-4 text-2xl font-bold text-slate-950">{paper.title}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           {paper.description ?? "No description provided."}
         </p>
@@ -355,7 +355,7 @@ function PaperCard({
         <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                 {paper.status.replace("-", " ")}
               </p>
               <p className="mt-1 text-sm font-bold text-slate-700">
@@ -369,14 +369,14 @@ function PaperCard({
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <Link
-            className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
+            className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
             href={`/past-papers/${paper.slug}`}
           >
             {actionLabel}
             <ArrowRight size={17} />
           </Link>
           <Link
-            className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+            className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
             href={`/past-papers/${paper.slug}`}
           >
             View Details
@@ -399,10 +399,10 @@ function FilterSelect({
   value: string;
 }) {
   return (
-    <label className="grid min-h-12 gap-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-500">
+    <label className="grid min-h-12 gap-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
       {label}
       <select
-        className="bg-transparent text-sm font-black text-slate-950 outline-none"
+        className="bg-transparent text-sm font-semibold text-slate-950 outline-none"
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >
@@ -428,7 +428,7 @@ function Metric({
   return (
     <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
       <Icon className="text-blue-600" size={18} />
-      <p className="mt-3 text-lg font-black text-slate-950">{value}</p>
+      <p className="mt-3 text-lg font-semibold text-slate-950">{value}</p>
       <p className="text-xs font-bold text-slate-500">{label}</p>
     </div>
   );
@@ -462,14 +462,14 @@ function ErrorCard({
   return (
     <div className="rounded-3xl border border-rose-100 bg-rose-50 p-6 text-center shadow-sm">
       <Search className="mx-auto text-rose-600" size={30} />
-      <h2 className="mt-3 text-xl font-black text-rose-900">
+      <h2 className="mt-3 text-xl font-semibold text-rose-900">
         Past papers could not be loaded.
       </h2>
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-rose-700">
         {message}
       </p>
       <button
-        className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-black text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
+        className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
         onClick={onRetry}
         type="button"
       >
@@ -490,11 +490,11 @@ function EmptyCard({
   return (
     <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-8 text-center shadow-sm">
       <ShieldCheck className="mx-auto text-blue-600" size={34} />
-      <h2 className="mt-4 text-2xl font-black text-slate-950">{title}</h2>
+      <h2 className="mt-4 text-2xl font-bold text-slate-950">{title}</h2>
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
         {description}
       </p>
-      <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black text-blue-700 shadow-sm">
+      <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-semibold text-blue-700 shadow-sm">
         <Sparkles size={15} />
         Original, licensed, or publicly permitted materials only
       </div>

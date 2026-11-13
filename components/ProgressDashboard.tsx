@@ -150,7 +150,7 @@ export function ProgressDashboard() {
   if (isLoading) {
     return (
       <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-3 text-sm font-black text-blue-600">
+        <div className="flex items-center gap-3 text-sm font-semibold text-blue-600">
           <Loader2 className="animate-spin" size={20} />
           Loading progress from Supabase...
         </div>
@@ -167,14 +167,14 @@ export function ProgressDashboard() {
     return (
       <section className="mt-8 rounded-3xl border border-rose-100 bg-rose-50 p-6 text-center shadow-sm">
         <BarChart3 className="mx-auto text-rose-600" size={30} />
-        <h2 className="mt-3 text-xl font-black text-rose-900">
+        <h2 className="mt-3 text-xl font-semibold text-rose-900">
           Progress unavailable
         </h2>
         <p className="mx-auto mt-2 max-w-xl text-sm font-bold leading-6 text-rose-700">
           {error}
         </p>
         <button
-          className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-rose-600 px-5 text-sm font-black text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
+          className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
           onClick={() => {
             void loadProgress();
           }}
@@ -199,7 +199,7 @@ export function ProgressDashboard() {
   return (
     <section className="mt-8 space-y-6">
       {successMessage ? (
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-sm font-black text-emerald-700">
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700">
           {successMessage}
         </div>
       ) : null}
@@ -236,7 +236,7 @@ export function ProgressDashboard() {
           <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-xl font-black text-slate-950">
+                <h2 className="text-xl font-semibold text-slate-950">
                   Progress over time
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
@@ -244,7 +244,7 @@ export function ProgressDashboard() {
                 </p>
               </div>
               <button
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-4 py-2.5 text-sm font-black text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-4 py-2.5 text-sm font-semibold text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                 disabled={isClearing}
                 onClick={handleClearProgress}
                 type="button"
@@ -257,7 +257,7 @@ export function ProgressDashboard() {
           </article>
 
           <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="text-xl font-black text-slate-950">Recent attempts</h2>
+            <h2 className="text-xl font-semibold text-slate-950">Recent attempts</h2>
             <div className="mt-5 space-y-3">
               {attempts.slice(0, 8).map((record) => (
                 <AttemptRow key={record.id} record={record} />
@@ -315,7 +315,7 @@ function StatCard({ icon, label, tone, value }: StatCardProps) {
           {icon}
         </span>
         <div>
-          <p className="text-2xl font-black text-slate-950">{value}</p>
+          <p className="text-2xl font-bold text-slate-950">{value}</p>
           <p className="mt-1 text-sm font-semibold text-slate-500">{label}</p>
         </div>
       </div>
@@ -339,7 +339,7 @@ function AttemptRow({ record }: AttemptRowProps) {
         <div className="flex flex-wrap items-center gap-2">
           <span
             className={[
-              "rounded-full px-3 py-1 text-xs font-black uppercase",
+              "rounded-full px-3 py-1 text-xs font-semibold uppercase",
               isPractice
                 ? "bg-blue-50 text-blue-700"
                 : "bg-violet-50 text-violet-700"
@@ -347,17 +347,17 @@ function AttemptRow({ record }: AttemptRowProps) {
           >
             {record.mode}
           </span>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
             {subtitle}
           </span>
         </div>
-        <h3 className="mt-3 text-lg font-black text-slate-950">
+        <h3 className="mt-3 text-lg font-semibold text-slate-950">
           {record.score} of {record.total} correct
         </h3>
         <p className="mt-1 text-sm text-slate-500">{formatDate(record.date)}</p>
       </div>
       <div className="rounded-2xl bg-slate-50 px-5 py-3 text-left sm:text-right">
-        <p className="text-2xl font-black text-blue-600">{record.percentage}%</p>
+        <p className="text-2xl font-bold text-blue-600">{record.percentage}%</p>
         {record.mode === "test" && record.estimatedScore ? (
           <p className="text-xs font-bold text-slate-500">
             SAT {record.estimatedScore}
@@ -377,7 +377,7 @@ function AttemptList({
 }) {
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-lg font-black text-slate-950">{title}</h2>
+      <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
       <div className="mt-4 space-y-3">
         {records.length > 0 ? (
           records.slice(0, 5).map((record) => (
@@ -386,10 +386,10 @@ function AttemptList({
               key={`${title}-${record.id}`}
             >
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-black text-slate-950">
+                <p className="text-sm font-semibold text-slate-950">
                   {record.score} / {record.total}
                 </p>
-                <span className="text-sm font-black text-blue-600">
+                <span className="text-sm font-semibold text-blue-600">
                   {record.percentage}%
                 </span>
               </div>
@@ -421,14 +421,14 @@ function TopicPanel({
 }) {
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-xl font-black text-slate-950">{title}</h2>
+      <h2 className="text-xl font-semibold text-slate-950">{title}</h2>
       <div className="mt-5 space-y-4">
         {items.length > 0 ? (
           items.map((item) => (
             <div key={`${title}-${item.topic}`}>
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-black text-slate-950">{item.topic}</p>
-                <span className="text-xs font-black text-slate-500">
+                <p className="text-sm font-semibold text-slate-950">{item.topic}</p>
+                <span className="text-xs font-semibold text-slate-500">
                   {item.label}
                 </span>
               </div>

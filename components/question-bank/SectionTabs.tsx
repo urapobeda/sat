@@ -40,7 +40,7 @@ export function SectionTabs({ activeTab, onChange, tabs }: SectionTabsProps) {
               <Icon size={23} />
             </span>
             <span>
-              <span className="block text-sm font-black">{tab.label}</span>
+              <span className="block text-sm font-semibold">{tab.label}</span>
               <span className="mt-1 block text-xs font-semibold text-slate-500">
                 {tab.questions}
               </span>

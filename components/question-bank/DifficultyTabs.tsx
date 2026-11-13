@@ -46,7 +46,7 @@ export function DifficultyTabs({
           <button
             aria-pressed={isActive}
             className={[
-              "inline-flex min-h-9 items-center justify-center rounded-lg px-4 text-xs font-black transition",
+              "inline-flex min-h-9 items-center justify-center rounded-lg px-4 text-xs font-semibold transition",
               isActive
                 ? "bg-blue-600 text-white shadow-sm"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"

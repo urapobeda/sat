@@ -68,7 +68,7 @@ export function StudyPlanCard() {
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">
             Today&apos;s Study Plan
           </p>
-          <p className="mt-1 text-lg font-extrabold text-slate-950">
+          <p className="mt-1 text-lg font-semibold text-slate-950">
             Next up: Practice Questions
           </p>
         </div>

@@ -54,10 +54,10 @@ export function SATCountdown({ compact = false }: SATCountdownProps) {
           compact ? "p-4" : "p-5"
         ].join(" ")}
       >
-        <p className="text-sm font-black uppercase tracking-[0.12em] text-blue-600">
+        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
           Next Digital SAT
         </p>
-        <h2 className="mt-2 text-2xl font-black text-slate-950">
+        <h2 className="mt-2 text-2xl font-bold text-slate-950">
           Schedule coming soon
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -83,7 +83,7 @@ export function SATCountdown({ compact = false }: SATCountdownProps) {
         <div>
           <span
             className={[
-              "inline-flex rounded-full px-3 py-1 text-xs font-black",
+              "inline-flex rounded-full px-3 py-1 text-xs font-semibold",
               badge === "Final Week"
                 ? "bg-rose-50 text-rose-700"
                 : badge === "Less than 30 Days"
@@ -93,12 +93,12 @@ export function SATCountdown({ compact = false }: SATCountdownProps) {
           >
             {badge}
           </span>
-          <p className="mt-4 text-sm font-black uppercase tracking-[0.12em] text-blue-600">
+          <p className="mt-4 text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
             Next Digital SAT
           </p>
           <h2
             className={[
-              "mt-2 font-black text-slate-950",
+              "mt-2 font-semibold text-slate-950",
               compact ? "text-xl" : "text-2xl"
             ].join(" ")}
           >
@@ -141,10 +141,10 @@ function SATCountdownLoading({ compact }: { compact: boolean }) {
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-violet-500 to-emerald-400" />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
+          <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
             Upcoming Exam
           </span>
-          <p className="mt-4 text-sm font-black uppercase tracking-[0.12em] text-blue-600">
+          <p className="mt-4 text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
             Next Digital SAT
           </p>
           <div className="mt-2 h-8 w-64 max-w-full animate-pulse rounded-xl bg-white/80" />
@@ -174,10 +174,10 @@ function SATCountdownLoading({ compact }: { compact: boolean }) {
 function TimeBlock({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-2xl border border-white/70 bg-white/80 p-4 text-center shadow-sm">
-      <p className="text-3xl font-black tabular-nums text-slate-950">
+      <p className="text-3xl font-bold tabular-nums text-slate-950">
         {typeof value === "number" ? String(value).padStart(2, "0") : value}
       </p>
-      <p className="mt-1 text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
         {label}
       </p>
     </div>

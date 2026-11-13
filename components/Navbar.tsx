@@ -133,7 +133,7 @@ export function Navbar() {
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
             <GraduationCap size={24} />
           </span>
-          <span className="truncate text-lg font-extrabold text-slate-950">
+          <span className="truncate text-lg font-semibold text-slate-950">
             <span className="text-blue-600">SAT</span> Hub
           </span>
         </Link>
@@ -146,7 +146,7 @@ export function Navbar() {
 
         {visibleMoreItems.length > 0 ? (
           <div className="mt-5 border-t border-slate-200 pt-4">
-            <p className="px-3 text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+            <p className="px-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
               More
             </p>
             <div className="mt-2 space-y-1">
@@ -161,14 +161,14 @@ export function Navbar() {
           {user ? (
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
               <Link
-                className="flex items-center gap-2 text-sm font-black text-slate-900 transition hover:text-blue-600"
+                className="flex items-center gap-2 text-sm font-semibold text-slate-900 transition hover:text-blue-600"
                 href="/progress"
               >
                 <UserRound size={17} />
                 Profile
               </Link>
               <button
-                className="mt-3 w-full rounded-xl border border-rose-100 bg-white px-3 py-2 text-sm font-black text-rose-600 transition hover:bg-rose-50"
+                className="mt-3 w-full rounded-xl border border-rose-100 bg-white px-3 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
                 onClick={handleSignOut}
                 type="button"
               >
@@ -197,7 +197,7 @@ export function Navbar() {
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
               <GraduationCap size={24} />
             </span>
-            <span className="truncate text-lg font-extrabold text-slate-950">
+            <span className="truncate text-lg font-semibold text-slate-950">
               <span className="text-blue-600">SAT</span> Practice Hub
             </span>
           </Link>
@@ -284,7 +284,7 @@ function SidebarLink({
     <Link
       aria-current={isActive ? "page" : undefined}
       className={[
-        "flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-black transition",
+        "flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition",
         isActive
           ? "bg-blue-600 !text-white shadow-lg shadow-blue-600/20 [&_*]:!text-white"
           : "text-slate-700 hover:bg-blue-50 hover:text-blue-700"
@@ -310,7 +310,7 @@ function SidebarMoreLink({
   return (
     <Link
       className={[
-        "flex min-h-10 items-center justify-between gap-2 rounded-xl px-3 text-sm font-black transition",
+        "flex min-h-10 items-center justify-between gap-2 rounded-xl px-3 text-sm font-semibold transition",
         isActive
           ? "bg-blue-600 !text-white shadow-lg shadow-blue-600/15 [&_*]:!text-white"
           : "text-slate-700 hover:bg-blue-50 hover:text-blue-700"
@@ -322,7 +322,7 @@ function SidebarMoreLink({
         <span className="truncate">{item.label}</span>
       </span>
       {item.isComingSoon ? (
-        <span className="rounded-full bg-violet-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-violet-700">
+        <span className="rounded-full bg-violet-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-violet-700">
           Soon
         </span>
       ) : null}
@@ -407,7 +407,7 @@ function NavigationLinks({
 
               return (
                 <Link
-                  className="flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-sm font-black text-slate-800 transition hover:bg-blue-50 hover:text-blue-700"
+                  className="flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-slate-800 transition hover:bg-blue-50 hover:text-blue-700"
                   href={item.href}
                   key={item.href}
                   onClick={() => setIsMoreOpen(false)}
@@ -419,7 +419,7 @@ function NavigationLinks({
                     <span className="truncate">{item.label}</span>
                   </span>
                   {item.isComingSoon ? (
-                    <span className="rounded-full bg-violet-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-violet-700">
+                    <span className="rounded-full bg-violet-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-violet-700">
                       Soon
                     </span>
                   ) : null}

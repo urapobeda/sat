@@ -98,7 +98,7 @@ export function ProgressCard() {
       <div className="relative overflow-hidden rounded-3xl border border-white/80 bg-white/90 p-5 shadow-2xl shadow-blue-950/10 backdrop-blur sm:p-6">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-violet-500 to-emerald-400" />
         <div className="flex items-start justify-between gap-4">
-          <p className="text-lg font-black text-slate-950">Your Progress</p>
+          <p className="text-lg font-semibold text-slate-950">Your Progress</p>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
             {hasLiveStats ? "Live Data" : "Preview"}
           </span>
@@ -108,7 +108,7 @@ export function ProgressCard() {
           <div className="rounded-2xl bg-slate-50/90 p-4">
             <p className="text-sm font-semibold text-slate-600">Best Score</p>
             <div className="mt-1 flex items-end gap-2">
-              <span className="text-4xl font-black text-slate-950">
+              <span className="text-4xl font-bold text-slate-950">
                 {isLoading ? <Loader2 className="animate-spin" size={28} /> : bestScore || "-"}
               </span>
               <span className="pb-1.5 text-sm font-bold text-slate-500">
@@ -126,10 +126,10 @@ export function ProgressCard() {
           <div className="relative h-28 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 via-white to-violet-50 p-4">
             <div className="pointer-events-none absolute -right-3 -top-2 h-24 w-24 rounded-full bg-blue-300/25 blur-3xl" />
             <div className="pointer-events-none absolute -left-2 bottom-0 h-20 w-20 rounded-full bg-violet-300/20 blur-3xl" />
-            <div className="pointer-events-none absolute left-5 top-4 z-10 text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+            <div className="pointer-events-none absolute left-5 top-4 z-10 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
               Score trend
             </div>
-            <div className="pointer-events-none absolute bottom-3 left-5 right-5 z-10 flex items-center justify-between text-[10px] font-black text-slate-500">
+            <div className="pointer-events-none absolute bottom-3 left-5 right-5 z-10 flex items-center justify-between text-[10px] font-semibold text-slate-500">
               <span>{hasLiveStats ? "Start" : "900"}</span>
               <span>{hasLiveStats ? "Now" : "1550"}</span>
             </div>
@@ -281,7 +281,7 @@ function MiniMetric({ label, tone, value, width }: MiniMetricProps) {
   return (
     <div>
       <p className="text-sm font-semibold text-slate-600">{label}</p>
-      <p className="mt-1 text-2xl font-black text-slate-950">
+      <p className="mt-1 text-2xl font-bold text-slate-950">
         {value}
       </p>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
@@ -302,7 +302,7 @@ function MetricTile({ icon, label, value }: MetricTileProps) {
     <div className="rounded-2xl border border-slate-100 bg-slate-50/90 p-3">
       <div className="flex items-center gap-2 text-blue-600">{icon}</div>
       <p className="mt-2 text-xs font-semibold text-slate-500">{label}</p>
-      <p className="mt-0.5 text-lg font-black text-slate-950">{value}</p>
+      <p className="mt-0.5 text-lg font-semibold text-slate-950">{value}</p>
     </div>
   );
 }

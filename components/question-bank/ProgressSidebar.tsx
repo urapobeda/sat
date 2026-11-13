@@ -25,14 +25,14 @@ export function ProgressSidebar({
   return (
     <aside className="space-y-5">
       <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-black text-slate-950">Your Progress</h2>
+        <h2 className="text-lg font-semibold text-slate-950">Your Progress</h2>
         <div className="mt-5 flex items-center gap-6">
           <div
             className="flex h-36 w-36 shrink-0 items-center justify-center rounded-full"
             style={{ background: conic }}
           >
             <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-white">
-              <p className="text-3xl font-black text-slate-950">{mastery}%</p>
+              <p className="text-3xl font-bold text-slate-950">{mastery}%</p>
               <p className="text-xs font-bold text-slate-500">Overall Mastery</p>
             </div>
           </div>
@@ -67,7 +67,7 @@ function ProgressStat({
     <div>
       <div className="flex items-center gap-2">
         <CheckCircle2 className={tone} size={16} />
-        <p className={`text-lg font-black ${tone}`}>{value}</p>
+        <p className={`text-lg font-semibold ${tone}`}>{value}</p>
       </div>
       <p className="ml-6 text-xs font-semibold text-slate-500">{label}</p>
     </div>

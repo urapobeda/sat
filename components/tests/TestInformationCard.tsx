@@ -42,7 +42,7 @@ const infoItems: Array<{
 export function TestInformationCard() {
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <h2 className="text-xl font-black text-slate-950">Test Information</h2>
+      <h2 className="text-xl font-semibold text-slate-950">Test Information</h2>
 
       <div className="mt-5 space-y-5">
         {infoItems.map((item) => {
@@ -56,7 +56,7 @@ export function TestInformationCard() {
                 <Icon size={17} />
               </span>
               <div>
-                <p className="font-black text-slate-950">{item.label}</p>
+                <p className="font-semibold text-slate-950">{item.label}</p>
                 <p className="mt-1 text-sm leading-6 text-slate-600">
                   {item.description}
                 </p>
