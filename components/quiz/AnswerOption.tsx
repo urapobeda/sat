@@ -59,7 +59,7 @@ export function AnswerOption({
           aria-pressed={isSelected}
           className={[
             "flex min-h-14 min-w-0 flex-1 cursor-pointer items-center gap-4 rounded-xl px-3 py-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-default",
-            examStyle ? "font-serif text-[17px]" : "px-4 text-base",
+            examStyle ? "font-sans text-[17px]" : "px-4 text-base",
             onCheck ? "max-[400px]:basis-full" : ""
           ].join(" ")}
           disabled={isDisabled}

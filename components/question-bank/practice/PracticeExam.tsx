@@ -212,7 +212,7 @@ export function PracticeExam({
                 <section aria-label={question.section === "math" ? "Problem" : "Reading passage"} className="min-w-0 lg:overflow-y-auto lg:border-r lg:border-slate-200" ref={passagePanel}>
                   <div className="mx-auto max-w-[40rem] lg:mr-0 px-4 pb-2 pt-6 sm:px-5 lg:pb-8 lg:pt-8">
                     <QuestionStem
-                      className="break-words font-serif text-[18px] leading-[1.5]"
+                      className="break-words font-sans text-[18px] leading-[1.5]"
                       highlight={highlight}
                       key={question.id}
                       number={currentIndex + 1}
@@ -256,7 +256,7 @@ export function PracticeExam({
                   ) : null}
                   {prompt ? (
                     <Highlightable
-                      className="mt-3 break-words font-serif text-[18px] leading-[1.5]"
+                      className="mt-3 break-words font-sans text-[18px] leading-[1.5]"
                       enabled={highlight.highlightEnabled}
                       key={`prompt-${question.id}`}
                       storageKey={`question-prompt-${question.id}`}

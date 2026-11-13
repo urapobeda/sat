@@ -190,7 +190,7 @@ export function PaperRunner({ slug, section, attemptId }: { slug: string; sectio
       <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-3">
         <Link className="inline-flex items-center gap-1 text-sm text-slate-600" href={`/past-papers/${slug}`}><ChevronLeft size={17} /> Go back</Link>
         <div className="text-center"><p className="text-sm font-bold">{current ? `${current.section === "math" ? "Math" : "Reading & Writing"} · Module ${current.module_number}` : snapshot?.title ?? "Practice Paper"}</p>
-          {current ? <p className="font-mono text-xl font-bold" aria-label="Time remaining">{formatTime(seconds)}</p> : null}</div>
+          {current ? <p className="font-sans tabular-nums text-xl font-bold" aria-label="Time remaining">{formatTime(seconds)}</p> : null}</div>
         <span className="text-xs text-slate-500" role="status">{busy ? "Submitting…" : saving ? "Saving…" : ""}</span>
       </header>
       {error ? <div className="mx-auto mt-4 max-w-5xl rounded-xl bg-amber-50 p-4 text-sm text-amber-900" role="alert">
