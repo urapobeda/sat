@@ -142,7 +142,7 @@ export function TestsPage() {
             <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg lg:max-w-xl">
               Build exam confidence with timed SAT-style questions and review your saved attempts.
             </p>
-            <Link className="mt-4 inline-flex rounded-xl bg-blue-600 px-4 py-2 font-bold text-white" href="/past-papers">
+            <Link className="mt-4 inline-flex rounded-xl bg-blue-600 px-4 py-2 font-bold text-white!" href="/past-papers">
               Browse Past Papers
             </Link>
           </div>
