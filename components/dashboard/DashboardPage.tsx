@@ -1,3 +1,4 @@
+import { MyGroups } from "@/components/groups/MyGroups";
 import { ArrowRight, BookOpen, CalendarDays, ChartNoAxesCombined, ClipboardList, FileText, FolderOpen, NotebookPen } from "lucide-react";
 import Link from "next/link";
 import { BearIcon } from "@/components/dashboard/BearIcon";
@@ -32,6 +33,7 @@ export function DashboardPage() {
           </div>
         </header>
 
+        <MyGroups />
         <LearningSnapshot />
 
         <section aria-labelledby="practice-shortcuts">

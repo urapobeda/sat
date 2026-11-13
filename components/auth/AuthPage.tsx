@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { BearIcon } from "@/components/dashboard/BearIcon";
 import { getSupabaseBrowserClient, isSupabaseConfigured, normalizeSupabaseUrl } from "@/lib/supabase/client";
+import { getAuthReturnPath } from "@/lib/groups";
 import { getAuthRedirectAction } from "@/lib/authRedirect";
 import { syncServerSession } from "@/lib/supabase/serverSession";
 import { ensureProfile } from "@/lib/supabase/queries";
@@ -75,7 +76,7 @@ export function AuthPage({ initialMode = "signin" }: { initialMode?: AuthMode })
         if (!active) return;
         void ensureProfile(session.user).then(async () => {
           await syncServerSession(session.access_token).catch(() => {});
-          if (active) router.replace("/question-bank");
+          if (active) router.replace(getAuthReturnPath(window.location.search));
         }).catch(() => {
           if (active) setError("Signed in, but the profile could not be saved.");
         });
@@ -114,7 +115,7 @@ export function AuthPage({ initialMode = "signin" }: { initialMode?: AuthMode })
     try {
       const { auth } = getSupabaseBrowserClient();
       if (mode === "forgot") {
-        const result = await auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/auth?mode=reset` });
+        const result = await auth.resetPasswordForEmail(email.trim(), { redirectTo: authCallbackUrl("reset") });
         if (result.error) throw result.error;
         setMessage("If an account exists for that email, you’ll receive a reset link.");
         return;
@@ -122,13 +123,13 @@ export function AuthPage({ initialMode = "signin" }: { initialMode?: AuthMode })
       if (mode === "reset") {
         const result = await auth.updateUser({ password });
         if (result.error) throw result.error;
-        router.replace("/question-bank");
+        router.replace(getAuthReturnPath(window.location.search));
         return;
       }
       const result = mode === "signup"
         ? await auth.signUp({
           email: email.trim(), password,
-          options: { data: { full_name: name }, emailRedirectTo: `${window.location.origin}/auth?mode=callback` }
+          options: { data: { full_name: name }, emailRedirectTo: authCallbackUrl() }
         })
         : await auth.signInWithPassword({ email: email.trim(), password });
       if (result.error) throw result.error;
@@ -138,12 +139,20 @@ export function AuthPage({ initialMode = "signin" }: { initialMode?: AuthMode })
       }
       await ensureProfile(result.data.session.user);
       await syncServerSession(result.data.session.access_token).catch(() => {});
-      router.replace("/question-bank");
+      router.replace(getAuthReturnPath(window.location.search));
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Authentication failed.");
     } finally {
       setPending(false);
     }
+  }
+
+  function authCallbackUrl(mode: "callback" | "reset" = "callback") {
+    const url = new URL("/auth", window.location.origin);
+    url.searchParams.set("mode", mode);
+    const next = getAuthReturnPath(window.location.search);
+    if (next.startsWith("/join/")) url.searchParams.set("next", next);
+    return url.toString();
   }
 
   async function signInWithGoogle() {
@@ -164,7 +173,7 @@ export function AuthPage({ initialMode = "signin" }: { initialMode?: AuthMode })
       }
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: `${window.location.origin}/auth?mode=callback` }
+        options: { redirectTo: authCallbackUrl() }
       });
       if (oauthError) throw oauthError;
     } catch (failure) {

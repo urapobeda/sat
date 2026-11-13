@@ -1,3 +1,4 @@
+import type { StudyGroup, GroupMember, GroupTeacher } from "@/lib/groups";
 import type { UserRole } from "@/lib/roles";
 import type { PaperItem, PaperSolution, PaperModuleRun } from "./../lib/paperRunner";
 export type Choice = {
@@ -196,6 +197,16 @@ export type PaperBookmark = {
 export type Database = {
   public: {
     Tables: {
+      groups: {
+        Row: Omit<StudyGroup, "teacher_name" | "member_count">;
+        Insert: never;
+        Update: { name?: string; archived?: boolean; teacher_id?: string };
+        Relationships: [];
+      };
+      group_members: {
+        Row: { group_id: string; student_id: string; joined_at: string };
+        Insert: never; Update: never; Relationships: [];
+      };
       ai_tutor_usage: {
         Row: { user_id: string; date: string; count: number };
         Insert: never;
@@ -364,6 +375,14 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      create_group: { Args: { p_name: string }; Returns: string };
+      join_group_by_code: { Args: { code: string }; Returns: string };
+      rotate_group_code: { Args: { p_group_id: string }; Returns: string };
+      list_my_groups: { Args: { p_group_id?: string }; Returns: StudyGroup[] };
+      get_group_members: { Args: { p_group_id: string }; Returns: GroupMember[] };
+      list_group_teachers: { Args: Record<string, never>; Returns: GroupTeacher[] };
+      can_manage_group: { Args: { p_group_id: string }; Returns: boolean };
+      is_group_member: { Args: { p_group_id: string }; Returns: boolean };
       current_user_role: { Args: Record<string, never>; Returns: UserRole };
       is_staff: { Args: Record<string, never>; Returns: boolean };
       admin_list_users: {
