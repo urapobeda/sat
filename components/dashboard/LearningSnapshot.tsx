@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useStudentAccount } from "@/components/dashboard/StudentAccount";
+import { getSessionStreak } from "@/lib/sessionStreak";
 import { getNextSATDate } from "@/lib/satDates";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getRecentPracticeAttempts, getRecentTestAttempts, mergeRecentAttempts, type RecentAttempt } from "@/lib/supabase/queries";
@@ -17,27 +18,14 @@ type Snapshot = {
 
 const formatDate = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
 
-function getSessionStreak(attempts: RecentAttempt[], now: number) {
-  const dayMs = 86_400_000;
-  const activeDays = new Set(attempts.map((attempt) => Math.floor(new Date(attempt.date).getTime() / dayMs)));
-  const today = Math.floor(now / dayMs);
-  let day = activeDays.has(today) ? today : today - 1;
-  let count = 0;
-  while (activeDays.has(day)) {
-    count++;
-    day--;
-  }
-  return count;
-}
-
 export function LearningSnapshot() {
   const { userId, isLoading } = useStudentAccount();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [retry, setRetry] = useState(0);
-  const [calendar, setCalendar] = useState<{ nextExam: Date | null; now: number } | null>(null);
+  const [calendar, setCalendar] = useState<{ nextExam: Date | null; now: number; timeZone: string } | null>(null);
 
   useEffect(() => {
-    const update = window.setTimeout(() => setCalendar({ nextExam: getNextSATDate(), now: Date.now() }), 0);
+    const update = window.setTimeout(() => setCalendar({ nextExam: getNextSATDate(), now: Date.now(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }), 0);
     return () => window.clearTimeout(update);
   }, []);
 
@@ -77,7 +65,7 @@ export function LearningSnapshot() {
   const exam = current?.plan ? new Date(`${current.plan.exam_date}T00:00:00`) : calendar?.nextExam;
   const days = exam && calendar ? Math.ceil((exam.getTime() - calendar.now) / 86_400_000) : null;
 
-  const streak = current?.practice && current.tests && calendar ? getSessionStreak(attempts, calendar.now) : null;
+  const streak = current?.practice && current.tests && calendar ? getSessionStreak(attempts, calendar.now, calendar.timeZone) : null;
 
   return (
     <section aria-labelledby="learning-snapshot">
@@ -94,7 +82,7 @@ export function LearningSnapshot() {
         {[
           { label: "Latest SAT estimate", value: score ?? "—", detail: change === null ? "Unofficial · based on a saved test" : `${change > 0 ? "+" : ""}${change} vs. previous test` },
           { label: "Target score", value: current?.plan?.target_score ?? "—", detail: "Set in your study plan" },
-          { label: "Session streak", value: streak === null ? "—" : `${streak} ${streak === 1 ? "day" : "days"}`, detail: "From completed sessions · UTC" },
+          { label: "Session streak", value: streak === null ? "—" : `${streak} ${streak === 1 ? "day" : "days"}`, detail: "From completed sessions" },
           { label: current?.plan ? "Your planned exam" : "Next listed SAT", value: exam ? formatDate.format(exam) : "—", detail: days === null ? "No upcoming date" : days < 0 ? "Update your planned date" : `${days} days to go` }
         ].map(({ label, value, detail }) => (
           <div className="hub-card p-4 sm:p-5" key={label}>
