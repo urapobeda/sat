@@ -10,5 +10,5 @@ export default async function TeacherSection({ params }: { params: Promise<{ sec
   const { section } = await params;
   const content = Object.hasOwn(sections, section) ? sections[section] : null;
   if (!content) notFound();
-  return <section className="hub-card p-6"><h1 className="text-3xl font-bold">{content[0]}</h1><p className="mt-3 text-slate-600 dark:text-slate-300">{content[1]}</p></section>;
+  return <section className="hub-card p-6"><h1 className="text-3xl font-bold">{content[0]}</h1><p className="mt-3 text-slate-600">{content[1]}</p></section>;
 }

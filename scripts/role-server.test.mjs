@@ -18,11 +18,19 @@ export const NextResponse = { json: (data, init) => {
 }, redirect: (url) => Response.redirect(url), next: () => new Response(null, { status: 200 }) };
 export async function cookies() { return { get: () => ({ value: c.token }) }; }
 export function redirect(location) { throw new Error('REDIRECT:' + location); }
-export function getSupabaseAdminClient() { return {
+function createMockClient() { return {
   auth: { async getUser(token) { return token === c.token ? { data: { user: { id: c.actorId, is_anonymous: c.anonymous, user_metadata: { role: 'admin' } } }, error: null } : { data: { user: null }, error: {} }; } },
   from() { return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: { role: c.role }, error: c.dbFailure ? {} : null }; } }; },
   async rpc(name, args) { c.calls.push([name, args]); return { data: [], error: null }; }
 }; }
+export function getSupabaseUserClient(token) {
+  c.userClientToken = token;
+  return createMockClient();
+}
+export function getSupabaseAdminClient() {
+  return { ...createMockClient(), from() { throw new Error('permission denied for table profiles'); } };
+}
+export function logRoleDenial(reason, details) { (c.denials ??= []).push({ reason, details }); }
 `;
 const url = (s) => "data:text/javascript;base64," + Buffer.from(s).toString("base64");
 const mockUrl = url(mock);
@@ -37,6 +45,7 @@ try {
   const actors = await import(actorUrl);
   assert.equal(await actors.getVerifiedRoleActor("forged-token"), null);
   assert.equal((await actors.getVerifiedRoleActor(context.token)).role, "student", "Ignore editable user_metadata roles");
+  assert.equal(context.userClientToken, context.token, "Read own role with the verified user JWT, not service_role grants");
   context.dbFailure = true;
   assert.equal(await actors.getVerifiedRoleActor(context.token), null);
   context.dbFailure = false;
@@ -90,5 +99,7 @@ try {
   assert.equal(context.lastCookie.options.maxAge, 0);
   context.token = `header.${Buffer.from(JSON.stringify({ exp: 1 })).toString("base64url")}.signature`;
   assert.equal((await sessions.POST(request("/api/auth/session"))).status, 401);
+  assert.ok(context.denials.length > 0);
+  assert.ok(!JSON.stringify(context.denials).includes(context.token));
   console.log("Server role tests passed (verified identity, metadata spoofing, page/API guards, self-demotion and secure session cookies)");
 } finally { delete globalThis.__satRoleTest; }

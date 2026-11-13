@@ -5,7 +5,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { syncServerSession } from "@/lib/supabase/serverSession";
 import type { UserRole } from "@/lib/roles";
 
-export function RoleSwitch({ role, staff = false, compact = false }: { role: UserRole; staff?: boolean; compact?: boolean }) {
+export function RoleSwitch({ role, staff = false }: { role: UserRole; staff?: boolean }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (role === "student") return null;
@@ -25,8 +25,8 @@ export function RoleSwitch({ role, staff = false, compact = false }: { role: Use
   const label = staff ? "Вид ученика" : "Кабинет учителя";
   return (
     <div className="space-y-1">
-      <button aria-label={label} title={label} disabled={pending} onClick={() => void navigate(staff ? "/dashboard" : "/teacher")} type="button" className={`flex cursor-pointer items-center gap-2 rounded-lg border border-white/15 p-2 text-sm text-slate-200 hover:bg-white/10 disabled:opacity-50 ${compact ? "justify-center" : "w-full"}`}>
-        {staff ? <UserRound size={17} /> : <GraduationCap size={17} />}{compact ? null : label}
+      <button aria-label={label} title={label} disabled={pending} onClick={() => void navigate(staff ? "/dashboard" : "/teacher")} type="button" className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm text-slate-200 hover:bg-white/10 disabled:opacity-50">
+        {staff ? <UserRound size={17} /> : <GraduationCap size={17} />}{label}
       </button>
       {error ? <p className="text-xs text-rose-300" role="alert">{error}</p> : null}
     </div>

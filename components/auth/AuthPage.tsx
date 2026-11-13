@@ -7,6 +7,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { BearIcon } from "@/components/dashboard/BearIcon";
 import { getSupabaseBrowserClient, isSupabaseConfigured, normalizeSupabaseUrl } from "@/lib/supabase/client";
 import { getAuthRedirectAction } from "@/lib/authRedirect";
+import { syncServerSession } from "@/lib/supabase/serverSession";
 import { ensureProfile } from "@/lib/supabase/queries";
 
 type AuthMode = "signin" | "signup" | "forgot" | "reset" | "callback";
@@ -72,7 +73,8 @@ export function AuthPage({ initialMode = "signin" }: { initialMode?: AuthMode })
       // Profile requests must run outside the Supabase auth listener.
       window.setTimeout(() => {
         if (!active) return;
-        void ensureProfile(session.user).then(() => {
+        void ensureProfile(session.user).then(async () => {
+          await syncServerSession(session.access_token).catch(() => {});
           if (active) router.replace("/question-bank");
         }).catch(() => {
           if (active) setError("Signed in, but the profile could not be saved.");
@@ -135,6 +137,7 @@ export function AuthPage({ initialMode = "signin" }: { initialMode?: AuthMode })
         return;
       }
       await ensureProfile(result.data.session.user);
+      await syncServerSession(result.data.session.access_token).catch(() => {});
       router.replace("/question-bank");
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Authentication failed.");

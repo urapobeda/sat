@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { BookOpen, CalendarDays, Calculator, ChartNoAxesCombined, ClipboardList, FileText, FolderOpen, Home, Menu, NotebookPen, PanelLeftClose, PanelLeftOpen, Target, Video, X } from "lucide-react";
 import { StudentAccount, StudentAccountProvider } from "@/components/dashboard/StudentAccount";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { BearIcon } from "@/components/dashboard/BearIcon";
 
 const groups = [
@@ -110,7 +109,6 @@ export function StudentShell({ active, children, exam = false, guardExit = false
             </div>
             {renderNav(false)}
             <div className="space-y-3 border-t border-white/10 pt-3">
-              <ThemeToggle />
               {guardExit ? <p className="text-xs text-slate-300">Account controls return after the session.</p> : <StudentAccount />}
             </div>
           </div>
@@ -124,7 +122,6 @@ export function StudentShell({ active, children, exam = false, guardExit = false
           </div>
           {renderNav(collapsed)}
           <div className={`flex flex-col gap-3 border-t border-white/10 pt-3 ${collapsed ? "items-center" : "px-1"}`}>
-            <ThemeToggle />
             {guardExit ? null : <StudentAccount compact={collapsed} />}
           </div>
         </aside>

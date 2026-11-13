@@ -4,8 +4,6 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { BearIcon } from "@/components/dashboard/BearIcon";
 import { StudentAccount, StudentAccountProvider } from "@/components/dashboard/StudentAccount";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { RoleSwitch } from "@/components/staff/RoleSwitch";
 import type { UserRole } from "@/lib/roles";
 
 export const teacherLinks = [
@@ -27,9 +25,7 @@ export function TeacherShell({ children, role }: { children: ReactNode; role: Us
             {role === "admin" ? <Link href="/admin/users" aria-current={pathname.startsWith("/admin") ? "page" : undefined} className="hub-nav-link px-3">Пользователи</Link> : null}
           </nav>
           <div className="space-y-3 border-t border-white/10 pt-4 lg:mt-auto">
-            <RoleSwitch role={role} staff />
-            <ThemeToggle />
-            <StudentAccount hideRoleSwitch />
+            <StudentAccount />
           </div>
         </aside>
         <main className="min-w-0 flex-1 px-4 py-6 sm:p-8"><div className="mx-auto max-w-7xl">{children}</div></main>
