@@ -16,3 +16,9 @@ pnpm-debug.log*
 # Math import working files (thousands of images; not for git)
 data/math/
 data/verbal/
+
+# Local working files
+tmp/
+math-import-and-ui.patch
+wordfrequensymap.cpp
+tsconfig.tsbuildinfo

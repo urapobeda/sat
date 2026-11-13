@@ -63,28 +63,12 @@ export function HomeworkTable({ rows }: { rows: HomeworkRow[] }) {
                 )}
               </td>
               <td className="py-4 align-top">
-                {row.action.variant === "primary" ? (
-                  <Link
-                    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold !text-white shadow-sm transition hover:bg-blue-700"
-                    href={row.action.href}
-                  >
-                    {row.action.label}
-                  </Link>
-                ) : row.action.variant === "outline" ? (
-                  <Link
-                    className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-800 transition hover:bg-slate-50"
-                    href={row.action.href}
-                  >
-                    {row.action.label}
-                  </Link>
-                ) : (
-                  <Link
-                    className="text-xs font-semibold text-blue-600 hover:underline"
-                    href={row.action.href}
-                  >
-                    {row.action.label}
-                  </Link>
-                )}
+                <Link
+                  className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white! shadow-sm transition hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                  href={row.action.href}
+                >
+                  {row.action.label}
+                </Link>
               </td>
             </tr>
           ))}
