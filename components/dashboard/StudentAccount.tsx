@@ -1,5 +1,8 @@
 "use client";
 
+import { RoleSwitch } from "@/components/staff/RoleSwitch";
+import { syncServerSession } from "@/lib/supabase/serverSession";
+import { isUserRole, type UserRole } from "@/lib/roles";
 import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
@@ -9,9 +12,10 @@ import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/c
 import { getProfile } from "@/lib/supabase/queries";
 import type { Profile } from "@/types/database";
 
-const StudentAccountContext = createContext<{ isLoading: boolean; name: string | null; userId?: string }>({
+const StudentAccountContext = createContext<{ isLoading: boolean; name: string | null; role: UserRole; userId?: string }>({
   isLoading: false,
-  name: null
+  name: null,
+  role: "student"
 });
 
 export function StudentAccountProvider({ children }: { children: ReactNode }) {
@@ -48,7 +52,7 @@ export function StudentAccountProvider({ children }: { children: ReactNode }) {
     : null;
 
   return (
-    <StudentAccountContext.Provider value={{ isLoading: configured && user === undefined, name, userId }}>
+    <StudentAccountContext.Provider value={{ isLoading: configured && user === undefined, name, userId, role: profile?.id === userId && isUserRole(profile?.role) ? profile.role : "student" }}>
       {children}
     </StudentAccountContext.Provider>
   );
@@ -63,8 +67,8 @@ export function StudentGreeting({ greeting }: { greeting: string }) {
   return <>{greeting}{name ? `, ${name}` : ""}!</>;
 }
 
-export function StudentAccount({ compact = false }: { compact?: boolean }) {
-  const { isLoading, name } = useContext(StudentAccountContext);
+export function StudentAccount({ compact = false, hideRoleSwitch = false }: { compact?: boolean; hideRoleSwitch?: boolean }) {
+  const { isLoading, name, role } = useContext(StudentAccountContext);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,8 +76,12 @@ export function StudentAccount({ compact = false }: { compact?: boolean }) {
     setError(null);
     setIsSigningOut(true);
     try {
+      // Clear the server cookie before dropping the browser session, so a failed
+      // network request cannot silently leave a signed-out staff cookie behind.
+      await syncServerSession(null);
       const { error: signOutError } = await getSupabaseBrowserClient().auth.signOut({ scope: "local" });
       if (signOutError) throw signOutError;
+      if (window.location.pathname.startsWith("/teacher") || window.location.pathname.startsWith("/admin")) window.location.assign("/");
     } catch {
       setError("Could not sign out. Please try again.");
     } finally {
@@ -83,14 +91,18 @@ export function StudentAccount({ compact = false }: { compact?: boolean }) {
 
   if (compact) {
     return (
+      <div className="space-y-2">
+      {!hideRoleSwitch ? <RoleSwitch role={role} compact /> : null}
       <Link aria-label={name ? "My progress" : "Sign in"} className="grid size-9 place-items-center rounded-xl bg-blue-600 !text-white" href={name ? "/progress" : "/auth"} title={name ?? "Sign in"}>
         <BearIcon size={20} />
       </Link>
+      </div>
     );
   }
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 space-y-3">
+      {!hideRoleSwitch ? <RoleSwitch role={role} /> : null}
       <div className="flex items-center gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
           <BearIcon size={20} />

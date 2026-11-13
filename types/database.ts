@@ -1,3 +1,4 @@
+import type { UserRole } from "@/lib/roles";
 import type { PaperItem, PaperSolution, PaperModuleRun } from "./../lib/paperRunner";
 export type Choice = {
   label: string;
@@ -6,6 +7,7 @@ export type Choice = {
 };
 
 export type Profile = {
+  role: UserRole;
   created_at: string;
   email: string | null;
   full_name: string | null;
@@ -362,6 +364,16 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      current_user_role: { Args: Record<string, never>; Returns: UserRole };
+      is_staff: { Args: Record<string, never>; Returns: boolean };
+      admin_list_users: {
+        Args: { p_search?: string; p_offset?: number };
+        Returns: { id: string; full_name: string | null; email: string | null; role: UserRole; created_at: string; total_count: number }[];
+      };
+      admin_set_user_role: {
+        Args: { p_actor_id: string; p_user_id: string; p_role: UserRole };
+        Returns: undefined;
+      };
       consume_ai_tutor_usage: {
         Args: { p_user_id: string };
         Returns: number | null;
@@ -391,7 +403,7 @@ export type Database = {
         Returns: boolean;
       };
     };
-    Enums: Record<string, never>;
+    Enums: { user_role: UserRole };
     CompositeTypes: Record<string, never>;
   };
 };

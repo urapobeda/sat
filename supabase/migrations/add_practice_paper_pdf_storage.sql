@@ -17,4 +17,3 @@ using (
 );
 
 grant select, insert, update on public.exam_papers, public.exam_modules to service_role;
-n

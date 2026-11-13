@@ -1,3 +1,4 @@
+import { syncServerSession } from "./serverSession";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
@@ -53,6 +54,12 @@ export function getSupabaseBrowserClient() {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true
+      }
+    });
+    browserClient.auth.onAuthStateChange((event, session) => {
+      if (["INITIAL_SESSION", "SIGNED_IN", "TOKEN_REFRESHED", "SIGNED_OUT"].includes(event)) {
+        // Keep network work outside the Supabase auth callback to avoid locks.
+        setTimeout(() => { void syncServerSession(session?.access_token ?? null).catch(() => {}); }, 0);
       }
     });
   }
