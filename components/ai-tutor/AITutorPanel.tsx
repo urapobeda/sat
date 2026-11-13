@@ -1,13 +1,13 @@
 "use client";
 
 import { AlertCircle, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AITutorActions } from "@/components/ai-tutor/AITutorActions";
 import { AITutorInput } from "@/components/ai-tutor/AITutorInput";
 import { AITutorMessage } from "@/components/ai-tutor/AITutorMessage";
 import {
-  AI_TUTOR_QUESTION_LIMIT,
-  AI_TUTOR_SESSION_LIMIT,
+  AI_TUTOR_DAILY_LIMIT,
   createTutorRequest,
   type AITutorAction,
   type AITutorChatMessage,
@@ -48,22 +48,11 @@ export function AITutorPanel({
   ]);
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [signInRequired, setSignInRequired] = useState(false);
   const [lastRequest, setLastRequest] = useState<LastRequest | null>(null);
-  const [sessionRequests, setSessionRequests] = useState(() =>
-    readNumberFromSessionStorage("aiTutorTotal")
-  );
-  const [questionRequests, setQuestionRequests] = useState(() =>
-    readNumberFromSessionStorage(getQuestionStorageKey(question.id))
-  );
+  const [dailyCount, setDailyCount] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-
-  const reachedLimit =
-    sessionRequests >= AI_TUTOR_SESSION_LIMIT ||
-    questionRequests >= AI_TUTOR_QUESTION_LIMIT;
-  const disabled = isPending || reachedLimit;
-  const limitMessage = reachedLimit
-    ? "You have reached the AI Tutor limit for this session."
-    : null;
+  const disabled = isPending;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -119,9 +108,11 @@ export function AITutorPanel({
       const payload: unknown = await response.json();
 
       if (!response.ok) {
+        setSignInRequired(response.status === 401);
         throw new Error(getErrorMessage(payload));
       }
 
+      setSignInRequired(false);
       const tutorResponse = payload as AITutorResponse;
       setMessages((currentMessages) => [
         ...currentMessages,
@@ -132,7 +123,7 @@ export function AITutorPanel({
           role: "assistant"
         }
       ]);
-      incrementLocalUsage(question.id, setSessionRequests, setQuestionRequests);
+      setDailyCount(tutorResponse.dailyUsage?.count ?? null);
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -195,12 +186,13 @@ export function AITutorPanel({
         </div>
 
         <div className="space-y-4 border-t border-slate-100 bg-white p-4">
-          {error || limitMessage ? (
+          {error ? (
             <div className="rounded-2xl border border-rose-100 bg-rose-50 p-3 text-sm font-bold text-rose-700">
               <div className="flex items-start gap-2">
                 <AlertCircle className="mt-0.5 shrink-0" size={17} />
-                <span>{limitMessage ?? error}</span>
+                <span>{error}</span>
               </div>
+              {signInRequired ? <Link className="mt-2 inline-block font-semibold underline" href="/auth">Sign in</Link> : null}
               {error && lastRequest ? (
                 <button
                   className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-xl bg-white px-3 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100"
@@ -224,8 +216,7 @@ export function AITutorPanel({
             onSend={(message) => sendTutorMessage("ask", message)}
           />
           <p className="text-center text-xs font-bold text-slate-500">
-            {questionRequests} / {AI_TUTOR_QUESTION_LIMIT} for this question /{" "}
-            {sessionRequests} / {AI_TUTOR_SESSION_LIMIT} this session
+            {dailyCount === null ? `${AI_TUTOR_DAILY_LIMIT} requests per day` : `${dailyCount} / ${AI_TUTOR_DAILY_LIMIT} requests today`} · Sign in required
           </p>
         </div>
       </aside>
@@ -250,37 +241,6 @@ function createId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function getQuestionStorageKey(questionId: string) {
-  return `aiTutorQuestion:${questionId}`;
-}
-
-function readNumberFromSessionStorage(key: string) {
-  if (typeof window === "undefined") {
-    return 0;
-  }
-
-  return Number(window.sessionStorage.getItem(key) ?? 0);
-}
-
-function incrementLocalUsage(
-  questionId: string,
-  setSessionRequests: (updater: (value: number) => number) => void,
-  setQuestionRequests: (updater: (value: number) => number) => void
-) {
-  setSessionRequests((currentValue) => {
-    const nextValue = currentValue + 1;
-    window.sessionStorage.setItem("aiTutorTotal", String(nextValue));
-
-    return nextValue;
-  });
-  setQuestionRequests((currentValue) => {
-    const nextValue = currentValue + 1;
-    window.sessionStorage.setItem(getQuestionStorageKey(questionId), String(nextValue));
-
-    return nextValue;
-  });
 }
 
 function getErrorMessage(payload: unknown) {

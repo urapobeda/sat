@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  AI_TUTOR_QUESTION_LIMIT,
-  AI_TUTOR_SESSION_LIMIT,
-  type AITutorResponse
+  AI_TUTOR_DAILY_LIMIT
 } from "@/lib/aiTutor";
 import {
   getQuestionPublicContext,
@@ -28,35 +26,32 @@ const tutorResponseSchema = z.object({
   title: z.string().trim().min(1).max(100)
 });
 
-type SessionUsage = {
-  questions: Map<string, number>;
-  total: number;
-};
-
-const sessionUsage = new Map<string, SessionUsage>();
-
 export async function POST(request: NextRequest) {
-  const sessionId = request.cookies.get("ai_tutor_session")?.value ?? crypto.randomUUID();
-
   try {
+    const userId = await getAuthenticatedUserId(request);
+    if (!userId) return jsonError("Sign in to use AI Tutor.", 401);
+
     const parsedRequest = tutorRequestSchema.safeParse(await request.json());
 
     if (!parsedRequest.success) {
-      return jsonError("Please send a valid SAT question and tutor request.", 400, sessionId);
-    }
-
-    const usageError = consumeSessionUsage(sessionId, parsedRequest.data.questionId);
-
-    if (usageError) {
-      return jsonError(usageError, 429, sessionId);
+      return jsonError("Please send a valid SAT question and tutor request.", 400);
     }
 
     const question = await getQuestionPublicContext(parsedRequest.data.questionId);
-    const solution = await hasVerifiedAnswer(request, parsedRequest.data.questionId)
+    const solution = await hasVerifiedAnswer(userId, parsedRequest.data.questionId)
       ? await getQuestionSolution(parsedRequest.data.questionId)
       : null;
     const openai = getOpenAIClient();
     const model = getOpenAIModel();
+    // Reserve quota atomically before invoking the paid AI service. Failed AI
+    // requests still count, so retries cannot bypass the daily spending cap.
+    const { data: dailyCount, error: usageError } = await getSupabaseAdminClient()
+      .rpc("consume_ai_tutor_usage", { p_user_id: userId });
+    if (usageError) return jsonError("AI Tutor usage could not be checked. Please try again.", 503);
+    if (dailyCount === null) return jsonError(`You have reached the AI Tutor daily limit of ${AI_TUTOR_DAILY_LIMIT} requests.`, 429);
+    if (!Number.isInteger(dailyCount) || dailyCount < 1 || dailyCount > AI_TUTOR_DAILY_LIMIT) {
+      return jsonError("AI Tutor usage could not be checked. Please try again.", 503);
+    }
 
     const response = await openai.responses.create({
       input: buildTutorPrompt({
@@ -67,7 +62,7 @@ export async function POST(request: NextRequest) {
       instructions: TUTOR_INSTRUCTIONS,
       max_output_tokens: 700,
       model,
-      safety_identifier: sessionId,
+      safety_identifier: userId,
       store: false,
       text: {
         format: {
@@ -98,30 +93,26 @@ export async function POST(request: NextRequest) {
     const content = response.output_text;
 
     if (!content) {
-      return jsonError("AI Tutor did not return a usable response.", 502, sessionId);
+      return jsonError("AI Tutor did not return a usable response.", 502);
     }
 
     const parsedTutorResponse = tutorResponseSchema.safeParse(JSON.parse(content));
 
     if (!parsedTutorResponse.success) {
-      return jsonError("AI Tutor returned an unexpected response format.", 502, sessionId);
+      return jsonError("AI Tutor returned an unexpected response format.", 502);
     }
 
-    return jsonResponse(parsedTutorResponse.data, 200, sessionId);
+    return NextResponse.json({ ...parsedTutorResponse.data, dailyUsage: { count: dailyCount, limit: AI_TUTOR_DAILY_LIMIT } });
   } catch (error) {
     if (error instanceof SyntaxError) {
-      return jsonError("Please send valid JSON.", 400, sessionId);
+      return jsonError("Please send valid JSON.", 400);
     }
 
-    return jsonError("AI Tutor is unavailable right now. Please try again.", 500, sessionId);
+    return jsonError("AI Tutor is unavailable right now. Please try again.", 500);
   }
 }
 
-async function hasVerifiedAnswer(request: NextRequest, questionId: string) {
-  if (!request.headers.has("authorization")) return false;
-  const userId = await getAuthenticatedUserId(request);
-  if (!userId) return false;
-
+async function hasVerifiedAnswer(userId: string, questionId: string) {
   const supabase = getSupabaseAdminClient();
   const results = await Promise.all(
     (["practice_answers", "test_answers"] as const).map((table) =>
@@ -136,47 +127,8 @@ async function hasVerifiedAnswer(request: NextRequest, questionId: string) {
   return results.some(({ data, error }) => !error && Boolean(data?.length));
 }
 
-function consumeSessionUsage(sessionId: string, questionId: string) {
-  const usage = sessionUsage.get(sessionId) ?? { questions: new Map<string, number>(), total: 0 };
-  const questionCount = usage.questions.get(questionId) ?? 0;
-
-  if (usage.total >= AI_TUTOR_SESSION_LIMIT || questionCount >= AI_TUTOR_QUESTION_LIMIT) {
-    return "You have reached the AI Tutor limit for this session.";
-  }
-
-  usage.total += 1;
-  usage.questions.set(questionId, questionCount + 1);
-  sessionUsage.set(sessionId, usage);
-
-  return null;
-}
-
-function jsonResponse(
-  body: AITutorResponse,
-  status: number,
-  sessionId: string
-) {
-  const response = NextResponse.json(body, { status });
-  response.cookies.set("ai_tutor_session", sessionId, {
-    httpOnly: true,
-    maxAge: 60 * 60 * 8,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production"
-  });
-
-  return response;
-}
-
-function jsonError(message: string, status: number, sessionId: string) {
-  const response = NextResponse.json({ error: message }, { status });
-  response.cookies.set("ai_tutor_session", sessionId, {
-    httpOnly: true,
-    maxAge: 60 * 60 * 8,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production"
-  });
-
-  return response;
+function jsonError(message: string, status: number) {
+  return NextResponse.json({ error: message }, { status });
 }
 
 function buildTutorPrompt({

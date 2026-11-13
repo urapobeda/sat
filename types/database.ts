@@ -194,6 +194,12 @@ export type PaperBookmark = {
 export type Database = {
   public: {
     Tables: {
+      ai_tutor_usage: {
+        Row: { user_id: string; date: string; count: number };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       paper_items: {
         Row: PaperItem;
         Insert: PaperItem;
@@ -356,6 +362,10 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      consume_ai_tutor_usage: {
+        Args: { p_user_id: string };
+        Returns: number | null;
+      };
       open_paper_attempt: {
         Args: { p_user: string; p_slug: string; p_section: string };
         Returns: string;

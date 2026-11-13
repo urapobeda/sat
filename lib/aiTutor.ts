@@ -1,7 +1,6 @@
 import type { Question } from "@/types/sat";
 
-export const AI_TUTOR_SESSION_LIMIT = 20;
-export const AI_TUTOR_QUESTION_LIMIT = 10;
+export const AI_TUTOR_DAILY_LIMIT = 30;
 
 export type AITutorAction =
   | "hint"
@@ -19,6 +18,7 @@ export type AITutorRequest = {
 };
 
 export type AITutorResponse = {
+  dailyUsage?: { count: number; limit: number };
   followUpQuestion: string | null;
   message: string;
   steps: string[];
