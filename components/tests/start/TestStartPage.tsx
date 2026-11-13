@@ -14,7 +14,7 @@ import {
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { z } from "zod";
+import { createTestDraftStore } from "@/lib/testDraft";
 import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
 import { EmptyState } from "@/components/EmptyState";
 import { confirmLeavingStudy, StudentShell } from "@/components/dashboard/StudentShell";
@@ -44,27 +44,7 @@ type TestCompletionResult = {
 };
 
 const EMPTY_TEST_FEEDBACK = {};
-const draftSchema = z.object({
-  questions: z.array(z.uuid()).min(1).max(TEST_QUESTION_LIMIT),
-  sessionId: z.uuid().nullable(),
-  endsAt: z.number().positive(),
-  answers: z.record(z.uuid(), z.string().max(500)),
-  flags: z.record(z.uuid(), z.boolean()),
-  index: z.number().int().min(0).max(TEST_QUESTION_LIMIT - 1)
-});
-
-function draftKey(userId?: string) {
-  return `sat-hub-test-draft-v1:${userId ?? "guest"}`;
-}
-
-function readDraft(key: string) {
-  try {
-    const parsed = draftSchema.safeParse(JSON.parse(window.sessionStorage.getItem(key) ?? "null"));
-    return parsed.success ? parsed.data : null;
-  } catch {
-    return null;
-  }
-}
+const testDraftStore = createTestDraftStore(() => window.localStorage);
 
 export function TestStartPage() {
   const [testQuestions, setTestQuestions] = useState<Question[]>([]);
@@ -73,6 +53,7 @@ export function TestStartPage() {
   const [flaggedQuestions, setFlaggedQuestions] = useState<Record<string, boolean>>({});
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [testSessionId, setTestSessionId] = useState<string | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(null);
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(TEST_DURATION_SECONDS);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,7 +89,8 @@ export function TestStartPage() {
       try {
         const user = await getCurrentUser().catch(() => null);
         if (!isMounted) return;
-        const draft = readDraft(draftKey(user?.id));
+        const saved = testDraftStore.read(user?.id);
+        const draft = saved?.draft;
         const loadedQuestions = draft ? await getQuestionDetails(draft.questions) : await getRandomQuestions(TEST_QUESTION_LIMIT);
         if (!isMounted) return;
         if (draft && loadedQuestions.length !== draft.questions.length) {
@@ -126,6 +108,7 @@ export function TestStartPage() {
         setTestQuestions(loadedQuestions);
         setCurrentUser(user);
         setTestSessionId(sessionId);
+        setDraftId(saved?.id ?? sessionId ?? crypto.randomUUID());
         setEndsAt(deadline);
         setRemainingSeconds(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
         if (draft) {
@@ -179,15 +162,12 @@ export function TestStartPage() {
 
   useEffect(() => {
     if (isFinished || isLoading || endsAt === null || !testQuestions.length) return;
-    try {
-      window.sessionStorage.setItem(draftKey(currentUser?.id), JSON.stringify({
-        questions: testQuestions.map((question) => question.id),
-        sessionId: testSessionId, endsAt, answers, flags: flaggedQuestions, index: currentIndex
-      }));
-    } catch {
-      // The test remains usable when browser storage is unavailable.
-    }
-  }, [answers, currentIndex, currentUser?.id, endsAt, flaggedQuestions, isFinished, isLoading, testQuestions, testSessionId]);
+    if (!draftId || hasSaved.current) return;
+    testDraftStore.save(currentUser?.id, draftId, {
+      questions: testQuestions.map((question) => question.id),
+      sessionId: testSessionId, endsAt, answers, flags: flaggedQuestions, index: currentIndex
+    });
+  }, [answers, currentIndex, currentUser?.id, draftId, endsAt, flaggedQuestions, isFinished, isLoading, testQuestions, testSessionId]);
 
   function selectAnswer(choice: string) {
     if (!currentQuestion || remainingSeconds === 0 || hasSaved.current) {
@@ -252,11 +232,7 @@ export function TestStartPage() {
       }
 
       setCompletionResult((await response.json()) as TestCompletionResult);
-      try {
-        window.sessionStorage.removeItem(draftKey(currentUser?.id));
-      } catch {
-        // Storage can be unavailable.
-      }
+      if (draftId) testDraftStore.clear(currentUser?.id, draftId);
     } catch {
       hasSaved.current = false;
       setPersistenceMessage("The test could not be submitted. Please try again.");
