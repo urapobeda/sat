@@ -74,7 +74,7 @@ begin
   perform 1 from public.profiles where id = p_actor_id and role = 'admin' for update;
   if not found then raise exception 'Admin required' using errcode = '42501'; end if;
   if p_actor_id = p_user_id and p_role <> 'admin' then
-    raise exception 'Cannot remove your own admin role' using errcode = '42501';git 
+    raise exception 'Cannot remove your own admin role' using errcode = '42501';
   end if;
   if p_role is null then raise exception 'Role required' using errcode = '22023'; end if;
   insert into public.profiles(id, email, full_name, role)

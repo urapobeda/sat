@@ -1,3 +1,4 @@
+import type { AssignmentFeedback, ReportRow } from "@/lib/assignmentReport";
 import type { StudyGroup, GroupMember, GroupTeacher } from "@/lib/groups";
 import type { UserRole } from "@/lib/roles";
 import type { PaperItem, PaperSolution, PaperModuleRun } from "./../lib/paperRunner";
@@ -223,6 +224,15 @@ export type Assignment = {
 export type Database = {
   public: {
     Tables: {
+      assignment_feedback: {
+        Row: AssignmentFeedback;
+        Insert: Pick<AssignmentFeedback, "submission_id" | "author_id" | "body"> & Partial<Pick<AssignmentFeedback, "id" | "question_id">>;
+        Update: never; Relationships: [];
+      };
+      assignment_retake_grants: {
+        Row: { submission_id: string; assignment_id: string; student_id: string; granted_by: string; created_at: string };
+        Insert: never; Update: never; Relationships: [];
+      };
       assignments: {
         Row: Assignment;
         Insert: Pick<Assignment, "group_id" | "created_by" | "title" | "kind" | "due_at"> &
@@ -426,6 +436,11 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      grant_assignment_retake: { Args: { p_submission: string }; Returns: number };
+      get_assignment_report_rows: { Args: { p_assignment: string }; Returns: ReportRow[] };
+      list_my_assignment_feedback: { Args: Record<string, never>; Returns: { assignment_id: string; submission_id: string }[] };
+      save_verified_assignment_answer: { Args: { p_user: string; p_submission: string; p_question: string; p_answer: string | null; p_correct: boolean | null; p_seconds: number | null }; Returns: undefined };
+      finalize_assignment_submission: { Args: { p_user: string; p_submission: string }; Returns: undefined };
       create_group: { Args: { p_name: string }; Returns: string };
       join_group_by_code: { Args: { code: string }; Returns: string };
       rotate_group_code: { Args: { p_group_id: string }; Returns: string };

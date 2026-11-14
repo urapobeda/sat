@@ -13,6 +13,10 @@ export async function GET(request: NextRequest) {
     const { data, error } = await db.rpc("list_student_assignments");
     if (error) throw error;
     const assignments = (data ?? []) as StudentAssignment[];
+    const feedback = await db.rpc("list_my_assignment_feedback");
+    if (!feedback.error) for (const item of assignments) {
+      item.feedback_submission_id = feedback.data?.find((entry) => entry.assignment_id === item.id)?.submission_id ?? null;
+    }
     await enrichPastPaperAssignments(db, actor.id, assignments);
     return NextResponse.json({ assignments }, { headers: { "Cache-Control": "no-store" } });
   } catch {

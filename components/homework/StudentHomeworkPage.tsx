@@ -156,6 +156,7 @@ function HomeworkRow({ assignment }: { assignment: StudentAssignment }) {
           </div>
         ) : null}
       </div>
+      {assignment.feedback_submission_id ? <Link className="hub-text-link text-sm" href={`/homework/${assignment.id}?submission=${assignment.feedback_submission_id}`}>Есть комментарий учителя</Link> : null}
       <Link
         className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white! shadow-sm transition hover:bg-blue-700"
         href={href}

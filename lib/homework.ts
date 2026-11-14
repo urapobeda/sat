@@ -3,6 +3,7 @@ export type ShowAnswersRule = "after_submit" | "after_due" | "never";
 export type SubmissionStatus = "in_progress" | "submitted";
 
 export type StudentAssignment = {
+  feedback_submission_id?: string | null;
   id: string;
   group_id: string;
   group_name: string;

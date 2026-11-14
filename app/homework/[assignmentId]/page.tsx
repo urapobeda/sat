@@ -1,6 +1,8 @@
+import { z } from "zod";
 import { HomeworkRunner } from "@/components/homework/HomeworkRunner";
 
-export default async function HomeworkAttemptRoute({ params }: { params: Promise<{ assignmentId: string }> }) {
+export default async function HomeworkAttemptRoute({ params, searchParams }: { params: Promise<{ assignmentId: string }>; searchParams: Promise<{ submission?: string }> }) {
   const { assignmentId } = await params;
-  return <HomeworkRunner assignmentId={assignmentId} />;
+  const sub = (await searchParams).submission;
+  return <HomeworkRunner assignmentId={assignmentId} initialSubmissionId={sub && z.uuid().safeParse(sub).success ? sub : undefined} />;
 }

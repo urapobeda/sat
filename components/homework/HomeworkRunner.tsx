@@ -2,7 +2,11 @@
 
 import { ArrowLeft, ArrowRight, Loader2, Search, Send, Trophy } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { HomeworkClock } from "@/lib/homeworkClock";
+import type { AssignmentFeedback } from "@/lib/assignmentReport";
+import { AssignmentFeedbackList } from "@/components/homework/AssignmentFeedbackList";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { confirmLeavingStudy, StudentShell } from "@/components/dashboard/StudentShell";
 import { EmptyState } from "@/components/EmptyState";
 import { ProgressBar } from "@/components/quiz/ProgressBar";
@@ -31,6 +35,10 @@ type Snapshot = {
   questions: Question[];
   answers: Record<string, string>;
   review: ReviewQuestion[] | null;
+  feedback: AssignmentFeedback[];
+  feedbackError: boolean;
+  answerTimes: Record<string, number | null>;
+  canRetake: boolean;
 };
 
 async function callAttempts<T>(body: Record<string, unknown>): Promise<T> {
@@ -44,7 +52,8 @@ async function callAttempts<T>(body: Record<string, unknown>): Promise<T> {
   return payload as T;
 }
 
-export function HomeworkRunner({ assignmentId }: { assignmentId: string }) {
+export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignmentId: string; initialSubmissionId?: string }) {
+  const router = useRouter();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -55,6 +64,48 @@ export function HomeworkRunner({ assignmentId }: { assignmentId: string }) {
   const [saveError, setSaveError] = useState(false);
   const submitDialog = useRef<HTMLDialogElement>(null);
   const hasSubmitted = useRef(false);
+  const activeSubmission = useRef<string | null>(null);
+  const answersRef = useRef<Record<string, string>>({});
+  const clock = useRef(new HomeworkClock());
+  const pending = useRef(Promise.resolve());
+  const failed = useRef(new Map<string, { questionId: string; answer: string | null; seconds: number }>());
+
+  const install = useCallback((result: Snapshot) => {
+    activeSubmission.current = result.submissionId;
+    clock.current = new HomeworkClock(result.answerTimes ?? {});
+    failed.current.clear(); answersRef.current = result.answers; hasSubmitted.current = false;
+    setSnapshot(result); setAnswers(result.answers); setCurrentIndex(0); setSaveError(false);
+  }, []);
+  function persist(sid: string, questionId: string, answer: string | null) {
+    const payload = { questionId, answer, seconds: clock.current.seconds(questionId) };
+    pending.current = pending.current.catch(() => {}).then(async () => {
+      try {
+        await callAttempts({ action: "answer", submissionId: sid, questionId, answer, timeSpentSeconds: payload.seconds });
+        if (activeSubmission.current === sid) failed.current.delete(questionId);
+      } catch {
+        if (activeSubmission.current === sid) failed.current.set(questionId, payload);
+      }
+      if (activeSubmission.current === sid) setSaveError(failed.current.size > 0);
+    });
+  }
+  const saveClock = useEffectEvent((sid: string, questionId: string) => {
+    if (!hasSubmitted.current && activeSubmission.current === sid) persist(sid, questionId, answersRef.current[questionId] ?? null);
+  });
+  const questionId = snapshot?.questions[currentIndex]?.id;
+  useEffect(() => {
+    if (loading || !snapshot || snapshot.status !== "in_progress" || !questionId) return;
+    const sid = snapshot.submissionId;
+    clock.current.enter(questionId, !document.hidden);
+    function visibility() {
+      if (document.hidden) { const id = clock.current.pause(); if (id) saveClock(sid, id); }
+      else clock.current.resume();
+    }
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      document.removeEventListener("visibilitychange", visibility);
+      const id = clock.current.pause(); if (id) saveClock(sid, id);
+    };
+  }, [loading, snapshot, questionId]);
 
   useEffect(() => {
     let active = true;
@@ -62,10 +113,9 @@ export function HomeworkRunner({ assignmentId }: { assignmentId: string }) {
       setLoading(true);
       setError(null);
       try {
-        const result = await callAttempts<Snapshot>({ action: "start", assignmentId });
+        const result = await callAttempts<Snapshot>(initialSubmissionId ? { action: "get", submissionId: initialSubmissionId } : { action: "start", assignmentId });
         if (!active) return;
-        setSnapshot(result);
-        setAnswers(result.answers);
+        install(result);
       } catch (requestError) {
         if (active) setError(requestError instanceof Error ? requestError.message : "Не удалось открыть задание.");
       } finally {
@@ -76,7 +126,7 @@ export function HomeworkRunner({ assignmentId }: { assignmentId: string }) {
     return () => {
       active = false;
     };
-  }, [assignmentId]);
+  }, [assignmentId, initialSubmissionId, install]);
 
   useEffect(() => {
     if (!snapshot || snapshot.status !== "in_progress" || !snapshot.timeLimitMinutes) return;
@@ -99,30 +149,49 @@ export function HomeworkRunner({ assignmentId }: { assignmentId: string }) {
   const answeredCount = Object.keys(answers).length;
 
   async function selectAnswer(choice: string) {
-    if (!currentQuestion || !snapshot || snapshot.status !== "in_progress") return;
-    setAnswers((current) => ({ ...current, [currentQuestion.id]: choice }));
-    try {
-      await callAttempts({ action: "answer", answer: choice, questionId: currentQuestion.id, submissionId: snapshot.submissionId });
-      setSaveError(false);
-    } catch {
-      setSaveError(true);
-    }
+    if (!currentQuestion || !snapshot || snapshot.status !== "in_progress" || hasSubmitted.current) return;
+    clock.current.capture();
+    answersRef.current = { ...answersRef.current, [currentQuestion.id]: choice };
+    setAnswers(answersRef.current);
+    persist(snapshot.submissionId, currentQuestion.id, choice);
   }
 
   async function finish() {
     if (!snapshot || hasSubmitted.current) return;
     hasSubmitted.current = true;
     setIsSubmitting(true);
+    setError(null);
     try {
+      const id = clock.current.pause();
+      if (id) persist(snapshot.submissionId, id, answersRef.current[id] ?? null);
+      await pending.current;
+      for (const value of [...failed.current.values()]) persist(snapshot.submissionId, value.questionId, value.answer);
+      await pending.current;
+      if (failed.current.size) throw new Error("Не все ответы сохранены. Проверьте соединение и повторите сдачу.");
       const result = await callAttempts<Snapshot>({ action: "submit", submissionId: snapshot.submissionId });
       setSnapshot(result);
       setAnswers(result.answers);
     } catch (requestError) {
+      // The response may have been lost after the transaction committed.
+      try {
+        const recovered = await callAttempts<Snapshot>({ action: "get", submissionId: snapshot.submissionId });
+        if (recovered.status === "submitted") { failed.current.clear(); setSaveError(false); setSnapshot(recovered); setAnswers(recovered.answers); setError(null); return; }
+      } catch { /* Keep the existing answers for a later retry. */ }
       hasSubmitted.current = false;
+      clock.current.resume();
       setError(requestError instanceof Error ? requestError.message : "Не удалось сдать задание.");
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function retake() {
+    setLoading(true); setError(null);
+    try {
+      const result = await callAttempts<Snapshot>({ action: "start", assignmentId, newAttempt: true });
+      install(result); router.replace(`/homework/${assignmentId}`);
+    } catch (failure) { setError(failure instanceof Error ? failure.message : "Не удалось начать пересдачу."); }
+    finally { setLoading(false); }
   }
 
   const active = Boolean(snapshot && snapshot.status === "in_progress" && !loading);
@@ -162,6 +231,7 @@ export function HomeworkRunner({ assignmentId }: { assignmentId: string }) {
           ) : null}
         </section>
 
+        {snapshot && error ? <p role="alert" className="mt-4 text-sm text-rose-600">{error} {snapshot.status === "in_progress" ? <button className="cursor-pointer underline" disabled={isSubmitting} type="button" onClick={() => void finish()}>Повторить сдачу</button> : null}</p> : null}
         {loading ? (
           <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3 text-sm font-semibold text-blue-600">
@@ -169,10 +239,10 @@ export function HomeworkRunner({ assignmentId }: { assignmentId: string }) {
               Загрузка задания…
             </div>
           </section>
-        ) : error ? (
+        ) : error && !snapshot ? (
           <EmptyState description={error} icon={<Search size={26} />} title="Задание недоступно" />
         ) : !snapshot ? null : snapshot.status === "submitted" ? (
-          <ResultView answers={answers} snapshot={snapshot} />
+          <ResultView answers={answers} snapshot={snapshot} onRetake={() => void retake()} />
         ) : currentQuestion ? (
           <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
             <div className="space-y-5">
@@ -187,7 +257,7 @@ export function HomeworkRunner({ assignmentId }: { assignmentId: string }) {
               <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
                 <button
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-5 py-3 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-400"
-                  disabled={currentIndex === 0}
+                  disabled={isSubmitting || currentIndex === 0}
                   onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))}
                   type="button"
                 >
@@ -205,7 +275,7 @@ export function HomeworkRunner({ assignmentId }: { assignmentId: string }) {
                 </button>
                 <button
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 sm:justify-self-end"
-                  disabled={currentIndex === snapshot.questions.length - 1}
+                  disabled={isSubmitting || currentIndex === snapshot.questions.length - 1}
                   onClick={() => setCurrentIndex((index) => Math.min(snapshot.questions.length - 1, index + 1))}
                   type="button"
                 >
@@ -229,6 +299,7 @@ export function HomeworkRunner({ assignmentId }: { assignmentId: string }) {
                             : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50"
                       ].join(" ")}
                       key={question.id}
+                      disabled={isSubmitting}
                       onClick={() => setCurrentIndex(index)}
                       type="button"
                     >
@@ -270,7 +341,7 @@ export function HomeworkRunner({ assignmentId }: { assignmentId: string }) {
   );
 }
 
-function ResultView({ answers, snapshot }: { answers: Record<string, string>; snapshot: Snapshot }) {
+function ResultView({ answers, snapshot, onRetake }: { answers: Record<string, string>; snapshot: Snapshot; onRetake: () => void }) {
   const percent = snapshot.totalCount ? Math.round(((snapshot.correctCount ?? 0) / snapshot.totalCount) * 100) : 0;
   return (
     <section className="mt-6 space-y-6">
@@ -288,6 +359,9 @@ function ResultView({ answers, snapshot }: { answers: Record<string, string>; sn
         <ProgressBar className="mx-auto mt-5 max-w-md" value={percent} />
         {snapshot.submittedAt ? <p className="mt-4 text-sm text-slate-500">Сдано: {formatAlmaty(snapshot.submittedAt)}</p> : null}
       </article>
+      {snapshot.canRetake ? <button className="hub-primary cursor-pointer" type="button" onClick={onRetake}>Начать пересдачу</button> : null}
+      <AssignmentFeedbackList feedback={snapshot.feedback ?? []} questionIds={snapshot.questions.map((q) => q.id)} />
+      {snapshot.feedbackError ? <p className="text-sm text-slate-600">Комментарии временно недоступны. Обновите страницу, чтобы повторить загрузку.</p> : null}
       {snapshot.review ? (
         <ReviewAnswers answers={answers} questions={snapshot.review} />
       ) : (

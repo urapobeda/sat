@@ -31,6 +31,12 @@ async function testAttemptsRoute() {
     export const NextResponse = { json: (body, init) => Response.json(body, init) };
     export async function getAuthenticatedUserId() { return c.authed ? '${userId}' : null; }
     export function getSupabaseAdminClient() { return { async rpc(name, args) { c.calls.push(['rpc', name, args]); return { data: c.rpcResult, error: c.rpcResult ? null : { message: 'nope' } }; } }; }
+    export async function openHomeworkAttempt(uid, aid, newAttempt) {
+      c.calls.push(['open', uid, aid, newAttempt]);
+      const result = await getSupabaseAdminClient().rpc('start_assignment_attempt', { p_assignment: aid, p_user: uid });
+      if (!result.data) throw new Error('No attempts');
+      return loadHomeworkAttempt(uid, result.data);
+    }
     export async function loadHomeworkAttempt(uid, sid) { c.calls.push(['load', uid, sid]); return { submissionId: sid, status: 'in_progress', questions: [], answers: {} }; }
     export async function saveHomeworkAnswer(args) { c.calls.push(['answer', args]); return undefined; }
     export async function submitHomeworkAttempt(args) { c.calls.push(['submit', args]); return { submissionId: args.submissionId, status: 'submitted', correctCount: 1, totalCount: 2, review: null }; }

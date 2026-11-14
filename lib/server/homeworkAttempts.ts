@@ -3,6 +3,7 @@ import "server-only";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getReviewQuestions, gradeQuestionAnswer, toQuestionChoices } from "@/lib/server/questionSolutions";
 import { canRevealAnswers, type ShowAnswersRule, type SubmissionStatus } from "@/lib/homework";
+import type { AssignmentFeedback } from "@/lib/assignmentReport";
 import type { Choice } from "@/types/database";
 import type { Question, ReviewQuestion } from "@/types/sat";
 
@@ -25,6 +26,10 @@ export type HomeworkAttemptSnapshot = {
   questions: Question[];
   answers: Record<string, string>;
   review: ReviewQuestion[] | null;
+  feedback: AssignmentFeedback[];
+  feedbackError: boolean;
+  answerTimes: Record<string, number | null>;
+  canRetake: boolean;
 };
 
 export async function loadHomeworkAttempt(userId: string, submissionId: string): Promise<HomeworkAttemptSnapshot> {
@@ -80,14 +85,14 @@ export async function loadHomeworkAttempt(userId: string, submissionId: string):
 
   const { data: answerRows, error: answersError } = await client
     .from("assignment_answers")
-    .select("question_id,answer")
+    .select("question_id,answer,time_spent_seconds")
     .eq("submission_id", submissionId);
   if (answersError) throw new Error("Attempt unavailable");
 
   const answers = Object.fromEntries(
     (answerRows ?? [])
-      .filter((row): row is { question_id: string; answer: string } => row.answer !== null)
-      .map((row) => [row.question_id, row.answer])
+      .filter((row) => row.answer !== null)
+      .map((row) => [row.question_id, row.answer!])
   );
 
   const submitted = submission.status === "submitted";
@@ -96,7 +101,18 @@ export async function loadHomeworkAttempt(userId: string, submissionId: string):
     ? await getReviewQuestions(Object.fromEntries(ids.map((id) => [id, answers[id] ?? null])))
     : null;
 
+  const [feedback, grants, attempts, member] = await Promise.all([
+    client.from("assignment_feedback").select("*").eq("submission_id", submissionId).order("created_at"),
+    client.from("assignment_retake_grants").select("submission_id", { count: "exact", head: true }).eq("assignment_id", assignment.id).eq("student_id", userId),
+    client.from("assignment_submissions").select("id", { count: "exact", head: true }).eq("assignment_id", assignment.id).eq("student_id", userId),
+    client.from("group_members").select("student_id").eq("group_id", assignment.group_id).eq("student_id", userId).maybeSingle()
+  ]);
   return {
+    feedback: submitted && !feedback.error ? feedback.data ?? [] : [],
+    feedbackError: submitted && Boolean(feedback.error),
+    answerTimes: Object.fromEntries((answerRows ?? []).map((row) => [row.question_id, row.time_spent_seconds])),
+    canRetake: submitted && assignment.published && !grants.error && !attempts.error && !member.error && Boolean(member.data)
+      && (attempts.count ?? 0) < assignment.max_attempts + (grants.count ?? 0),
     submissionId: submission.id,
     assignmentId: assignment.id,
     title: assignment.title,
@@ -123,79 +139,32 @@ export async function saveHomeworkAnswer({
   timeSpentSeconds,
   userId
 }: {
-  answer: string;
+  answer: string | null;
   questionId: string;
   submissionId: string;
   timeSpentSeconds: number | null;
   userId: string;
 }) {
-  const client = getSupabaseAdminClient();
-  const { data: submission, error } = await client
-    .from("assignment_submissions")
-    .select("id,assignment_id,status")
-    .eq("id", submissionId)
-    .eq("student_id", userId)
-    .maybeSingle();
-  if (error || !submission) throw new Error("Attempt unavailable");
-  if (submission.status !== "in_progress") throw new Error("This attempt was already submitted.");
-
-  const { data: link, error: linkError } = await client
-    .from("assignment_questions")
-    .select("question_id")
-    .eq("assignment_id", submission.assignment_id)
-    .eq("question_id", questionId)
-    .maybeSingle();
-  if (linkError || !link) throw new Error("Question is not part of this assignment.");
-
-  const feedback = await gradeQuestionAnswer({ questionId, selectedAnswer: answer });
-  const { error: upsertError } = await client.from("assignment_answers").upsert(
-    {
-      answer,
-      answered_at: new Date().toISOString(),
-      is_correct: feedback.isCorrect,
-      question_id: questionId,
-      submission_id: submissionId,
-      time_spent_seconds: timeSpentSeconds
-    },
-    { onConflict: "submission_id,question_id" }
-  );
-  if (upsertError) throw new Error(upsertError.message);
+  const feedback = answer === null ? null : await gradeQuestionAnswer({ questionId, selectedAnswer: answer });
+  const { error } = await getSupabaseAdminClient().rpc("save_verified_assignment_answer", {
+    p_user: userId, p_submission: submissionId, p_question: questionId,
+    p_answer: answer, p_correct: feedback?.isCorrect ?? null, p_seconds: timeSpentSeconds
+  });
+  if (error) throw new Error("Unable to save answer");
 }
 
 export async function submitHomeworkAttempt({ submissionId, userId }: { submissionId: string; userId: string }) {
-  const client = getSupabaseAdminClient();
-  const { data: submission, error } = await client
-    .from("assignment_submissions")
-    .select("id,assignment_id,status")
-    .eq("id", submissionId)
-    .eq("student_id", userId)
-    .maybeSingle();
-  if (error || !submission) throw new Error("Attempt unavailable");
-  if (submission.status === "submitted") return loadHomeworkAttempt(userId, submissionId);
-
-  const { count: totalCount, error: totalError } = await client
-    .from("assignment_questions")
-    .select("question_id", { count: "exact", head: true })
-    .eq("assignment_id", submission.assignment_id);
-  if (totalError) throw new Error(totalError.message);
-
-  const { count: correctCount, error: correctError } = await client
-    .from("assignment_answers")
-    .select("question_id", { count: "exact", head: true })
-    .eq("submission_id", submissionId)
-    .eq("is_correct", true);
-  if (correctError) throw new Error(correctError.message);
-
-  await client
-    .from("assignment_submissions")
-    .update({
-      correct_count: correctCount ?? 0,
-      status: "submitted",
-      submitted_at: new Date().toISOString(),
-      total_count: totalCount ?? 0
-    })
-    .eq("id", submissionId)
-    .eq("status", "in_progress");
-
+  const { error } = await getSupabaseAdminClient().rpc("finalize_assignment_submission", { p_user: userId, p_submission: submissionId });
+  if (error) throw new Error("Unable to submit attempt");
   return loadHomeworkAttempt(userId, submissionId);
+}
+
+export async function openHomeworkAttempt(userId: string, assignmentId: string, newAttempt = false) {
+  const client = getSupabaseAdminClient();
+  const latest = await client.from("assignment_submissions").select("id,status").eq("assignment_id", assignmentId).eq("student_id", userId).order("attempt_no", { ascending: false }).limit(1).maybeSingle();
+  if (latest.error) throw new Error("Attempt unavailable");
+  if (latest.data && (!newAttempt || latest.data.status === "in_progress")) return loadHomeworkAttempt(userId, latest.data.id);
+  const result = await client.rpc("start_assignment_attempt", { p_user: userId, p_assignment: assignmentId });
+  if (result.error || !result.data) throw new Error("No attempts available");
+  return loadHomeworkAttempt(userId, result.data);
 }

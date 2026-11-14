@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedUserId } from "@/lib/server/auth";
-import { getSupabaseAdminClient } from "@/lib/supabase/admin";
-import { loadHomeworkAttempt, saveHomeworkAnswer, submitHomeworkAttempt } from "@/lib/server/homeworkAttempts";
+import { loadHomeworkAttempt, openHomeworkAttempt, saveHomeworkAnswer, submitHomeworkAttempt } from "@/lib/server/homeworkAttempts";
 
-const startSchema = z.object({ action: z.literal("start"), assignmentId: z.uuid() });
+const startSchema = z.object({ action: z.literal("start"), assignmentId: z.uuid(), newAttempt: z.boolean().optional() });
 const getSchema = z.object({ action: z.literal("get"), submissionId: z.uuid() });
 const answerSchema = z.object({
   action: z.literal("answer"),
-  answer: z.string().trim().min(1).max(500),
+  answer: z.string().trim().min(1).max(500).nullable(),
   questionId: z.uuid(),
   submissionId: z.uuid(),
   timeSpentSeconds: z.number().int().min(0).max(86400).nullable().optional()
@@ -31,16 +30,9 @@ export async function POST(request: NextRequest) {
     const input = parsed.data;
 
     if (input.action === "start") {
-      const { data: submissionId, error } = await getSupabaseAdminClient().rpc("start_assignment_attempt", {
-        p_assignment: input.assignmentId,
-        p_user: userId
-      });
-      if (error || !submissionId) {
-        return NextResponse.json({ error: "Это задание недоступно для выполнения." }, { status: 409 });
-      }
-      return NextResponse.json(await loadHomeworkAttempt(userId, submissionId), {
-        headers: { "Cache-Control": "no-store" }
-      });
+      try {
+        return NextResponse.json(await openHomeworkAttempt(userId, input.assignmentId, input.newAttempt ?? false), { headers: { "Cache-Control": "no-store" } });
+      } catch { return NextResponse.json({ error: "Это задание недоступно для выполнения или попытки закончились." }, { status: 409 }); }
     }
 
     if (input.action === "get") {

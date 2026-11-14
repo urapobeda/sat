@@ -1,5 +1,7 @@
 "use client";
 
+import { AssignmentReport } from "@/components/homework/AssignmentReport";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -7,7 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import { groupRequest } from "@/lib/groupApi";
 import type { Assignment } from "@/types/database";
 import type { AssignmentRosterRow, ShowAnswersRule } from "@/lib/homework";
-import { almatyInputToUtcIso, formatAlmaty, utcIsoToAlmatyInput } from "@/lib/timezone";
+import { almatyInputToUtcIso, utcIsoToAlmatyInput } from "@/lib/timezone";
 import { QuestionPicker } from "@/components/homework/QuestionPicker";
 
 type DetailResponse = {
@@ -16,7 +18,6 @@ type DetailResponse = {
   roster: AssignmentRosterRow[];
 };
 
-const STATUS_LABEL: Record<string, string> = { in_progress: "Выполняет", submitted: "Сдал" };
 
 export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string }) {
   const router = useRouter();
@@ -34,6 +35,7 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
   const [showAnswers, setShowAnswers] = useState<ShowAnswersRule>("after_submit");
   const [maxAttempts, setMaxAttempts] = useState(1);
   const [questionIds, setQuestionIds] = useState<string[]>([]);
+  const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -163,9 +165,13 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
         </p>
       ) : null}
 
+      <h1 className="text-3xl font-bold">{detail.assignment.title}</h1>
+      <AssignmentReport key={retry} assignmentId={assignmentId} />
+      <button className="hub-text-link cursor-pointer text-sm font-semibold" type="button" aria-expanded={editing} onClick={() => setEditing(!editing)}>{editing ? "Скрыть настройки" : "Настройки задания и вопросы"}</button>
+      {editing ? <>
       <div className="hub-card space-y-3 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-2xl font-bold">{detail.assignment.title}</h1>
+          <h2 className="text-xl font-semibold">Настройки</h2>
           <div className="flex gap-2">
             <button
               className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50"
@@ -268,8 +274,8 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
       {detail.assignment.kind === "question_set" ? (
         <div className="hub-card space-y-4 p-5">
           <h2 className="text-lg font-semibold">Вопросы задания</h2>
-          <QuestionPicker onChange={setQuestionIds} selectedIds={questionIds} />
-          <button className="hub-primary cursor-pointer disabled:opacity-50" disabled={saving || questionIds.length === 0} onClick={saveQuestions} type="button">
+          {hasSubmissions ? <p className="text-sm text-slate-600">Вопросы зафиксированы после начала выполнения.</p> : <QuestionPicker onChange={setQuestionIds} selectedIds={questionIds} />}
+          <button className="hub-primary cursor-pointer disabled:opacity-50" disabled={saving || hasSubmissions || questionIds.length === 0} onClick={saveQuestions} type="button">
             Сохранить вопросы
           </button>
         </div>
@@ -279,37 +285,8 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
         </div>
       )}
 
-      <div className="hub-card p-5">
-        <h2 className="text-lg font-semibold">Сдачи учеников</h2>
-        {detail.roster.length === 0 ? (
-          <p className="mt-2 text-sm text-slate-600">В группе пока нет учеников.</p>
-        ) : (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[480px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  <th className="pb-2 pr-4">Ученик</th>
-                  <th className="pb-2 pr-4">Статус</th>
-                  <th className="pb-2 pr-4">Результат</th>
-                  <th className="pb-2">Сдано</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {detail.roster.map((row) => (
-                  <tr key={row.student_id}>
-                    <td className="py-2 pr-4">{row.full_name}</td>
-                    <td className="py-2 pr-4">{row.status ? STATUS_LABEL[row.status] : "Не начал"}</td>
-                    <td className="py-2 pr-4">
-                      {row.status === "submitted" ? `${row.correct_count ?? 0} / ${row.total_count ?? 0}` : "—"}
-                    </td>
-                    <td className="py-2">{row.submitted_at ? formatAlmaty(row.submitted_at) : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+
+      </> : null}
     </section>
   );
 }
