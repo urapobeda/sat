@@ -1,0 +1,302 @@
+"use client";
+
+import { ArrowLeft, ArrowRight, Loader2, Search, Send, Trophy } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { confirmLeavingStudy, StudentShell } from "@/components/dashboard/StudentShell";
+import { EmptyState } from "@/components/EmptyState";
+import { ProgressBar } from "@/components/quiz/ProgressBar";
+import { QuestionCard } from "@/components/quiz/QuestionCard";
+import { ReviewAnswers } from "@/components/quiz/ReviewAnswers";
+import { Timer } from "@/components/quiz/Timer";
+import { getSupabaseAuthHeaders } from "@/lib/supabase/authHeaders";
+import { isPastDue } from "@/lib/homework";
+import { formatAlmaty } from "@/lib/timezone";
+import type { Question, ReviewQuestion } from "@/types/sat";
+
+type Snapshot = {
+  submissionId: string;
+  assignmentId: string;
+  title: string;
+  instructions: string;
+  timeLimitMinutes: number | null;
+  dueAt: string;
+  showAnswers: "after_submit" | "after_due" | "never";
+  status: "in_progress" | "submitted";
+  startedAt: string;
+  submittedAt: string | null;
+  correctCount: number | null;
+  totalCount: number | null;
+  late: boolean;
+  questions: Question[];
+  answers: Record<string, string>;
+  review: ReviewQuestion[] | null;
+};
+
+async function callAttempts<T>(body: Record<string, unknown>): Promise<T> {
+  const response = await fetch("/api/homework/attempts", {
+    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json", ...(await getSupabaseAuthHeaders()) },
+    method: "POST"
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Не удалось выполнить действие.");
+  return payload as T;
+}
+
+export function HomeworkRunner({ assignmentId }: { assignmentId: string }) {
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const submitDialog = useRef<HTMLDialogElement>(null);
+  const hasSubmitted = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    async function start() {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await callAttempts<Snapshot>({ action: "start", assignmentId });
+        if (!active) return;
+        setSnapshot(result);
+        setAnswers(result.answers);
+      } catch (requestError) {
+        if (active) setError(requestError instanceof Error ? requestError.message : "Не удалось открыть задание.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    void start();
+    return () => {
+      active = false;
+    };
+  }, [assignmentId]);
+
+  useEffect(() => {
+    if (!snapshot || snapshot.status !== "in_progress" || !snapshot.timeLimitMinutes) return;
+    const deadline = new Date(snapshot.startedAt).getTime() + snapshot.timeLimitMinutes * 60_000;
+    function tick() {
+      const seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setRemainingSeconds(seconds);
+      if (seconds === 0) void finish();
+    }
+    const immediate = window.setTimeout(tick, 0);
+    const interval = window.setInterval(tick, 1000);
+    return () => {
+      window.clearTimeout(immediate);
+      window.clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- finish is stable enough for this effect's lifetime
+  }, [snapshot]);
+
+  const currentQuestion = snapshot?.questions[currentIndex];
+  const answeredCount = Object.keys(answers).length;
+
+  async function selectAnswer(choice: string) {
+    if (!currentQuestion || !snapshot || snapshot.status !== "in_progress") return;
+    setAnswers((current) => ({ ...current, [currentQuestion.id]: choice }));
+    try {
+      await callAttempts({ action: "answer", answer: choice, questionId: currentQuestion.id, submissionId: snapshot.submissionId });
+      setSaveError(false);
+    } catch {
+      setSaveError(true);
+    }
+  }
+
+  async function finish() {
+    if (!snapshot || hasSubmitted.current) return;
+    hasSubmitted.current = true;
+    setIsSubmitting(true);
+    try {
+      const result = await callAttempts<Snapshot>({ action: "submit", submissionId: snapshot.submissionId });
+      setSnapshot(result);
+      setAnswers(result.answers);
+    } catch (requestError) {
+      hasSubmitted.current = false;
+      setError(requestError instanceof Error ? requestError.message : "Не удалось сдать задание.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  const active = Boolean(snapshot && snapshot.status === "in_progress" && !loading);
+
+  return (
+    <StudentShell active="homework" exam guardExit={active}>
+      <main className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
+        <section className="hub-card p-4 sm:p-5">
+          <Link
+            className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 transition hover:text-blue-700"
+            href="/homework"
+            onNavigate={(event) => {
+              if (active && !confirmLeavingStudy()) event.preventDefault();
+            }}
+          >
+            <ArrowLeft size={17} />
+            К домашним заданиям
+          </Link>
+          {snapshot ? (
+            <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950 sm:text-3xl">{snapshot.title}</h1>
+                {snapshot.instructions ? <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{snapshot.instructions}</p> : null}
+                <p className="mt-2 text-sm text-slate-600">
+                  Срок: {formatAlmaty(snapshot.dueAt)}
+                  {isPastDue(snapshot.dueAt) && snapshot.status === "in_progress" ? " · срок истёк, будет отмечено как сдано с опозданием" : ""}
+                </p>
+                {saveError ? <p className="mt-1 text-sm text-rose-600">Не удалось сохранить последний ответ. Проверьте соединение.</p> : null}
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {remainingSeconds !== null ? <Timer label="Осталось" seconds={remainingSeconds} /> : null}
+                <span className="inline-flex min-h-9 items-center rounded-full bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200">
+                  {answeredCount} / {snapshot.questions.length} отвечено
+                </span>
+              </div>
+            </div>
+          ) : null}
+        </section>
+
+        {loading ? (
+          <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-3 text-sm font-semibold text-blue-600">
+              <Loader2 className="animate-spin" size={20} />
+              Загрузка задания…
+            </div>
+          </section>
+        ) : error ? (
+          <EmptyState description={error} icon={<Search size={26} />} title="Задание недоступно" />
+        ) : !snapshot ? null : snapshot.status === "submitted" ? (
+          <ResultView answers={answers} snapshot={snapshot} />
+        ) : currentQuestion ? (
+          <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <div className="space-y-5">
+              <QuestionCard
+                currentIndex={currentIndex}
+                mode="test"
+                onSelect={selectAnswer}
+                question={currentQuestion}
+                selectedAnswer={answers[currentQuestion.id] ?? null}
+                totalQuestions={snapshot.questions.length}
+              />
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+                <button
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-5 py-3 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                  disabled={currentIndex === 0}
+                  onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))}
+                  type="button"
+                >
+                  <ArrowLeft size={18} />
+                  Назад
+                </button>
+                <button
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-5 py-3 text-sm font-semibold text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                  disabled={isSubmitting}
+                  onClick={() => submitDialog.current?.showModal()}
+                  type="button"
+                >
+                  {isSubmitting ? <Loader2 className="animate-spin" size={17} /> : <Send size={17} />}
+                  Сдать
+                </button>
+                <button
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 sm:justify-self-end"
+                  disabled={currentIndex === snapshot.questions.length - 1}
+                  onClick={() => setCurrentIndex((index) => Math.min(snapshot.questions.length - 1, index + 1))}
+                  type="button"
+                >
+                  Далее
+                  <ArrowRight size={18} />
+                </button>
+              </div>
+            </div>
+            <aside className="space-y-4">
+              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h2 className="text-lg font-semibold text-slate-950">Вопросы</h2>
+                <div className="mt-4 grid grid-cols-5 gap-2">
+                  {snapshot.questions.map((question, index) => (
+                    <button
+                      className={[
+                        "relative flex h-11 items-center justify-center rounded-xl border text-sm font-semibold transition",
+                        index === currentIndex
+                          ? "border-blue-500 bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                          : answers[question.id]
+                            ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50"
+                      ].join(" ")}
+                      key={question.id}
+                      onClick={() => setCurrentIndex(index)}
+                      type="button"
+                    >
+                      {index + 1}
+                    </button>
+                  ))}
+                </div>
+                <ProgressBar className="mt-5" value={(answeredCount / Math.max(snapshot.questions.length, 1)) * 100} />
+              </article>
+            </aside>
+          </section>
+        ) : null}
+
+        <dialog aria-labelledby="homework-submit-title" className="hub-card m-auto w-[min(28rem,calc(100%-2rem))] p-5 text-slate-950 backdrop:bg-slate-950/60 sm:p-6" ref={submitDialog}>
+          <h2 className="hub-section-title" id="homework-submit-title">
+            Сдать задание?
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Отвечено {answeredCount} из {snapshot?.questions.length ?? 0} вопросов. После сдачи изменить ответы будет нельзя.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-end gap-2">
+            <button className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100" onClick={() => submitDialog.current?.close()} type="button">
+              Продолжить
+            </button>
+            <button
+              className="hub-primary cursor-pointer"
+              onClick={() => {
+                submitDialog.current?.close();
+                void finish();
+              }}
+              type="button"
+            >
+              Сдать
+            </button>
+          </div>
+        </dialog>
+      </main>
+    </StudentShell>
+  );
+}
+
+function ResultView({ answers, snapshot }: { answers: Record<string, string>; snapshot: Snapshot }) {
+  const percent = snapshot.totalCount ? Math.round(((snapshot.correctCount ?? 0) / snapshot.totalCount) * 100) : 0;
+  return (
+    <section className="mt-6 space-y-6">
+      <article className="rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+          <Trophy size={34} />
+        </div>
+        <p className="mt-5 text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
+          {snapshot.late ? "Сдано с опозданием" : "Задание сдано"}
+        </p>
+        <h2 className="mt-2 text-3xl font-bold text-slate-950">
+          {snapshot.correctCount ?? 0} из {snapshot.totalCount ?? 0} правильно
+        </h2>
+        <p className="mt-2 text-lg font-bold text-slate-600">{percent}% точность</p>
+        <ProgressBar className="mx-auto mt-5 max-w-md" value={percent} />
+        {snapshot.submittedAt ? <p className="mt-4 text-sm text-slate-500">Сдано: {formatAlmaty(snapshot.submittedAt)}</p> : null}
+      </article>
+      {snapshot.review ? (
+        <ReviewAnswers answers={answers} questions={snapshot.review} />
+      ) : (
+        <div className="hub-card p-5 text-sm text-slate-600">
+          {snapshot.showAnswers === "never"
+            ? "Учитель скрыл разбор ответов для этого задания."
+            : `Разбор ответов откроется после срока сдачи (${formatAlmaty(snapshot.dueAt)}).`}
+        </div>
+      )}
+    </section>
+  );
+}

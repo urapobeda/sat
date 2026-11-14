@@ -1,10 +1,11 @@
 import { MyGroups } from "@/components/groups/MyGroups";
-import { ArrowRight, BookOpen, CalendarDays, ChartNoAxesCombined, ClipboardList, FileText, FolderOpen, NotebookPen } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarDays, ChartNoAxesCombined, FileText, FolderOpen, NotebookPen } from "lucide-react";
 import Link from "next/link";
 import { BearIcon } from "@/components/dashboard/BearIcon";
 import { StudentGreeting } from "@/components/dashboard/StudentAccount";
 import { StudentShell } from "@/components/dashboard/StudentShell";
 import { LearningSnapshot } from "@/components/dashboard/LearningSnapshot";
+import { UpcomingHomeworkCard } from "@/components/homework/UpcomingHomeworkCard";
 
 const shortcuts = [
   { label: "Question Bank", description: "Practice a skill at your pace.", href: "/question-bank", icon: BookOpen },
@@ -50,8 +51,8 @@ export function DashboardPage() {
         </section>
 
         <div className="grid gap-4 md:grid-cols-3">
+          <UpcomingHomeworkCard />
           {[
-            { label: "Today’s tasks", detail: "Check your homework workspace for available assignments.", action: "View homework", href: "/homework", icon: ClipboardList },
             { label: "Learning library", detail: "Browse study resources and tools by subject.", action: "Open library", href: "/materials", icon: FolderOpen },
             { label: "Your analytics", detail: "Review your saved attempts and see where you can improve.", action: "View progress", href: "/progress", icon: ChartNoAxesCombined }
           ].map(({ label, detail, action, href, icon: Icon }) => (

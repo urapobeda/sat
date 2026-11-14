@@ -1,5 +1,5 @@
-import { HomeworkPage } from "@/components/dashboard/HomeworkPage";
+import { StudentHomeworkPage } from "@/components/homework/StudentHomeworkPage";
 
 export default function HomeworkRoute() {
-  return <HomeworkPage />;
+  return <StudentHomeworkPage />;
 }

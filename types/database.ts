@@ -1,6 +1,16 @@
 import type { StudyGroup, GroupMember, GroupTeacher } from "@/lib/groups";
 import type { UserRole } from "@/lib/roles";
 import type { PaperItem, PaperSolution, PaperModuleRun } from "./../lib/paperRunner";
+import type {
+  AssignmentAnswer,
+  AssignmentKind,
+  AssignmentQuestionRow,
+  AssignmentRosterRow,
+  AssignmentSubmission,
+  ShowAnswersRule,
+  StudentAssignment,
+  TeacherAssignment
+} from "@/lib/homework";
 export type Choice = {
   label: string;
   text: string;
@@ -194,9 +204,50 @@ export type PaperBookmark = {
   user_id: string;
 };
 
+export type Assignment = {
+  id: string;
+  group_id: string;
+  created_by: string;
+  title: string;
+  instructions: string;
+  kind: AssignmentKind;
+  paper_id: string | null;
+  time_limit_minutes: number | null;
+  due_at: string;
+  show_answers: ShowAnswersRule;
+  max_attempts: number;
+  published: boolean;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
+      assignments: {
+        Row: Assignment;
+        Insert: Pick<Assignment, "group_id" | "created_by" | "title" | "kind" | "due_at"> &
+          Partial<Pick<Assignment, "instructions" | "paper_id" | "time_limit_minutes" | "show_answers" | "max_attempts" | "published">>;
+        Update: Partial<Omit<Assignment, "id" | "group_id" | "created_by" | "created_at">>;
+        Relationships: [];
+      };
+      assignment_questions: {
+        Row: AssignmentQuestionRow;
+        Insert: AssignmentQuestionRow;
+        Update: Partial<AssignmentQuestionRow>;
+        Relationships: [];
+      };
+      assignment_submissions: {
+        Row: AssignmentSubmission;
+        Insert: Partial<AssignmentSubmission> & Pick<AssignmentSubmission, "assignment_id" | "student_id">;
+        Update: Partial<AssignmentSubmission>;
+        Relationships: [];
+      };
+      assignment_answers: {
+        Row: AssignmentAnswer;
+        Insert: Partial<AssignmentAnswer> & Pick<AssignmentAnswer, "submission_id" | "question_id">;
+        Update: Partial<AssignmentAnswer>;
+        Relationships: [];
+      };
       groups: {
         Row: Omit<StudyGroup, "teacher_name" | "member_count">;
         Insert: never;
@@ -409,6 +460,12 @@ export type Database = {
         };
         Returns: boolean;
       };
+      can_manage_assignment: { Args: { p_assignment_id: string }; Returns: boolean };
+      set_assignment_questions: { Args: { p_assignment_id: string; p_question_ids: string[] }; Returns: boolean };
+      start_assignment_attempt: { Args: { p_user: string; p_assignment: string }; Returns: string };
+      list_student_assignments: { Args: Record<string, never>; Returns: StudentAssignment[] };
+      list_teacher_assignments: { Args: { p_group_id?: string }; Returns: TeacherAssignment[] };
+      get_assignment_roster: { Args: { p_assignment_id: string }; Returns: AssignmentRosterRow[] };
       finalize_verified_test: {
         Args: {
           p_session: string;
