@@ -323,7 +323,7 @@ export function PracticeExam({
                 <button className={control} disabled={currentIndex === 0 || isChecking || isSavingResult} onClick={onPrevious} type="button">
                   Previous
                 </button>
-                <button className={control} disabled={!feedback?.isCorrect || isChecking || isSavingResult} onClick={onNext} type="button">
+                <button className={control} disabled={isChecking || isSavingResult} onClick={onNext} type="button">
                   {isSavingResult ? <Loader2 className="animate-spin" size={16} aria-hidden="true" /> : null}
                   {currentIndex === questions.length - 1 ? "Show Results" : "Next"}
                 </button>
