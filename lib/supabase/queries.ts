@@ -161,6 +161,11 @@ export async function getOrCreateStudyPlan(userId: string) {
     .single();
 
   if (insertError) {
+    // Another mounted view or tab may have created the same user's plan.
+    if (insertError.code === "23505") {
+      const existing = await supabase.from("study_plans").select("*").eq("user_id", userId).single();
+      if (!existing.error) return existing.data;
+    }
     throw new Error(insertError.message);
   }
 
@@ -322,18 +327,14 @@ export async function getQuestions(filters: QuestionFilters = {}) {
 
 export async function getIncorrectQuestionIds(userId: string) {
   const supabase = getSupabaseBrowserClient();
-  const [practiceResult, testResult] = await Promise.all([
-    supabase
-      .from("practice_answers")
-      .select("question_id")
-      .eq("user_id", userId)
-      .eq("is_correct", false),
-    supabase
-      .from("test_answers")
-      .select("question_id")
-      .eq("user_id", userId)
-      .eq("is_correct", false)
-  ]);
+  const [practiceResult, testResult] = await Promise.all(
+    (["practice_answers", "test_answers"] as const).map((table) =>
+      loadQuestionPages((from, to, withCount) => supabase.from(table)
+        .select("question_id", withCount ? { count: "exact" } : undefined)
+        .eq("user_id", userId).eq("is_correct", false)
+        .order("created_at").order("id").range(from, to))
+    )
+  );
 
   if (practiceResult.error || testResult.error) {
     throw new Error(
@@ -453,18 +454,14 @@ export async function getWeeklyQuestionActivity(
   userId: string
 ): Promise<WeeklyActivityPoint[]> {
   const supabase = getSupabaseBrowserClient();
-  const [practiceResult, testResult] = await Promise.all([
-    supabase
-      .from("practice_answers")
-      .select("created_at,is_correct")
-      .eq("user_id", userId)
-      .not("is_correct", "is", null),
-    supabase
-      .from("test_answers")
-      .select("created_at,is_correct")
-      .eq("user_id", userId)
-      .not("is_correct", "is", null)
-  ]);
+  const [practiceResult, testResult] = await Promise.all(
+    (["practice_answers", "test_answers"] as const).map((table) =>
+      loadQuestionPages((from, to, withCount) => supabase.from(table)
+        .select("created_at,is_correct", withCount ? { count: "exact" } : undefined)
+        .eq("user_id", userId).not("is_correct", "is", null)
+        .order("created_at").order("id").range(from, to))
+    )
+  );
 
   if (practiceResult.error || testResult.error) {
     throw new Error(
@@ -502,7 +499,7 @@ function getWeekStartIso(date: Date) {
   const result = new Date(date);
   result.setHours(0, 0, 0, 0);
   result.setDate(result.getDate() - result.getDay());
-  return result.toISOString().slice(0, 10);
+  return `${result.getFullYear()}-${String(result.getMonth() + 1).padStart(2, "0")}-${String(result.getDate()).padStart(2, "0")}`;
 }
 
 export async function getMarkedQuestionIds(userId: string) {
@@ -664,11 +661,11 @@ export async function completePracticeSession(
 
 export async function getPracticeHistory(userId: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
+  const { data, error } = await loadQuestionPages((from, to, withCount) => supabase
     .from("practice_sessions")
-    .select("*")
+    .select("*", withCount ? { count: "exact" } : undefined)
     .eq("user_id", userId)
-    .order("started_at", { ascending: false });
+    .order("started_at", { ascending: false }).order("id").range(from, to));
 
   if (error) {
     throw new Error(error.message);
@@ -752,11 +749,11 @@ export async function completeTestSession(
 
 export async function getTestHistory(userId: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
+  const { data, error } = await loadQuestionPages((from, to, withCount) => supabase
     .from("test_sessions")
-    .select("*")
+    .select("*", withCount ? { count: "exact" } : undefined)
     .eq("user_id", userId)
-    .order("started_at", { ascending: false });
+    .order("started_at", { ascending: false }).order("id").range(from, to));
 
   if (error) {
     throw new Error(error.message);
@@ -856,18 +853,26 @@ export async function getStrongAreas(userId: string) {
     .slice(0, 5);
 }
 
-export async function getTopicPerformance(userId: string): Promise<TopicPerformance[]> {
+const topicRequests = new Map<string, Promise<TopicPerformance[]>>();
+export function getTopicPerformance(userId: string): Promise<TopicPerformance[]> {
+  const pending = topicRequests.get(userId);
+  if (pending) return pending;
+  // Share concurrent weak/strong-area loads, but never cache private results.
+  const request = loadTopicPerformance(userId).finally(() => topicRequests.delete(userId));
+  topicRequests.set(userId, request);
+  return request;
+}
+
+async function loadTopicPerformance(userId: string): Promise<TopicPerformance[]> {
   const supabase = getSupabaseBrowserClient();
-  const { data: practiceAnswers, error: practiceError } = await supabase
-    .from("practice_answers")
-    .select("question_id,is_correct")
-    .eq("user_id", userId)
-    .not("is_correct", "is", null);
-  const { data: testAnswers, error: testError } = await supabase
-    .from("test_answers")
-    .select("question_id,is_correct")
-    .eq("user_id", userId)
-    .not("is_correct", "is", null);
+  const [{ data: practiceAnswers, error: practiceError }, { data: testAnswers, error: testError }] = await Promise.all(
+    (["practice_answers", "test_answers"] as const).map((table) =>
+      loadQuestionPages((from, to, withCount) => supabase.from(table)
+        .select("question_id,is_correct", withCount ? { count: "exact" } : undefined)
+        .eq("user_id", userId).not("is_correct", "is", null)
+        .order("created_at").order("id").range(from, to))
+    )
+  );
 
   if (practiceError || testError) {
     throw new Error(practiceError?.message ?? testError?.message ?? "Progress error");
@@ -883,13 +888,15 @@ export async function getTopicPerformance(userId: string): Promise<TopicPerforma
     return [];
   }
 
-  const { data: answeredQuestions, error } = await supabase
-    .from("questions")
-    .select("id,topic")
-    .in("id", questionIds);
-
-  if (error) {
-    throw new Error(error.message);
+  const answeredQuestions: { id: string; topic: string }[] = [];
+  // Keep UUID lists below URL limits and each request below PostgREST's row cap.
+  for (let offset = 0; offset < questionIds.length; offset += 400) {
+    const batches = await Promise.all(Array.from({ length: Math.min(4, Math.ceil((questionIds.length - offset) / 100)) }, (_, index) =>
+      supabase.from("questions").select("id,topic").in("id", questionIds.slice(offset + index * 100, offset + (index + 1) * 100))));
+    for (const { data, error } of batches) {
+      if (error) throw new Error(error.message);
+      answeredQuestions.push(...data ?? []);
+    }
   }
 
   const topicByQuestionId = new Map(

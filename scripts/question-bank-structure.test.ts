@@ -46,6 +46,8 @@ assert.equal(getCategoryForTopic("reading-writing", "Unknown").title, "Craft and
 assert.equal(getQuestionSubtopic(q("math", "Probability puzzles")), "Ratios, Rates, Proportional Relationships, and Units");
 assert.ok(questionMatchesSubtopic(q("math", "Circles"), "Circles"));
 assert.ok(!questionMatchesSubtopic(q("math", "Circles"), "Linear Functions"));
+assert.equal(getQuestionSubtopic(q("math", "Nonlinear equations in one variable and systems of equations in two")), "Nonlinear Equations in One Variable and Systems of Equations in Two Variables");
+assert.equal(getQuestionSubtopic(q("math", "One-variable data: Distributions and measures of center and")), "One-Variable Data: Distributions and Measures of Center and Spread");
 
 // Repeated lookups return identical category objects (memoized, not recomputed).
 assert.equal(getCategoryForTopic("math", "Circles"), getCategoryForTopic("math", "Circles"));

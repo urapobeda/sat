@@ -82,8 +82,11 @@ export const QUESTION_BANK_CATEGORIES: QuestionBankCategory[] = [
     section: "math",
     subtopics: [
       subtopic("Equivalent Expressions", ["Advanced Math"]),
-      subtopic("Nonlinear Equations in One Variable"),
-      subtopic("Systems of Equations in Two Variables"),
+      subtopic("Nonlinear Equations in One Variable and Systems of Equations in Two Variables", [
+        "Nonlinear equations in one variable and systems of equations in two",
+        "Nonlinear Equations in One Variable",
+        "Systems of Equations in Two Variables"
+      ]),
       subtopic("Nonlinear Functions")
     ],
     title: "Advanced Math"
@@ -101,6 +104,7 @@ export const QUESTION_BANK_CATEGORIES: QuestionBankCategory[] = [
       subtopic("Percentages"),
       subtopic("One-Variable Data: Distributions and Measures of Center and Spread", [
         "One-Variable Data",
+        "One-variable data: Distributions and measures of center and",
         "Statistics"
       ]),
       subtopic("Two-Variable Data: Models and Scatterplots", [

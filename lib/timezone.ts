@@ -1,4 +1,4 @@
-// Asia/Almaty has been a fixed UTC+5 offset with no daylight saving since 2005.
+// Current Almaty wall-clock dates use UTC+5 (the change took effect in 2024).
 const ALMATY_OFFSET_MINUTES = 5 * 60;
 
 /** `date` as "YYYY-MM-DD" and `time` as "HH:mm", both Almaty wall-clock, to a UTC ISO string. */
@@ -8,6 +8,9 @@ export function almatyInputToUtcIso(date: string, time: string): string | null {
   if (!match || !timeMatch) return null;
   const [, year, month, day] = match;
   const [, hour, minute] = timeMatch;
+  if (Number(year) < 100 || Number(hour) > 23 || Number(minute) > 59) return null;
+  const calendar = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (calendar.getUTCFullYear() !== Number(year) || calendar.getUTCMonth() !== Number(month) - 1 || calendar.getUTCDate() !== Number(day)) return null;
   const utcMs =
     Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)) -
     ALMATY_OFFSET_MINUTES * 60_000;

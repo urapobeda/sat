@@ -1,4 +1,4 @@
-import { getQuestionSubtopic } from "./questionBankStructure.ts";
+import { getCategoriesForSection, getQuestionSubtopic } from "./questionBankStructure.ts";
 import { normalizeTopic } from "./questions.ts";
 import type { QuestionDifficulty, QuestionSummary, SectionFilter } from "@/types/sat";
 
@@ -49,6 +49,13 @@ export function filterQuestionCatalog(catalog: QuestionSummary[], filters: {
   }
   const topics = new Set((filters.topics?.length ? filters.topics : legacyTopic ? [legacyTopic] : []).map(normalizeTopic));
   if (!topics.size) return matchingDifficulty;
+  // Older bookmarks can contain an alias rather than the current skill label.
+  const sections = filters.section === "all" ? ["math", "reading-writing"] as const : [filters.section];
+  for (const section of sections) for (const category of getCategoriesForSection(section)) {
+    for (const subtopic of category.subtopics) {
+      if (subtopic.aliases.some((alias) => topics.has(normalizeTopic(alias)))) topics.add(normalizeTopic(subtopic.title));
+    }
+  }
   return matchingDifficulty.filter((question) =>
     topics.has(normalizeTopic(question.topic)) || topics.has(normalizeTopic(getQuestionSubtopic(question))));
 }
