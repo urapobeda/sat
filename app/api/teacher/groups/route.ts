@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   if (!staff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const body = z.object({ name: z.string().trim().min(1).max(100) }).safeParse(await request.json());
-    if (!body.success) return NextResponse.json({ error: "Введите название до 100 символов." }, { status: 400 });
+    if (!body.success) return NextResponse.json({ error: "Enter a name of up to 100 characters." }, { status: 400 });
     const { data, error } = await staff.db.rpc("create_group", { p_name: body.data.name });
     if (error) throw error;
     return NextResponse.json({ id: data }, { status: 201 });

@@ -48,7 +48,7 @@ async function callAttempts<T>(body: Record<string, unknown>): Promise<T> {
     method: "POST"
   });
   const payload = await response.json();
-  if (!response.ok) throw new Error(payload.error || "Не удалось выполнить действие.");
+  if (!response.ok) throw new Error(payload.error || "The action could not be completed.");
   return payload as T;
 }
 
@@ -117,7 +117,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
         if (!active) return;
         install(result);
       } catch (requestError) {
-        if (active) setError(requestError instanceof Error ? requestError.message : "Не удалось открыть задание.");
+        if (active) setError(requestError instanceof Error ? requestError.message : "Could not open the assignment.");
       } finally {
         if (active) setLoading(false);
       }
@@ -167,7 +167,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
       await pending.current;
       for (const value of [...failed.current.values()]) persist(snapshot.submissionId, value.questionId, value.answer);
       await pending.current;
-      if (failed.current.size) throw new Error("Не все ответы сохранены. Проверьте соединение и повторите сдачу.");
+      if (failed.current.size) throw new Error("Not all answers were saved. Check your connection and submit again.");
       const result = await callAttempts<Snapshot>({ action: "submit", submissionId: snapshot.submissionId });
       setSnapshot(result);
       setAnswers(result.answers);
@@ -179,7 +179,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
       } catch { /* Keep the existing answers for a later retry. */ }
       hasSubmitted.current = false;
       clock.current.resume();
-      setError(requestError instanceof Error ? requestError.message : "Не удалось сдать задание.");
+      setError(requestError instanceof Error ? requestError.message : "Could not submit the assignment.");
     } finally {
       setIsSubmitting(false);
     }
@@ -190,7 +190,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
     try {
       const result = await callAttempts<Snapshot>({ action: "start", assignmentId, newAttempt: true });
       install(result); router.replace(`/homework/${assignmentId}`);
-    } catch (failure) { setError(failure instanceof Error ? failure.message : "Не удалось начать пересдачу."); }
+    } catch (failure) { setError(failure instanceof Error ? failure.message : "Could not start a retake."); }
     finally { setLoading(false); }
   }
 
@@ -208,7 +208,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
             }}
           >
             <ArrowLeft size={17} />
-            К домашним заданиям
+            Back to homework
           </Link>
           {snapshot ? (
             <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -216,31 +216,31 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
                 <h1 className="text-2xl font-bold leading-tight tracking-tight text-slate-950 sm:text-3xl">{snapshot.title}</h1>
                 {snapshot.instructions ? <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{snapshot.instructions}</p> : null}
                 <p className="mt-2 text-sm text-slate-600">
-                  Срок: {formatAlmaty(snapshot.dueAt)}
-                  {isPastDue(snapshot.dueAt) && snapshot.status === "in_progress" ? " · срок истёк, будет отмечено как сдано с опозданием" : ""}
+                  Due: {formatAlmaty(snapshot.dueAt)}
+                  {isPastDue(snapshot.dueAt) && snapshot.status === "in_progress" ? " · past due, will be marked as late" : ""}
                 </p>
-                {saveError ? <p className="mt-1 text-sm text-rose-600">Не удалось сохранить последний ответ. Проверьте соединение.</p> : null}
+                {saveError ? <p className="mt-1 text-sm text-rose-600">Could not save your last answer. Check your connection.</p> : null}
               </div>
               <div className="flex flex-wrap gap-3">
-                {remainingSeconds !== null ? <Timer label="Осталось" seconds={remainingSeconds} /> : null}
+                {remainingSeconds !== null ? <Timer label="Time left" seconds={remainingSeconds} /> : null}
                 <span className="inline-flex min-h-9 items-center rounded-full bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200">
-                  {answeredCount} / {snapshot.questions.length} отвечено
+                  {answeredCount} / {snapshot.questions.length} answered
                 </span>
               </div>
             </div>
           ) : null}
         </section>
 
-        {snapshot && error ? <p role="alert" className="mt-4 text-sm text-rose-600">{error} {snapshot.status === "in_progress" ? <button className="cursor-pointer underline" disabled={isSubmitting} type="button" onClick={() => void finish()}>Повторить сдачу</button> : null}</p> : null}
+        {snapshot && error ? <p role="alert" className="mt-4 text-sm text-rose-600">{error} {snapshot.status === "in_progress" ? <button className="cursor-pointer underline" disabled={isSubmitting} type="button" onClick={() => void finish()}>Retry submission</button> : null}</p> : null}
         {loading ? (
           <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-3 text-sm font-semibold text-blue-600">
               <Loader2 className="animate-spin" size={20} />
-              Загрузка задания…
+              Loading assignment…
             </div>
           </section>
         ) : error && !snapshot ? (
-          <EmptyState description={error} icon={<Search size={26} />} title="Задание недоступно" />
+          <EmptyState description={error} icon={<Search size={26} />} title="Assignment unavailable" />
         ) : !snapshot ? null : snapshot.status === "submitted" ? (
           <ResultView answers={answers} snapshot={snapshot} onRetake={() => void retake()} />
         ) : currentQuestion ? (
@@ -262,7 +262,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
                   type="button"
                 >
                   <ArrowLeft size={18} />
-                  Назад
+                  Back
                 </button>
                 <button
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-5 py-3 text-sm font-semibold text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
@@ -271,7 +271,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
                   type="button"
                 >
                   {isSubmitting ? <Loader2 className="animate-spin" size={17} /> : <Send size={17} />}
-                  Сдать
+                  Submit
                 </button>
                 <button
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 sm:justify-self-end"
@@ -279,14 +279,14 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
                   onClick={() => setCurrentIndex((index) => Math.min(snapshot.questions.length - 1, index + 1))}
                   type="button"
                 >
-                  Далее
+                  Next
                   <ArrowRight size={18} />
                 </button>
               </div>
             </div>
             <aside className="space-y-4">
               <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-950">Вопросы</h2>
+                <h2 className="text-lg font-semibold text-slate-950">Questions</h2>
                 <div className="mt-4 grid grid-cols-5 gap-2">
                   {snapshot.questions.map((question, index) => (
                     <button
@@ -315,14 +315,14 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
 
         <dialog aria-labelledby="homework-submit-title" className="hub-card m-auto w-[min(28rem,calc(100%-2rem))] p-5 text-slate-950 backdrop:bg-slate-950/60 sm:p-6" ref={submitDialog}>
           <h2 className="hub-section-title" id="homework-submit-title">
-            Сдать задание?
+            Submit assignment?
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Отвечено {answeredCount} из {snapshot?.questions.length ?? 0} вопросов. После сдачи изменить ответы будет нельзя.
+            You answered {answeredCount} of {snapshot?.questions.length ?? 0} questions. You cannot change your answers after submitting.
           </p>
           <div className="mt-5 flex flex-wrap justify-end gap-2">
             <button className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100" onClick={() => submitDialog.current?.close()} type="button">
-              Продолжить
+              Keep working
             </button>
             <button
               className="hub-primary cursor-pointer"
@@ -332,7 +332,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
               }}
               type="button"
             >
-              Сдать
+              Submit
             </button>
           </div>
         </dialog>
@@ -350,25 +350,25 @@ function ResultView({ answers, snapshot, onRetake }: { answers: Record<string, s
           <Trophy size={34} />
         </div>
         <p className="mt-5 text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
-          {snapshot.late ? "Сдано с опозданием" : "Задание сдано"}
+          {snapshot.late ? "Submitted late" : "Assignment submitted"}
         </p>
         <h2 className="mt-2 text-3xl font-bold text-slate-950">
-          {snapshot.correctCount ?? 0} из {snapshot.totalCount ?? 0} правильно
+          {snapshot.correctCount ?? 0} of {snapshot.totalCount ?? 0} correct
         </h2>
-        <p className="mt-2 text-lg font-bold text-slate-600">{percent}% точность</p>
+        <p className="mt-2 text-lg font-bold text-slate-600">{percent}% accuracy</p>
         <ProgressBar className="mx-auto mt-5 max-w-md" value={percent} />
-        {snapshot.submittedAt ? <p className="mt-4 text-sm text-slate-500">Сдано: {formatAlmaty(snapshot.submittedAt)}</p> : null}
+        {snapshot.submittedAt ? <p className="mt-4 text-sm text-slate-500">Submitted: {formatAlmaty(snapshot.submittedAt)}</p> : null}
       </article>
-      {snapshot.canRetake ? <button className="hub-primary cursor-pointer" type="button" onClick={onRetake}>Начать пересдачу</button> : null}
+      {snapshot.canRetake ? <button className="hub-primary cursor-pointer" type="button" onClick={onRetake}>Start a retake</button> : null}
       <AssignmentFeedbackList feedback={snapshot.feedback ?? []} questionIds={snapshot.questions.map((q) => q.id)} />
-      {snapshot.feedbackError ? <p className="text-sm text-slate-600">Комментарии временно недоступны. Обновите страницу, чтобы повторить загрузку.</p> : null}
+      {snapshot.feedbackError ? <p className="text-sm text-slate-600">Comments are temporarily unavailable. Refresh the page to try again.</p> : null}
       {snapshot.review ? (
         <ReviewAnswers answers={answers} questions={snapshot.review} />
       ) : (
         <div className="hub-card p-5 text-sm text-slate-600">
           {snapshot.showAnswers === "never"
-            ? "Учитель скрыл разбор ответов для этого задания."
-            : `Разбор ответов откроется после срока сдачи (${formatAlmaty(snapshot.dueAt)}).`}
+            ? "Your teacher has hidden the answer review for this assignment."
+            : `The answer review opens after the due date (${formatAlmaty(snapshot.dueAt)}).`}
         </div>
       )}
     </section>

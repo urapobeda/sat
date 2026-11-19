@@ -23,7 +23,7 @@ export function utcIsoToAlmatyInput(iso: string): { date: string; time: string }
 }
 
 export function formatAlmaty(iso: string): string {
-  return new Intl.DateTimeFormat("ru-RU", {
+  return new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Almaty",
     day: "numeric",
     month: "short",

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   const groupId = request.nextUrl.searchParams.get("groupId");
   if (groupId && !z.uuid().safeParse(groupId).success) {
-    return NextResponse.json({ error: "Некорректная группа." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid group." }, { status: 400 });
   }
 
   try {
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
   const parsed = createSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Проверьте поля задания." }, { status: 400 });
+    return NextResponse.json({ error: "Check the assignment fields." }, { status: 400 });
   }
 
   try {

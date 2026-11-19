@@ -26,14 +26,14 @@ export function ThemeToggle({ menuItem = false }: { menuItem?: boolean }) {
   const Icon = isDark ? Moon : Sun;
   return (
     <button
-      aria-label={menuItem ? `Тема: ${isDark ? "тёмная" : "светлая"}` : isDark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={menuItem ? `Theme: ${isDark ? "dark" : "light"}` : isDark ? "Switch to light mode" : "Switch to dark mode"}
       className={menuItem
         ? "flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm text-slate-200 hover:bg-white/10"
         : "inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-blue-100 bg-white text-slate-900 shadow-sm transition hover:bg-blue-50"}
-      onClick={toggle} title={isDark ? "Включить светлую тему" : "Включить тёмную тему"} type="button"
+      onClick={toggle} title={isDark ? "Switch to light theme" : "Switch to dark theme"} type="button"
     >
       <Icon aria-hidden="true" size={menuItem ? 17 : 18} />
-      {menuItem ? <span>Тема: {isDark ? "тёмная" : "светлая"}</span> : null}
+      {menuItem ? <span>Theme: {isDark ? "dark" : "light"}</span> : null}
     </button>
   );
 }

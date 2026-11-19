@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     await enrichPastPaperAssignments(db, actor.id, assignments);
     return NextResponse.json({ assignments }, { headers: { "Cache-Control": "no-store" } });
   } catch {
-    return NextResponse.json({ error: "Не удалось загрузить домашние задания." }, { status: 503 });
+    return NextResponse.json({ error: "Could not load homework." }, { status: 503 });
   }
 }
 

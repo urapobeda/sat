@@ -21,12 +21,12 @@ export async function GET(request: NextRequest, context: Context) {
   const staff = await getHomeworkStaff(request);
   if (!staff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { assignmentId } = await context.params;
-  if (!z.uuid().safeParse(assignmentId).success) return NextResponse.json({ error: "Задание не найдено." }, { status: 404 });
+  if (!z.uuid().safeParse(assignmentId).success) return NextResponse.json({ error: "Assignment not found." }, { status: 404 });
 
   try {
     const assignment = await staff.db.from("assignments").select("*").eq("id", assignmentId).maybeSingle();
     if (assignment.error) throw assignment.error;
-    if (!assignment.data) return NextResponse.json({ error: "Задание не найдено." }, { status: 404 });
+    if (!assignment.data) return NextResponse.json({ error: "Assignment not found." }, { status: 404 });
 
     const [questions, roster] = await Promise.all([
       staff.db.from("assignment_questions").select("question_id,position").eq("assignment_id", assignmentId).order("position"),
@@ -48,10 +48,10 @@ export async function PATCH(request: NextRequest, context: Context) {
   const staff = await getHomeworkStaff(request);
   if (!staff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { assignmentId } = await context.params;
-  if (!z.uuid().safeParse(assignmentId).success) return NextResponse.json({ error: "Задание не найдено." }, { status: 404 });
+  if (!z.uuid().safeParse(assignmentId).success) return NextResponse.json({ error: "Assignment not found." }, { status: 404 });
 
   const parsed = actionSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Некорректное действие." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid action." }, { status: 400 });
 
   try {
     const body = parsed.data;
@@ -81,7 +81,7 @@ export async function PATCH(request: NextRequest, context: Context) {
 
     const { data, error } = await staff.db.from("assignments").update(patch).eq("id", assignmentId).select("id").maybeSingle();
     if (error) throw error;
-    return data ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "Задание не найдено." }, { status: 404 });
+    return data ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "Assignment not found." }, { status: 404 });
   } catch (error) {
     return homeworkError(error);
   }
@@ -91,18 +91,18 @@ export async function DELETE(request: NextRequest, context: Context) {
   const staff = await getHomeworkStaff(request);
   if (!staff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { assignmentId } = await context.params;
-  if (!z.uuid().safeParse(assignmentId).success) return NextResponse.json({ error: "Задание не найдено." }, { status: 404 });
+  if (!z.uuid().safeParse(assignmentId).success) return NextResponse.json({ error: "Assignment not found." }, { status: 404 });
 
   try {
     const roster = await staff.db.rpc("get_assignment_roster", { p_assignment_id: assignmentId });
     if (roster.error) throw roster.error;
     if ((roster.data ?? []).some((row) => Boolean(row.status))) {
-      return NextResponse.json({ error: "Нельзя удалить: есть сдачи учеников." }, { status: 409 });
+      return NextResponse.json({ error: "Cannot delete: students have already submitted." }, { status: 409 });
     }
 
     const { data, error } = await staff.db.from("assignments").delete().eq("id", assignmentId).select("id").maybeSingle();
     if (error) throw error;
-    return data ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "Задание не найдено." }, { status: 404 });
+    return data ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "Assignment not found." }, { status: 404 });
   } catch (error) {
     return homeworkError(error);
   }

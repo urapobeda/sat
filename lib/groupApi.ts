@@ -6,6 +6,6 @@ export async function groupRequest<T>(path: string, method = "GET", body?: unkno
     ...(body === undefined ? {} : { body: JSON.stringify(body) })
   });
   const payload = await response.json();
-  if (!response.ok) throw new Error(payload.error || "Не удалось выполнить действие.");
+  if (!response.ok) throw new Error(payload.error || "The action could not be completed.");
   return payload as T;
 }

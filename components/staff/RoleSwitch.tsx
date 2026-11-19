@@ -14,15 +14,15 @@ export function RoleSwitch({ role, staff = false }: { role: UserRole; staff?: bo
     setError(null);
     try {
       const { data, error: sessionError } = await getSupabaseBrowserClient().auth.getSession();
-      if (sessionError || !data.session) throw new Error("Войдите в аккаунт ещё раз.");
+      if (sessionError || !data.session) throw new Error("Please sign in again.");
       await syncServerSession(data.session.access_token);
       window.location.assign(href);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Не удалось переключить кабинет.");
+      setError(failure instanceof Error ? failure.message : "Could not switch the workspace.");
       setPending(false);
     }
   }
-  const label = staff ? "Вид ученика" : "Кабинет учителя";
+  const label = staff ? "Student view" : "Teacher workspace";
   return (
     <div className="space-y-1">
       <button aria-label={label} title={label} disabled={pending} onClick={() => void navigate(staff ? "/dashboard" : "/teacher")} type="button" className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm text-slate-200 hover:bg-white/10 disabled:opacity-50">

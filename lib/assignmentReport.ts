@@ -3,7 +3,7 @@ import type { ReviewQuestion } from "@/types/sat";
 export type AssignmentFeedback = { id: string; submission_id: string; question_id: string | null; author_id: string; body: string; created_at: string };
 export type ReportRow = { student_id: string; full_name: string; is_member: boolean; submission_id: string | null; attempt_no: number | null; status: "in_progress" | "submitted" | null; started_at: string | null; submitted_at: string | null; correct_count: number | null; total_count: number | null; extra_attempts: number };
 export type ReportStatus = "not_started" | "in_progress" | "submitted" | "late";
-export const REPORT_STATUS: Record<ReportStatus, string> = { not_started: "Не начал", in_progress: "В процессе", submitted: "Сдано", late: "Сдано с опозданием" };
+export const REPORT_STATUS: Record<ReportStatus, string> = { not_started: "Not started", in_progress: "In progress", submitted: "Submitted", late: "Submitted late" };
 export function reportStatus(row: ReportRow, due: string): ReportStatus {
   if (!row.status) return "not_started";
   if (row.status === "in_progress") return "in_progress";
@@ -53,7 +53,7 @@ export function reportCsv(rows: ReportRow[], due: string) {
     if (/^[\s]*[=+\-@]/.test(text) || /^[\t\r\n]/.test(text)) text = "'" + text;
     return '"' + text.replaceAll('"', '""') + '"';
   };
-  return "\uFEFF" + [["Ученик", "Статус", "Правильно", "Всего", "%", "Время (м:с)", "Дата сдачи", "Попытка"],
+  return "\uFEFF" + [["Student", "Status", "Correct", "Total", "%", "Time (m:s)", "Submitted at", "Attempt"],
     ...rows.map((row) => [row.full_name, REPORT_STATUS[reportStatus(row, due)], row.status === "submitted" ? row.correct_count : "", row.status === "submitted" ? row.total_count : "", row.status === "submitted" ? reportPercent(row) : "", duration(elapsedSeconds(row)), row.submitted_at ?? "", row.attempt_no ?? ""])]
     .map((row) => row.map(cell).join(",")).join("\r\n");
 }

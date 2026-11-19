@@ -57,7 +57,7 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
         setMaxAttempts(result.assignment.max_attempts);
         setQuestionIds(result.questions.sort((a, b) => a.position - b.position).map((item) => item.question_id));
       } catch (failure) {
-        if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : "Не удалось загрузить задание.");
+        if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : "Could not load the assignment.");
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -69,7 +69,7 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
   async function saveDetails() {
     const dueAt = almatyInputToUtcIso(dueDate, dueTime);
     if (!title.trim() || !dueAt) {
-      setError("Укажите название и срок сдачи.");
+      setError("Enter a title and a due date.");
       return;
     }
     setSaving(true);
@@ -85,10 +85,10 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
         timeLimitMinutes: timeLimit ? Number(timeLimit) : null,
         title: title.trim()
       });
-      setMessage("Сохранено.");
+      setMessage("Saved.");
       setRetry((value) => value + 1);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Не удалось сохранить задание.");
+      setError(failure instanceof Error ? failure.message : "Could not save the assignment.");
     } finally {
       setSaving(false);
     }
@@ -100,10 +100,10 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
     setMessage(null);
     try {
       await groupRequest(`/api/teacher/homework/${assignmentId}`, "PATCH", { action: "set_questions", questionIds });
-      setMessage("Вопросы сохранены.");
+      setMessage("Questions saved.");
       setRetry((value) => value + 1);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Не удалось сохранить вопросы.");
+      setError(failure instanceof Error ? failure.message : "Could not save the questions.");
     } finally {
       setSaving(false);
     }
@@ -116,26 +116,26 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
       await groupRequest(`/api/teacher/homework/${assignmentId}`, "PATCH", { action: "publish", published });
       setRetry((value) => value + 1);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Не удалось изменить публикацию.");
+      setError(failure instanceof Error ? failure.message : "Could not change the publish status.");
     } finally {
       setSaving(false);
     }
   }
 
   async function deleteAssignment() {
-    if (!window.confirm("Удалить это задание?")) return;
+    if (!window.confirm("Delete this assignment?")) return;
     setSaving(true);
     setError(null);
     try {
       await groupRequest(`/api/teacher/homework/${assignmentId}`, "DELETE");
       router.push("/teacher/homework");
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Не удалось удалить задание.");
+      setError(failure instanceof Error ? failure.message : "Could not delete the assignment.");
       setSaving(false);
     }
   }
 
-  if (loading) return <p role="status">Загрузка задания…</p>;
+  if (loading) return <p role="status">Loading assignment…</p>;
   if (error && !detail) {
     return (
       <p className="text-sm text-rose-600" role="alert">
@@ -151,7 +151,7 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
     <section className="space-y-5">
       <Link className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700" href="/teacher/homework">
         <ArrowLeft size={16} />
-        Все задания
+        All assignments
       </Link>
 
       {error ? (
@@ -167,11 +167,11 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
 
       <h1 className="text-3xl font-bold">{detail.assignment.title}</h1>
       <AssignmentReport key={retry} assignmentId={assignmentId} />
-      <button className="hub-text-link cursor-pointer text-sm font-semibold" type="button" aria-expanded={editing} onClick={() => setEditing(!editing)}>{editing ? "Скрыть настройки" : "Настройки задания и вопросы"}</button>
+      <button className="hub-text-link cursor-pointer text-sm font-semibold" type="button" aria-expanded={editing} onClick={() => setEditing(!editing)}>{editing ? "Hide settings" : "Assignment settings and questions"}</button>
       {editing ? <>
       <div className="hub-card space-y-3 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-xl font-semibold">Настройки</h2>
+          <h2 className="text-xl font-semibold">Settings</h2>
           <div className="flex gap-2">
             <button
               className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50"
@@ -179,23 +179,23 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
               onClick={() => togglePublished(!detail.assignment.published)}
               type="button"
             >
-              {detail.assignment.published ? "Снять с публикации" : "Опубликовать"}
+              {detail.assignment.published ? "Unpublish" : "Publish"}
             </button>
             <button
               className="cursor-pointer rounded-xl border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
               disabled={saving || hasSubmissions}
               onClick={deleteAssignment}
-              title={hasSubmissions ? "Нельзя удалить: есть сдачи учеников" : undefined}
+              title={hasSubmissions ? "Cannot delete: students have already submitted" : undefined}
               type="button"
             >
-              Удалить
+              Delete
             </button>
           </div>
         </div>
-        <p className="text-sm text-slate-600">{detail.assignment.published ? "Опубликовано" : "Черновик"}</p>
+        <p className="text-sm text-slate-600">{detail.assignment.published ? "Published" : "Draft"}</p>
 
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Название
+          Title
           <input
             className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3"
             maxLength={200}
@@ -204,7 +204,7 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
           />
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium">
-          Инструкция для учеников
+          Instructions for students
           <textarea
             className="min-h-24 rounded-xl border border-slate-200 bg-transparent px-3 py-2"
             maxLength={5000}
@@ -214,7 +214,7 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
         </label>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Срок — дата (Asia/Almaty)
+            Due date (Asia/Almaty)
             <input
               className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3"
               onChange={(event) => setDueDate(event.target.value)}
@@ -223,7 +223,7 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Время
+            Time
             <input
               className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3"
               onChange={(event) => setDueTime(event.target.value)}
@@ -232,30 +232,30 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Лимит времени (мин)
+            Time limit (min)
             <input
               className="min-h-11 w-32 rounded-xl border border-slate-200 bg-transparent px-3"
               min={1}
               onChange={(event) => setTimeLimit(event.target.value)}
-              placeholder="Без лимита"
+              placeholder="No limit"
               type="number"
               value={timeLimit}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Показывать ответы
+            Show answers
             <select
               className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3"
               onChange={(event) => setShowAnswers(event.target.value as ShowAnswersRule)}
               value={showAnswers}
             >
-              <option value="after_submit">После сдачи</option>
-              <option value="after_due">После срока</option>
-              <option value="never">Не показывать</option>
+              <option value="after_submit">After submission</option>
+              <option value="after_due">After due date</option>
+              <option value="never">Never</option>
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Попыток
+            Attempts
             <input
               className="min-h-11 w-24 rounded-xl border border-slate-200 bg-transparent px-3"
               max={10}
@@ -267,21 +267,21 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
           </label>
         </div>
         <button className="hub-primary cursor-pointer disabled:opacity-50" disabled={saving} onClick={saveDetails} type="button">
-          Сохранить
+          Save
         </button>
       </div>
 
       {detail.assignment.kind === "question_set" ? (
         <div className="hub-card space-y-4 p-5">
-          <h2 className="text-lg font-semibold">Вопросы задания</h2>
-          {hasSubmissions ? <p className="text-sm text-slate-600">Вопросы зафиксированы после начала выполнения.</p> : <QuestionPicker onChange={setQuestionIds} selectedIds={questionIds} />}
+          <h2 className="text-lg font-semibold">Assignment questions</h2>
+          {hasSubmissions ? <p className="text-sm text-slate-600">Questions are locked once students have started.</p> : <QuestionPicker onChange={setQuestionIds} selectedIds={questionIds} />}
           <button className="hub-primary cursor-pointer disabled:opacity-50" disabled={saving || hasSubmissions || questionIds.length === 0} onClick={saveQuestions} type="button">
-            Сохранить вопросы
+            Save questions
           </button>
         </div>
       ) : (
         <div className="hub-card p-5 text-sm text-slate-600">
-          Это задание ссылается на готовый пробный вариант. Прогресс учеников отслеживается через обычный прогон варианта.
+          This assignment points to an existing practice paper. Student progress is tracked through the regular paper run.
         </div>
       )}
 

@@ -6,7 +6,7 @@ import { getCategoriesForSection, getQuestionCategory, getQuestionSubtopic } fro
 import type { QuestionDifficulty, QuestionSummary, SatSection } from "@/types/sat";
 
 const DIFFICULTIES: QuestionDifficulty[] = ["easy", "medium", "hard"];
-const DIFFICULTY_LABEL: Record<QuestionDifficulty, string> = { easy: "Лёгкий", hard: "Сложный", medium: "Средний" };
+const DIFFICULTY_LABEL: Record<QuestionDifficulty, string> = { easy: "Easy", hard: "Hard", medium: "Medium" };
 
 export function QuestionPicker({ onChange, selectedIds }: { onChange: (ids: string[]) => void; selectedIds: string[] }) {
   const [catalog, setCatalog] = useState<QuestionSummary[]>([]);
@@ -30,7 +30,7 @@ export function QuestionPicker({ onChange, selectedIds }: { onChange: (ids: stri
       })
       .catch((requestError) => {
         if (active) {
-          setError(requestError instanceof Error ? requestError.message : "Не удалось загрузить вопросы.");
+          setError(requestError instanceof Error ? requestError.message : "Could not load questions.");
           setLoading(false);
         }
       });
@@ -98,9 +98,9 @@ export function QuestionPicker({ onChange, selectedIds }: { onChange: (ids: stri
     setExpanded((current) => ({ ...current, [id]: "" }));
     try {
       const [question] = await getQuestionDetails([id]);
-      setExpanded((current) => ({ ...current, [id]: question?.question ?? "Текст недоступен." }));
+      setExpanded((current) => ({ ...current, [id]: question?.question ?? "Text unavailable." }));
     } catch {
-      setExpanded((current) => ({ ...current, [id]: "Не удалось загрузить текст вопроса." }));
+      setExpanded((current) => ({ ...current, [id]: "Could not load the question text." }));
     }
   }
 
@@ -116,7 +116,7 @@ export function QuestionPicker({ onChange, selectedIds }: { onChange: (ids: stri
           }}
           value={section}
         >
-          <option value="math">Математика</option>
+          <option value="math">Math</option>
           <option value="reading-writing">Reading &amp; Writing</option>
         </select>
         <select
@@ -127,7 +127,7 @@ export function QuestionPicker({ onChange, selectedIds }: { onChange: (ids: stri
           }}
           value={category}
         >
-          <option value="all">Все темы</option>
+          <option value="all">All topics</option>
           {categories.map((item) => (
             <option key={item.title} value={item.title}>
               {item.title}
@@ -169,7 +169,7 @@ export function QuestionPicker({ onChange, selectedIds }: { onChange: (ids: stri
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-slate-600">
-          Найдено: {filtered.length}, выбрано: {selectedIds.length}
+          Found: {filtered.length}, selected: {selectedIds.length}
         </span>
         <input
           className="min-h-9 w-20 rounded-xl border border-slate-200 bg-transparent px-2"
@@ -184,7 +184,7 @@ export function QuestionPicker({ onChange, selectedIds }: { onChange: (ids: stri
           onClick={addRandom}
           type="button"
         >
-          Добавить случайные по фильтру
+          Add random matching questions
         </button>
         {selectedIds.length > 0 ? (
           <button
@@ -192,14 +192,14 @@ export function QuestionPicker({ onChange, selectedIds }: { onChange: (ids: stri
             onClick={() => onChange([])}
             type="button"
           >
-            Очистить выбор
+            Clear selection
           </button>
         ) : null}
       </div>
 
       {loading ? (
         <p className="text-sm text-slate-500" role="status">
-          Загрузка вопросов…
+          Loading questions…
         </p>
       ) : error ? (
         <p className="text-sm text-rose-600" role="alert">
@@ -215,7 +215,7 @@ export function QuestionPicker({ onChange, selectedIds }: { onChange: (ids: stri
                   <p className="text-sm font-medium text-slate-900">{question.topic}</p>
                   <p className="text-xs text-slate-500">{DIFFICULTY_LABEL[question.difficulty]}</p>
                   {expanded[question.id] !== undefined ? (
-                    <p className="mt-1 text-xs text-slate-600">{expanded[question.id] || "Загрузка…"}</p>
+                    <p className="mt-1 text-xs text-slate-600">{expanded[question.id] || "Loading…"}</p>
                   ) : null}
                 </div>
                 <button
@@ -223,21 +223,21 @@ export function QuestionPicker({ onChange, selectedIds }: { onChange: (ids: stri
                   onClick={() => togglePreview(question.id)}
                   type="button"
                 >
-                  {expanded[question.id] !== undefined ? "Скрыть" : "Показать"}
+                  {expanded[question.id] !== undefined ? "Hide" : "Show"}
                 </button>
               </div>
             </div>
           ))}
           {filtered.length > 200 ? (
-            <p className="p-3 text-xs text-slate-500">Показаны первые 200 из {filtered.length}. Уточните фильтры.</p>
+            <p className="p-3 text-xs text-slate-500">Showing the first 200 of {filtered.length}. Narrow the filters.</p>
           ) : null}
-          {filtered.length === 0 ? <p className="p-3 text-sm text-slate-500">Нет вопросов по этим фильтрам.</p> : null}
+          {filtered.length === 0 ? <p className="p-3 text-sm text-slate-500">No questions match these filters.</p> : null}
         </div>
       )}
 
       {selectedIds.length > 0 ? (
         <div className="rounded-xl border border-slate-200 p-3">
-          <p className="mb-2 text-sm font-semibold text-slate-700">Выбранные вопросы ({selectedIds.length})</p>
+          <p className="mb-2 text-sm font-semibold text-slate-700">Selected questions ({selectedIds.length})</p>
           <ol className="max-h-56 space-y-1 overflow-y-auto text-sm">
             {selectedIds.map((id, index) => (
               <li className="flex items-center justify-between gap-2" key={id}>
@@ -249,7 +249,7 @@ export function QuestionPicker({ onChange, selectedIds }: { onChange: (ids: stri
                   onClick={() => onChange(selectedIds.filter((item) => item !== id))}
                   type="button"
                 >
-                  Убрать
+                  Remove
                 </button>
               </li>
             ))}

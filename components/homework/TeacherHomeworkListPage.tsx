@@ -11,11 +11,11 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type PastPaperOption = { id: string; slug: string; title: string };
 
-const KIND_LABEL: Record<AssignmentKind, string> = { past_paper: "Пробный вариант", question_set: "Набор вопросов" };
+const KIND_LABEL: Record<AssignmentKind, string> = { past_paper: "Practice paper", question_set: "Question set" };
 const SHOW_ANSWERS_LABEL: Record<ShowAnswersRule, string> = {
-  after_due: "После срока",
-  after_submit: "После сдачи",
-  never: "Не показывать"
+  after_due: "After due date",
+  after_submit: "After submission",
+  never: "Never"
 };
 
 export function TeacherHomeworkListPage({ admin }: { admin: boolean }) {
@@ -53,7 +53,7 @@ export function TeacherHomeworkListPage({ admin }: { admin: boolean }) {
         setGroups(groupResult.groups.filter((group) => !group.archived));
       } catch (failure) {
         if (!controller.signal.aborted) {
-          setError(failure instanceof Error ? failure.message : "Не удалось загрузить домашние задания.");
+          setError(failure instanceof Error ? failure.message : "Could not load homework.");
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -77,7 +77,7 @@ export function TeacherHomeworkListPage({ admin }: { admin: boolean }) {
     event.preventDefault();
     const dueAt = almatyInputToUtcIso(dueDate, dueTime);
     if (!groupId || !title.trim() || !dueAt || (kind === "past_paper" && !paperId)) {
-      setError("Заполните группу, название, срок и (для пробного варианта) вариант.");
+      setError("Fill in the group, title, due date and (for a practice paper) the paper.");
       return;
     }
     setSaving(true);
@@ -95,7 +95,7 @@ export function TeacherHomeworkListPage({ admin }: { admin: boolean }) {
       });
       router.push(`/teacher/homework/${result.id}`);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Не удалось создать задание.");
+      setError(failure instanceof Error ? failure.message : "Could not create the assignment.");
       setSaving(false);
     }
   }
@@ -103,22 +103,22 @@ export function TeacherHomeworkListPage({ admin }: { admin: boolean }) {
   return (
     <section className="space-y-5">
       <div>
-        <h1 className="text-3xl font-bold">Домашние задания</h1>
-        <p className="mt-2 text-sm text-slate-600">{admin ? "Задания всех групп." : "Задания ваших групп."}</p>
+        <h1 className="text-3xl font-bold">Homework</h1>
+        <p className="mt-2 text-sm text-slate-600">{admin ? "Assignments for all groups." : "Assignments for your groups."}</p>
       </div>
 
       <form className="hub-card space-y-3 p-4" onSubmit={createAssignment}>
-        <p className="text-sm font-semibold text-slate-700">Новое задание</p>
+        <p className="text-sm font-semibold text-slate-700">New assignment</p>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex min-w-[12rem] flex-col gap-1 text-sm font-medium">
-            Группа
+            Group
             <select
               className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3"
               onChange={(event) => setGroupId(event.target.value)}
               required
               value={groupId}
             >
-              <option value="">Выберите группу</option>
+              <option value="">Choose a group</option>
               {groups.map((group) => (
                 <option key={group.id} value={group.id}>
                   {group.name}
@@ -127,38 +127,38 @@ export function TeacherHomeworkListPage({ admin }: { admin: boolean }) {
             </select>
           </label>
           <label className="flex min-w-[14rem] flex-1 flex-col gap-1 text-sm font-medium">
-            Название
+            Title
             <input
               className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3"
               maxLength={200}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="Например, Домашка по линейным уравнениям"
+              placeholder="e.g. Linear equations homework"
               required
               value={title}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Тип
+            Type
             <select
               className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3"
               onChange={(event) => setKind(event.target.value as AssignmentKind)}
               value={kind}
             >
-              <option value="question_set">Набор вопросов</option>
-              <option value="past_paper">Пробный вариант</option>
+              <option value="question_set">Question set</option>
+              <option value="past_paper">Practice paper</option>
             </select>
           </label>
         </div>
 
         {kind === "past_paper" ? (
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Пробный вариант
+            Practice paper
             <select
               className="min-h-11 max-w-md rounded-xl border border-slate-200 bg-transparent px-3"
               onChange={(event) => setPaperId(event.target.value)}
               value={paperId}
             >
-              <option value="">Выберите вариант</option>
+              <option value="">Choose a paper</option>
               {papers.map((paper) => (
                 <option key={paper.id} value={paper.id}>
                   {paper.title}
@@ -170,7 +170,7 @@ export function TeacherHomeworkListPage({ admin }: { admin: boolean }) {
 
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Срок — дата (Asia/Almaty)
+            Due date (Asia/Almaty)
             <input
               className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3"
               onChange={(event) => setDueDate(event.target.value)}
@@ -180,7 +180,7 @@ export function TeacherHomeworkListPage({ admin }: { admin: boolean }) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Время
+            Time
             <input
               className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3"
               onChange={(event) => setDueTime(event.target.value)}
@@ -190,30 +190,30 @@ export function TeacherHomeworkListPage({ admin }: { admin: boolean }) {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Лимит времени (мин)
+            Time limit (min)
             <input
               className="min-h-11 w-32 rounded-xl border border-slate-200 bg-transparent px-3"
               min={1}
               onChange={(event) => setTimeLimit(event.target.value)}
-              placeholder="Без лимита"
+              placeholder="No limit"
               type="number"
               value={timeLimit}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Показывать ответы
+            Show answers
             <select
               className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3"
               onChange={(event) => setShowAnswers(event.target.value as ShowAnswersRule)}
               value={showAnswers}
             >
-              <option value="after_submit">После сдачи</option>
-              <option value="after_due">После срока</option>
-              <option value="never">Не показывать</option>
+              <option value="after_submit">After submission</option>
+              <option value="after_due">After due date</option>
+              <option value="never">Never</option>
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Попыток
+            Attempts
             <input
               className="min-h-11 w-24 rounded-xl border border-slate-200 bg-transparent px-3"
               max={10}
@@ -224,7 +224,7 @@ export function TeacherHomeworkListPage({ admin }: { admin: boolean }) {
             />
           </label>
           <button className="hub-primary cursor-pointer disabled:opacity-50" disabled={saving} type="submit">
-            {saving ? "Создание…" : "Создать задание"}
+            {saving ? "Creating…" : "Create assignment"}
           </button>
         </div>
       </form>
@@ -233,15 +233,15 @@ export function TeacherHomeworkListPage({ admin }: { admin: boolean }) {
         <p className="text-sm text-rose-600" role="alert">
           {error}{" "}
           <button className="cursor-pointer underline" onClick={() => setRetry((value) => value + 1)} type="button">
-            Повторить
+            Retry
           </button>
         </p>
       ) : null}
 
       {loading ? (
-        <p role="status">Загрузка заданий…</p>
+        <p role="status">Loading assignments…</p>
       ) : !assignments.length ? (
-        <div className="hub-card p-6 text-sm text-slate-600">Заданий пока нет. Создайте первое задание выше.</div>
+        <div className="hub-card p-6 text-sm text-slate-600">No assignments yet. Create your first one above.</div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {assignments.map((assignment) => (
@@ -253,17 +253,17 @@ export function TeacherHomeworkListPage({ admin }: { admin: boolean }) {
                     assignment.published ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
                   }`}
                 >
-                  {assignment.published ? "Опубликовано" : "Черновик"}
+                  {assignment.published ? "Published" : "Draft"}
                 </span>
               </div>
               <p className="mt-2 text-sm text-slate-600">
                 {assignment.group_name} · {KIND_LABEL[assignment.kind]}
               </p>
-              <p className="mt-1 text-sm text-slate-600">Срок: {formatAlmaty(assignment.due_at)}</p>
+              <p className="mt-1 text-sm text-slate-600">Due: {formatAlmaty(assignment.due_at)}</p>
               <p className="mt-2 text-sm font-semibold text-slate-700">
-                {assignment.kind === "question_set" ? `Сдали ${assignment.submitted_count ?? 0} из ${assignment.group_size}` : `Учеников: ${assignment.group_size}`}
+                {assignment.kind === "question_set" ? `${assignment.submitted_count ?? 0} of ${assignment.group_size} submitted` : `Students: ${assignment.group_size}`}
               </p>
-              <p className="mt-1 text-xs text-slate-500">Ответы: {SHOW_ANSWERS_LABEL[assignment.show_answers]}</p>
+              <p className="mt-1 text-xs text-slate-500">Answers: {SHOW_ANSWERS_LABEL[assignment.show_answers]}</p>
             </Link>
           ))}
         </div>

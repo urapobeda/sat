@@ -145,7 +145,22 @@ export function getCategoriesForSection(section: Question["section"]) {
   return QUESTION_BANK_CATEGORIES.filter((category) => category.section === section);
 }
 
+const categoryForTopicCache = new Map<string, QuestionBankCategory>();
+
 export function getCategoryForTopic(
+  section: Question["section"],
+  topic: string
+): QuestionBankCategory {
+  const cacheKey = `${section}\u0000${topic}`;
+  const cached = categoryForTopicCache.get(cacheKey);
+  if (cached) return cached;
+
+  const category = resolveCategoryForTopic(section, topic);
+  categoryForTopicCache.set(cacheKey, category);
+  return category;
+}
+
+function resolveCategoryForTopic(
   section: Question["section"],
   topic: string
 ): QuestionBankCategory {
@@ -270,23 +285,42 @@ export function getMastery(stats: QuestionGroupStats) {
   return Math.round((stats.correctQuestions / stats.answeredQuestions) * 100);
 }
 
-function getSubtopicMatch(section: Question["section"], topic: string) {
+type SubtopicMatch = { category: QuestionBankCategory; subtopic: QuestionBankSubtopic } | null;
+
+// The catalog has thousands of questions but only a few dozen distinct topics, and the
+// category tree is static, so matches are memoized per (section, topic) and label
+// normalization happens once per section instead of on every lookup.
+const subtopicMatchCache = new Map<string, SubtopicMatch>();
+const normalizedLabelIndex = new Map<Question["section"], Map<string, NonNullable<SubtopicMatch>>>();
+
+function getNormalizedLabelIndex(section: Question["section"]) {
+  let index = normalizedLabelIndex.get(section);
+  if (index) return index;
+
   const normalizeLabel = section === "reading-writing" ? normalizeVerbalTopic : normalize;
-  const normalizedTopic = normalizeLabel(topic);
-  const categories = getCategoriesForSection(section);
-
-  for (const category of categories) {
+  index = new Map();
+  for (const category of getCategoriesForSection(section)) {
     for (const currentSubtopic of category.subtopics) {
-      const labels = [currentSubtopic.title, ...currentSubtopic.aliases];
-      const hasMatch = labels.some((label) => normalizeLabel(label) === normalizedTopic);
-
-      if (hasMatch) {
-        return { category, subtopic: currentSubtopic };
+      for (const label of [currentSubtopic.title, ...currentSubtopic.aliases]) {
+        const key = normalizeLabel(label);
+        // Keep the first match to preserve the original category/subtopic order.
+        if (!index.has(key)) index.set(key, { category, subtopic: currentSubtopic });
       }
     }
   }
+  normalizedLabelIndex.set(section, index);
+  return index;
+}
 
-  return null;
+function getSubtopicMatch(section: Question["section"], topic: string): SubtopicMatch {
+  const cacheKey = `${section}\u0000${topic}`;
+  const cached = subtopicMatchCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  const normalizeLabel = section === "reading-writing" ? normalizeVerbalTopic : normalize;
+  const match = getNormalizedLabelIndex(section).get(normalizeLabel(topic)) ?? null;
+  subtopicMatchCache.set(cacheKey, match);
+  return match;
 }
 
 function getRequiredCategory(title: string) {

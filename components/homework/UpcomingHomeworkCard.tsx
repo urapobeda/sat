@@ -42,9 +42,9 @@ export function UpcomingHomeworkCard() {
       <span className="hub-icon">
         <ClipboardList aria-hidden="true" size={18} />
       </span>
-      <h2 className="mt-3 font-semibold text-slate-950">Сегодня</h2>
+      <h2 className="mt-3 font-semibold text-slate-950">Upcoming homework</h2>
       {upcoming.length === 0 ? (
-        <p className="mt-1 flex-1 text-sm leading-6 text-slate-600">Нет ближайших домашних заданий.</p>
+        <p className="mt-1 flex-1 text-sm leading-6 text-slate-600">No upcoming homework.</p>
       ) : (
         <ul className="mt-2 w-full flex-1 space-y-2">
           {upcoming.map((item) => (
@@ -58,7 +58,7 @@ export function UpcomingHomeworkCard() {
         </ul>
       )}
       <Link className="mt-3 text-sm font-semibold hub-text-link hover:underline" href="/homework">
-        Все домашние задания
+        All homework
       </Link>
     </section>
   );
