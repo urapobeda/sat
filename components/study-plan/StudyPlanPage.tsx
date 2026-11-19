@@ -216,6 +216,7 @@ export function StudyPlanPage() {
         <EmptyState
           action={{ href: "/auth", label: "Sign in" }}
           description="Sign in to create your personalized SAT Study Plan."
+          headingLevel="h1"
           icon={<LockKeyhole size={26} />}
           title="Personalized plan locked"
         />

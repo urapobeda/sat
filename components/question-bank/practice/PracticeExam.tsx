@@ -128,6 +128,7 @@ export function PracticeExam({
   return (
     <StudentShell active="question-bank" exam>
     <main aria-label="Practice Mode" className="flex h-full min-h-0 flex-col bg-white text-slate-950">
+      <h1 className="sr-only">{question ? `${question.section === "math" ? "Math" : "Reading & Writing"} practice` : "Practice"}</h1>
       <header className="relative z-20 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-slate-200 px-2 py-1.5 sm:gap-4 sm:px-5">
         <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-0.5 text-sm font-medium text-slate-700 sm:gap-x-7">
           <Link className="inline-flex items-center gap-1 whitespace-nowrap hover:text-slate-950" href={backHref}>
