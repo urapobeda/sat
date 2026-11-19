@@ -124,7 +124,7 @@ export function SchedulePage() {
               className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
               key={stat.label}
             >
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 {stat.label}
               </p>
               <p className="mt-1 truncate text-xl font-bold text-slate-950">

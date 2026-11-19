@@ -352,7 +352,7 @@ export function QuestionBankPracticePage() {
         }
       }
     } catch {
-      if (persistenceRequest.current === persistence) setPersistenceMessage("Results are shown here, but Supabase did not save them.");
+      if (persistenceRequest.current === persistence) setPersistenceMessage("Results are shown here, but they could not be saved.");
     } finally {
       if (persistenceRequest.current === persistence) {
         setIsSavingResult(false);
@@ -435,6 +435,7 @@ export function QuestionBankPracticePage() {
         />
       ) : practiceQuestions.length === 0 ? (
         <EmptyState
+          action={{ href: "/question-bank", label: "Back to Question Bank" }}
           description="No questions match these filters. Go back and choose another section or topic."
           icon={<Search size={26} />}
           title="No questions found"

@@ -33,7 +33,7 @@ export function AccuracyByDifficultyCard({
           {rows.map((row) => (
             <div className="flex items-center justify-between gap-3" key={row.label}>
               <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Target className="text-slate-400" size={14} />
+                <Target className="text-slate-500" size={14} />
                 {row.label}
               </span>
               <span className="text-sm font-bold text-slate-900">

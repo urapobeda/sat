@@ -14,9 +14,12 @@ export function UpcomingHomeworkCard() {
     const controller = new AbortController();
     async function load() {
       try {
+        const headers = await getSupabaseAuthHeaders();
+        // Guests have no homework; skip the request instead of logging a 403.
+        if (!headers.Authorization) return;
         const response = await fetch("/api/homework", {
           cache: "no-store",
-          headers: await getSupabaseAuthHeaders(),
+          headers,
           signal: controller.signal
         });
         const payload = await response.json();

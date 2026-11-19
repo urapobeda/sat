@@ -110,7 +110,7 @@ export function StudentAccount({ compact = false }: { compact?: boolean }) {
         }}
       >
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-blue-600 text-white"><BearIcon size={20} /></span>
-        {!compact ? <><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{isLoading ? "Загрузка…" : name ?? "Войти"}</span><span className="block text-xs text-slate-400">{name ? roleLabels[role] : "Сохраняйте прогресс"}</span></span><ChevronUp aria-hidden="true" className={`shrink-0 text-slate-400 transition ${open ? "rotate-180" : ""}`} size={15} /></> : null}
+        {!compact ? <><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{isLoading ? "Загрузка…" : name ?? "Войти"}</span><span className="block text-xs text-slate-500">{name ? roleLabels[role] : "Сохраняйте прогресс"}</span></span><ChevronUp aria-hidden="true" className={`shrink-0 text-slate-500 transition ${open ? "rotate-180" : ""}`} size={15} /></> : null}
       </button>
       <div
         ref={popover} popover="auto" id={menuId} role="dialog" aria-label="Действия аккаунта"

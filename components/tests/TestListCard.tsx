@@ -17,7 +17,7 @@ export function TestListCard({ tests }: TestListCardProps) {
           <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-6 text-center">
             <p className="font-semibold text-slate-950">No tests completed yet</p>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Start a mini test to create your first Supabase test session.
+              Start a mini test to create your first test session.
             </p>
           </div>
         )}

@@ -21,6 +21,7 @@ export function StudentHomeworkPage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("todo");
   const [retry, setRetry] = useState(0);
+  const [signedOut, setSignedOut] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -28,9 +29,19 @@ export function StudentHomeworkPage() {
       setLoading(true);
       setError(null);
       try {
+        const headers = await getSupabaseAuthHeaders();
+        if (!headers.Authorization) {
+          // Guests have no assignments; show a sign-in prompt instead of a 403 error.
+          if (!controller.signal.aborted) {
+            setSignedOut(true);
+            setLoading(false);
+          }
+          return;
+        }
+        setSignedOut(false);
         const response = await fetch("/api/homework", {
           cache: "no-store",
-          headers: await getSupabaseAuthHeaders(),
+          headers,
           signal: controller.signal
         });
         const payload = await response.json();
@@ -69,7 +80,7 @@ export function StudentHomeworkPage() {
           {TABS.map((item) => (
             <button
               className={`relative -mb-px cursor-pointer px-4 py-2.5 text-sm font-semibold ${
-                tab === item.id ? "border-b-2 border-blue-600 text-blue-700" : "text-slate-500 hover:text-slate-800"
+                tab === item.id ? "border-b-2 border-blue-600 text-blue-700" : "text-slate-600 hover:text-slate-900"
               }`}
               key={item.id}
               onClick={() => setTab(item.id)}
@@ -80,7 +91,14 @@ export function StudentHomeworkPage() {
           ))}
         </div>
 
-        {error ? (
+        {signedOut ? (
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600 shadow-sm">
+            <p>Войдите в аккаунт, чтобы увидеть домашние задания от преподавателя.</p>
+            <Link className="hub-primary mt-4 inline-flex" href="/auth">
+              Войти
+            </Link>
+          </div>
+        ) : error ? (
           <p className="text-sm text-rose-600" role="alert">
             {error}{" "}
             <button className="cursor-pointer underline" onClick={() => setRetry((value) => value + 1)} type="button">

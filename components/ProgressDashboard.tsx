@@ -56,7 +56,7 @@ export function ProgressDashboard() {
         setWeakAreas([]);
         setStrongAreas([]);
         setGuestMessage(
-          "No progress yet. Start practicing to see your stats. Sign in to save progress with Supabase."
+          "No progress yet. Start practicing to see your stats. Sign in to save your progress."
         );
         return;
       }
@@ -78,7 +78,7 @@ export function ProgressDashboard() {
         setError(
           requestError instanceof Error
             ? requestError.message
-            : "Unable to load progress from Supabase."
+            : "Unable to load your progress. Please try again."
         );
       }
     } finally {
@@ -152,7 +152,7 @@ export function ProgressDashboard() {
       <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-3 text-sm font-semibold text-blue-600">
           <Loader2 className="animate-spin" size={20} />
-          Loading progress from Supabase...
+          Loading progress...
         </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((item) => (
@@ -240,11 +240,11 @@ export function ProgressDashboard() {
                   Progress over time
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
-                  Accuracy trend from your Supabase practice and test sessions.
+                  Accuracy trend from your practice and test sessions.
                 </p>
               </div>
               <button
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-4 py-2.5 text-sm font-semibold text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-4 py-2.5 text-sm font-semibold text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 disabled={isClearing}
                 onClick={handleClearProgress}
                 type="button"

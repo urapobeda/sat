@@ -178,10 +178,10 @@ export function PastPapersPage() {
     <Layout active="tests">
       <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-white p-6 shadow-soft sm:p-8">
         <div className="pointer-events-none absolute right-8 top-8 hidden h-28 w-28 rounded-3xl bg-gradient-to-br from-blue-600 to-violet-600 opacity-10 blur-2xl sm:block" />
-        <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+        <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
             <p className="text-sm font-semibold uppercase tracking-[0.14em] text-blue-600">
-              Phase 1 Library
+              Exam Library
             </p>
             <h1 className="mt-3 text-4xl font-bold leading-tight text-slate-950 sm:text-5xl">
               Past Papers & Mock Exams
@@ -191,7 +191,7 @@ export function PastPapersPage() {
               adaptive mock exams.
             </p>
           </div>
-          <div className="rounded-3xl border border-amber-100 bg-amber-50/80 p-4 text-sm font-bold leading-6 text-amber-900 shadow-sm lg:max-w-md">
+          <div className="rounded-3xl border border-amber-100 bg-amber-50/80 p-4 text-sm font-medium leading-6 text-amber-900 shadow-sm xl:max-w-sm xl:shrink-0">
             This platform is not affiliated with or endorsed by College Board.
             Exam materials are original, licensed, or publicly permitted for
             educational use.
@@ -202,9 +202,9 @@ export function PastPapersPage() {
       <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_repeat(6,minmax(0,1fr))]">
           <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 focus-within:ring-4 focus-within:ring-blue-100">
-            <Search className="shrink-0 text-slate-400" size={18} />
+            <Search className="shrink-0 text-slate-500" size={18} />
             <input
-              className="w-full bg-transparent outline-none placeholder:text-slate-400"
+              className="w-full bg-transparent outline-none placeholder:text-slate-500"
               onChange={(event) => updateParam("q", event.target.value)}
               placeholder="Search papers..."
               value={filters.search}
@@ -270,7 +270,7 @@ export function PastPapersPage() {
           <ErrorCard message={error} onRetry={() => void loadPapers()} />
         ) : papers.length === 0 ? (
           <EmptyCard
-            description="Run the Past Papers migration and seed SQL to publish demo papers from your existing question bank."
+            description="New practice papers are on the way. Check back soon."
             title="No published papers yet"
           />
         ) : visiblePapers.length === 0 ? (

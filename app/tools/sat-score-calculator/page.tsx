@@ -598,7 +598,7 @@ function SectionResultCard({
 function Breakdown({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-100">
-      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
         {label}
       </p>
       <p className="mt-1 font-semibold capitalize text-slate-950">{value}</p>

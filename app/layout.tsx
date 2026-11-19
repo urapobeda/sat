@@ -4,8 +4,8 @@ import "katex/dist/katex.min.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SAT Practice Hub",
-  description: "A minimal SAT preparation site for Math, Reading, and Writing."
+  title: { default: "SAT Practice Hub", template: "%s · SAT Practice Hub" },
+  description: "Digital SAT practice: question bank, full-length practice tests, score calculator and progress tracking."
 };
 
 const themeScript = `

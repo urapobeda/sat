@@ -1,13 +1,15 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { Card } from "@/components/Card";
 
 type EmptyStateProps = {
+  action?: { href: string; label: string };
   description: string;
   icon: ReactNode;
   title: string;
 };
 
-export function EmptyState({ description, icon, title }: EmptyStateProps) {
+export function EmptyState({ action, description, icon, title }: EmptyStateProps) {
   return (
     <Card className="mt-10 min-h-80 hover:translate-y-0">
       <div className="flex min-h-64 flex-col items-center justify-center text-center">
@@ -18,6 +20,11 @@ export function EmptyState({ description, icon, title }: EmptyStateProps) {
         <p className="mt-3 max-w-md text-sm leading-6 text-neutral-600">
           {description}
         </p>
+        {action ? (
+          <Link className="hub-primary mt-5 inline-flex" href={action.href}>
+            {action.label}
+          </Link>
+        ) : null}
       </div>
     </Card>
   );

@@ -256,7 +256,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
               />
               <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
                 <button
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-5 py-3 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-5 py-3 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-500"
                   disabled={isSubmitting || currentIndex === 0}
                   onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))}
                   type="button"
@@ -265,7 +265,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
                   Назад
                 </button>
                 <button
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-5 py-3 text-sm font-semibold text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-5 py-3 text-sm font-semibold text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                   disabled={isSubmitting}
                   onClick={() => submitDialog.current?.showModal()}
                   type="button"
