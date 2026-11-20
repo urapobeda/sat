@@ -75,6 +75,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
     clock.current = new HomeworkClock(result.answerTimes ?? {});
     failed.current.clear(); answersRef.current = result.answers; hasSubmitted.current = false;
     setSnapshot(result); setAnswers(result.answers); setCurrentIndex(0); setSaveError(false);
+    setRemainingSeconds(result.timeLimitMinutes && result.status === "in_progress" ? Math.max(0,Math.ceil((Date.parse(result.startedAt)+result.timeLimitMinutes*60000-Date.now())/1000)):null);
   }, []);
   function persist(sid: string, questionId: string, answer: string | null) {
     const payload = { questionId, answer, seconds: clock.current.seconds(questionId) };
@@ -149,7 +150,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
   const answeredCount = Object.keys(answers).length;
 
   async function selectAnswer(choice: string) {
-    if (!currentQuestion || !snapshot || snapshot.status !== "in_progress" || hasSubmitted.current) return;
+    if (!currentQuestion || !snapshot || snapshot.status !== "in_progress" || hasSubmitted.current || remainingSeconds === 0) return;
     clock.current.capture();
     answersRef.current = { ...answersRef.current, [currentQuestion.id]: choice };
     setAnswers(answersRef.current);

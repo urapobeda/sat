@@ -39,13 +39,15 @@ export function StudentAccountProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
     let active = true;
 
-    void getProfile(userId).then((data) => {
+    const refresh = () => { void getProfile(userId).then((data) => {
       if (active) setProfile(data);
     }).catch(() => {
       // The session still provides the signup name and email.
-    });
+    }); };
+    refresh();
+    window.addEventListener("sat-profile-updated",refresh);
 
-    return () => { active = false; };
+    return () => { active = false; window.removeEventListener("sat-profile-updated",refresh); };
   }, [userId]);
 
   const metadataName = user?.user_metadata?.full_name;
@@ -119,6 +121,7 @@ export function StudentAccount({ compact = false }: { compact?: boolean }) {
         style={{ inset: "auto", left: position.left, bottom: position.bottom }}
       >
         {name ? <RoleSwitch role={role} staff={staff} /> : <Link href="/auth" className="block rounded-lg px-3 py-2.5 text-sm hover:bg-white/10">Sign in</Link>}
+        {name ? <Link href="/profile" className="block rounded-lg px-3 py-2.5 text-sm hover:bg-white/10">My profile</Link> : null}
         {name && role === "student" ? <GroupJoinMenuItem /> : null}
         <ThemeToggle menuItem />
         {name ? <button className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm text-slate-200 hover:bg-white/10 disabled:opacity-50" disabled={isSigningOut} onClick={() => void signOut()} type="button"><LogOut aria-hidden="true" size={17} />{isSigningOut ? "Signing out…" : "Sign out"}</button> : null}

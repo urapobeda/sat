@@ -1,5 +1,7 @@
 "use client";
 
+import { AI_TUTOR_ENABLED } from "@/lib/features";
+
 import {
   ArrowLeft,
   ArrowRight,
@@ -340,7 +342,7 @@ export function TestStartPage() {
                 Start New Test
                 <ArrowRight size={18} />
               </Link>
-              <button
+              {AI_TUTOR_ENABLED ? (<button
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:shadow-xl"
                 onClick={() => {
                   const missedQuestion =
@@ -356,7 +358,7 @@ export function TestStartPage() {
               >
                 <Sparkles size={18} />
                 Review with AI
-              </button>
+              </button>) : null}
               <Link
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                 href="/progress"
@@ -371,7 +373,7 @@ export function TestStartPage() {
               questions={completionResult?.reviewQuestions ?? []}
             />
           </div>
-          {reviewQuestion ? (
+          {AI_TUTOR_ENABLED && reviewQuestion ? (
             <AITutorPanel
               hasSubmittedOverride
               isOpen={Boolean(reviewQuestion)}

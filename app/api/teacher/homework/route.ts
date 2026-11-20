@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = parsed.data;
+    if (body.kind === "past_paper") return NextResponse.json({error:"Practice paper homework is temporarily unavailable. Use a question set."},{status:400});
     const { data, error } = await staff.db
       .from("assignments")
       .insert({

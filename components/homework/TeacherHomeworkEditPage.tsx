@@ -16,6 +16,7 @@ type DetailResponse = {
   assignment: Assignment;
   questions: { question_id: string; position: number }[];
   roster: AssignmentRosterRow[];
+  hasSubmissions: boolean;
 };
 
 
@@ -145,7 +146,7 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
   }
   if (!detail) return null;
 
-  const hasSubmissions = detail.roster.some((row) => Boolean(row.status));
+  const hasSubmissions = detail.hasSubmissions;
 
   return (
     <section className="space-y-5">
@@ -166,6 +167,12 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
       ) : null}
 
       <h1 className="text-3xl font-bold">{detail.assignment.title}</h1>
+      <button disabled={saving || detail.assignment.kind !== "question_set"} className="hub-primary cursor-pointer disabled:opacity-50" type="button" onClick={async () => {
+        setSaving(true); setError(null);
+        try { const copy = await groupRequest<{id:string}>(`/api/teacher/homework/${assignmentId}`,"PATCH",{action:"duplicate"}); router.push(`/teacher/homework/${copy.id}`); }
+        catch(failure) { setError(failure instanceof Error ? failure.message : "Could not duplicate assignment"); }
+        finally { setSaving(false); }
+      }}>Дублировать задание</button>
       <AssignmentReport key={retry} assignmentId={assignmentId} />
       <button className="hub-text-link cursor-pointer text-sm font-semibold" type="button" aria-expanded={editing} onClick={() => setEditing(!editing)}>{editing ? "Hide settings" : "Assignment settings and questions"}</button>
       {editing ? <>
@@ -236,6 +243,7 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
             <input
               className="min-h-11 w-32 rounded-xl border border-slate-200 bg-transparent px-3"
               min={1}
+              disabled={hasSubmissions}
               onChange={(event) => setTimeLimit(event.target.value)}
               placeholder="No limit"
               type="number"
@@ -274,7 +282,7 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
       {detail.assignment.kind === "question_set" ? (
         <div className="hub-card space-y-4 p-5">
           <h2 className="text-lg font-semibold">Assignment questions</h2>
-          {hasSubmissions ? <p className="text-sm text-slate-600">Questions are locked once students have started.</p> : <QuestionPicker onChange={setQuestionIds} selectedIds={questionIds} />}
+          {hasSubmissions ? <p className="text-sm text-slate-600">Ученики уже начали — создайте копию задания</p> : <QuestionPicker onChange={setQuestionIds} selectedIds={questionIds} />}
           <button className="hub-primary cursor-pointer disabled:opacity-50" disabled={saving || hasSubmissions || questionIds.length === 0} onClick={saveQuestions} type="button">
             Save questions
           </button>

@@ -15,7 +15,7 @@ const updateSchema = z.object({
 });
 const publishSchema = z.object({ action: z.literal("publish"), published: z.boolean() });
 const questionsSchema = z.object({ action: z.literal("set_questions"), questionIds: z.array(z.uuid()).min(1).max(100) });
-const actionSchema = z.discriminatedUnion("action", [updateSchema, publishSchema, questionsSchema]);
+const actionSchema = z.discriminatedUnion("action", [updateSchema, publishSchema, questionsSchema,z.object({action:z.literal("duplicate")})]);
 
 export async function GET(request: NextRequest, context: Context) {
   const staff = await getHomeworkStaff(request);
@@ -28,15 +28,17 @@ export async function GET(request: NextRequest, context: Context) {
     if (assignment.error) throw assignment.error;
     if (!assignment.data) return NextResponse.json({ error: "Assignment not found." }, { status: 404 });
 
-    const [questions, roster] = await Promise.all([
+    const [questions, roster, submissions] = await Promise.all([
       staff.db.from("assignment_questions").select("question_id,position").eq("assignment_id", assignmentId).order("position"),
-      staff.db.rpc("get_assignment_roster", { p_assignment_id: assignmentId })
+      staff.db.rpc("get_assignment_roster", { p_assignment_id: assignmentId }),
+      staff.db.from("assignment_submissions").select("id", {count:"exact",head:true}).eq("assignment_id",assignmentId)
     ]);
     if (questions.error) throw questions.error;
     if (roster.error) throw roster.error;
+    if (submissions.error) throw submissions.error;
 
     return NextResponse.json(
-      { assignment: assignment.data, questions: questions.data ?? [], roster: roster.data ?? [] },
+      { assignment: assignment.data, questions: questions.data ?? [], roster: roster.data ?? [], hasSubmissions:(submissions.count??0)>0 },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (error) {
@@ -55,6 +57,11 @@ export async function PATCH(request: NextRequest, context: Context) {
 
   try {
     const body = parsed.data;
+    if (body.action === "duplicate") {
+      const result = await staff.db.rpc("duplicate_assignment",{p_assignment:assignmentId});
+      if (result.error) throw result.error;
+      return NextResponse.json({id:result.data},{status:201});
+    }
 
     if (body.action === "set_questions") {
       const { error } = await staff.db.rpc("set_assignment_questions", {
@@ -94,9 +101,9 @@ export async function DELETE(request: NextRequest, context: Context) {
   if (!z.uuid().safeParse(assignmentId).success) return NextResponse.json({ error: "Assignment not found." }, { status: 404 });
 
   try {
-    const roster = await staff.db.rpc("get_assignment_roster", { p_assignment_id: assignmentId });
-    if (roster.error) throw roster.error;
-    if ((roster.data ?? []).some((row) => Boolean(row.status))) {
+    const submissions = await staff.db.from("assignment_submissions").select("id",{count:"exact",head:true}).eq("assignment_id",assignmentId);
+    if (submissions.error) throw submissions.error;
+    if ((submissions.count??0)>0) {
       return NextResponse.json({ error: "Cannot delete: students have already submitted." }, { status: 409 });
     }
 

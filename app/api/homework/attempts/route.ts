@@ -55,7 +55,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(await submitHomeworkAttempt({ submissionId: input.submissionId, userId }), {
       headers: { "Cache-Control": "no-store" }
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "HOMEWORK_EXPIRED") return NextResponse.json({error:"Time expired. The saved answers were submitted."},{status:409});
     return NextResponse.json({ error: "Could not save the assignment. Please try again." }, { status: 500 });
   }
 }

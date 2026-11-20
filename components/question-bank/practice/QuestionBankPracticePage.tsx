@@ -1,5 +1,7 @@
 "use client";
 
+import { AI_TUTOR_ENABLED } from "@/lib/features";
+
 import { Loader2, Search, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -277,7 +279,9 @@ export function QuestionBankPracticePage() {
         throw new Error("Unable to verify answer.");
       }
 
-      const verifiedFeedback = (await response.json()) as PracticeFeedback;
+      const payload = await response.json();
+      if (payload.blocked) { unlockAnswer(); setPersistenceMessage(payload.message); return; }
+      const verifiedFeedback = payload as PracticeFeedback;
       if (persistenceRequest.current !== persistence) return;
       setFeedback((currentFeedback) => ({
         ...currentFeedback,
@@ -453,7 +457,7 @@ export function QuestionBankPracticePage() {
               total={practiceQuestions.length}
               weakTopics={weakTopics}
             />
-            <article className="rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-violet-50/60 p-5 shadow-sm sm:p-6">
+            {AI_TUTOR_ENABLED ? (<article className="rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-violet-50/60 p-5 shadow-sm sm:p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
@@ -482,9 +486,9 @@ export function QuestionBankPracticePage() {
                   Review with AI
                 </button>
               </div>
-            </article>
+            </article>) : null}
           </div>
-          {reviewQuestion ? (
+          {AI_TUTOR_ENABLED && reviewQuestion ? (
             <AITutorPanel
               hasSubmittedOverride
               isOpen={Boolean(reviewQuestion)}

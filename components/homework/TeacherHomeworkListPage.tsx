@@ -145,7 +145,7 @@ export function TeacherHomeworkListPage({ admin }: { admin: boolean }) {
               value={kind}
             >
               <option value="question_set">Question set</option>
-              <option value="past_paper">Practice paper</option>
+
             </select>
           </label>
         </div>

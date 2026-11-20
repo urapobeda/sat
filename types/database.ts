@@ -19,6 +19,13 @@ export type Choice = {
 };
 
 export type Profile = {
+  target_score: number | null;
+  sat_date: string | null;
+  school: string | null;
+  grade: string | null;
+  telegram: string | null;
+  about: string | null;
+  avatar_url: string | null;
   role: UserRole;
   created_at: string;
   email: string | null;
@@ -311,6 +318,12 @@ export type Database = {
         Row: Profile;
         Update: Partial<Profile>;
       };
+      teacher_notes: {
+        Row: {id:string;student_id:string;author_id:string;body:string;created_at:string};
+        Insert: {student_id:string;author_id:string;body:string};
+        Update: {body?:string};
+        Relationships: [];
+      };
       study_plans: {
         Insert: Partial<StudyPlan> & Pick<StudyPlan, "user_id">;
         Relationships: [];
@@ -436,6 +449,15 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      refresh_my_assignment_deadlines: { Args: Record<string, never>; Returns: undefined };
+      expire_assignment_attempt: { Args: { p_user: string; p_submission: string }; Returns: boolean };
+      assignment_answers_released: { Args: { p_assignment: string; p_student: string }; Returns: boolean };
+      duplicate_assignment: { Args: { p_assignment: string }; Returns: string };
+      question_in_pending_homework: { Args: { p_user: string; p_question: string }; Returns: boolean };
+      can_view_student: { Args: { p_student: string }; Returns: boolean };
+      teacher_student_ids: { Args: Record<string, never>; Returns: {student_id:string}[] };
+      search_teacher_students: { Args: {p_query:string}; Returns: {student_id:string}[] };
+      student_profile_groups: { Args: {p_student:string}; Returns: {id:string;name:string;teacher_name:string}[] };
       grant_assignment_retake: { Args: { p_submission: string }; Returns: number };
       get_assignment_report_rows: { Args: { p_assignment: string }; Returns: ReportRow[] };
       list_my_assignment_feedback: { Args: Record<string, never>; Returns: { assignment_id: string; submission_id: string }[] };

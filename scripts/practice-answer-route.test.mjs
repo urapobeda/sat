@@ -29,7 +29,7 @@ const user = "00000000-0000-4000-8000-000000000001";
 const question = "00000000-0000-4000-8000-000000000002";
 const session = "00000000-0000-4000-8000-000000000003";
 
-async function check({ correct, guest = false, missingColumn = false, owned = true, invalid = false, verifyOverlap = false }) {
+async function check({ correct, guest = false, missingColumn = false, owned = true, invalid = false, verifyOverlap = false, blocked = false, restrictionError = false }) {
   const writes = [];
   const filters = [];
   let ownershipStarted;
@@ -42,6 +42,7 @@ async function check({ correct, guest = false, missingColumn = false, owned = tr
     waitForOwnership,
     feedback: { isCorrect: correct, correctAnswer: "B", correctLabel: "B", explanation: "Verified on the server." },
     db: {
+      async rpc() { return { data:blocked,error:restrictionError?{message:"unavailable"}:null }; },
       from(table) {
         if (table === "practice_sessions") return {
           select() { return this; },
@@ -61,6 +62,10 @@ async function check({ correct, guest = false, missingColumn = false, owned = tr
 }
 
 try {
+  const embargo = await check({correct:true,blocked:true});
+  assert.equal(embargo.body.blocked,true);assert.equal(embargo.writes.length,0);
+  for(const field of ['correctAnswer','explanation','isCorrect'])assert.equal(field in embargo.body,false);
+  assert.equal((await check({correct:true,restrictionError:true})).response.status,503);
   const correct = await check({ correct: true, verifyOverlap: true });
   assert.equal(correct.body.timingRecorded, true);
   assert.equal(correct.body.answerSaved, true);
