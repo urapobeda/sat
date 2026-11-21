@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { groupRequest } from "@/lib/groupApi";
 import { duration, elapsedSeconds, reportCsv, reportPercent, reportStatus, REPORT_STATUS, type ReportRow, type ReportStatus, type analyzeAssignment } from "@/lib/assignmentReport";
 import { formatAlmaty } from "@/lib/timezone";
-type Report = ReturnType<typeof analyzeAssignment> & { assignment: { due_at: string; kind: string }; rows: ReportRow[] };
+type Report = ReturnType<typeof analyzeAssignment> & { assignment: { due_at: string | null; kind: string }; rows: ReportRow[] };
 export function AssignmentReport({ assignmentId }: { assignmentId: string }) {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);

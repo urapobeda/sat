@@ -68,9 +68,9 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
   }, [assignmentId, retry]);
 
   async function saveDetails() {
-    const dueAt = almatyInputToUtcIso(dueDate, dueTime);
-    if (!title.trim() || !dueAt) {
-      setError("Enter a title and a due date.");
+    const dueAt = dueDate ? almatyInputToUtcIso(dueDate, dueTime) : null;
+    if (!title.trim() || (dueDate && !dueAt)) {
+      setError("Enter a title and a valid due date, or leave the date empty for no deadline.");
       return;
     }
     setSaving(true);
@@ -221,7 +221,7 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
         </label>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-sm font-medium">
-            Due date (Asia/Almaty)
+            Due date (Asia/Almaty; optional)
             <input
               className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3"
               onChange={(event) => setDueDate(event.target.value)}

@@ -26,7 +26,7 @@ type Snapshot = {
   title: string;
   instructions: string;
   timeLimitMinutes: number | null;
-  dueAt: string;
+  dueAt: string | null;
   showAnswers: "after_submit" | "after_due" | "never";
   status: "in_progress" | "submitted";
   startedAt: string;

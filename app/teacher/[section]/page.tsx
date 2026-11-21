@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 const sections: Record<string, [string, string]> = {
   groups: ["Groups", "Group management is coming soon."],
   students: ["Students", "A list of students and their progress is coming soon."],
-  schedule: ["Schedule", "The lesson schedule is coming soon."],
   materials: ["Materials", "Materials management is coming soon."]
 };
 export default async function TeacherSection({ params }: { params: Promise<{ section: string }> }) {

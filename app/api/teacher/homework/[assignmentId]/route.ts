@@ -6,7 +6,7 @@ type Context = { params: Promise<{ assignmentId: string }> };
 
 const updateSchema = z.object({
   action: z.literal("update"),
-  dueAt: z.string().refine((value) => !Number.isNaN(Date.parse(value))).optional(),
+  dueAt: z.string().refine((value) => !Number.isNaN(Date.parse(value))).nullable().optional(),
   instructions: z.string().max(5000).optional(),
   maxAttempts: z.number().int().min(1).max(10).optional(),
   showAnswers: z.enum(["after_submit", "after_due", "never"]).optional(),

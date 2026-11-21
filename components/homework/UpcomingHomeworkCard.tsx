@@ -34,7 +34,7 @@ export function UpcomingHomeworkCard() {
 
   const upcoming = (assignments ?? [])
     .filter((item) => item.status !== "submitted")
-    .sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime())
+    .sort((a, b) => (a.due_at ? Date.parse(a.due_at) : Infinity) - (b.due_at ? Date.parse(b.due_at) : Infinity))
     .slice(0, 3);
 
   return (

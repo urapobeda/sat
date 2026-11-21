@@ -1,4 +1,6 @@
 import type { AssignmentFeedback, ReportRow } from "@/lib/assignmentReport";
+import type { Lesson, LessonItem, LessonRow, LessonHomework } from "@/lib/lessons";
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 import type { StudyGroup, GroupMember, GroupTeacher } from "@/lib/groups";
 import type { UserRole } from "@/lib/roles";
 import type { PaperItem, PaperSolution, PaperModuleRun } from "./../lib/paperRunner";
@@ -221,7 +223,10 @@ export type Assignment = {
   kind: AssignmentKind;
   paper_id: string | null;
   time_limit_minutes: number | null;
-  due_at: string;
+  due_at: string | null;
+  lesson_id: string | null;
+  lesson_part: "classwork" | "homework" | null;
+  lesson_request_id: string | null;
   show_answers: ShowAnswersRule;
   max_attempts: number;
   published: boolean;
@@ -231,6 +236,8 @@ export type Assignment = {
 export type Database = {
   public: {
     Tables: {
+      lessons: { Row: Lesson; Insert: Omit<Lesson, "id" | "created_at">; Update: Partial<Pick<Lesson, "title" | "section" | "topic" | "starts_at" | "position" | "notes">>; Relationships: [] };
+      lesson_items: { Row: LessonItem; Insert: Omit<LessonItem, "id">; Update: Partial<Omit<LessonItem, "id">>; Relationships: [] };
       assignment_feedback: {
         Row: AssignmentFeedback;
         Insert: Pick<AssignmentFeedback, "submission_id" | "author_id" | "body"> & Partial<Pick<AssignmentFeedback, "id" | "question_id">>;
@@ -449,6 +456,10 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      save_lesson: { Args: { p_id: string | null; p_group_id: string; p_title: string; p_section: string; p_topic: string; p_starts_at: string | null; p_position: number; p_notes: string; p_items: Json }; Returns: string };
+      list_my_lessons: { Args: { p_group_id?: string; p_scheduled?: boolean }; Returns: LessonRow[] };
+      list_my_lesson_assignments: { Args: Record<string, never>; Returns: LessonHomework[] };
+      assign_lesson_part: { Args: { p_lesson: string; p_part: string; p_due_at: string | null; p_comment: string; p_request_id: string }; Returns: { id: string; student_count: number }[] };
       refresh_my_assignment_deadlines: { Args: Record<string, never>; Returns: undefined };
       expire_assignment_attempt: { Args: { p_user: string; p_submission: string }; Returns: boolean };
       assignment_answers_released: { Args: { p_assignment: string; p_student: string }; Returns: boolean };

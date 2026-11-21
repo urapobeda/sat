@@ -15,7 +15,7 @@ export type HomeworkAttemptSnapshot = {
   title: string;
   instructions: string;
   timeLimitMinutes: number | null;
-  dueAt: string;
+  dueAt: string | null;
   showAnswers: ShowAnswersRule;
   status: SubmissionStatus;
   startedAt: string;
@@ -129,7 +129,7 @@ export async function loadHomeworkAttempt(userId: string, submissionId: string):
     submittedAt: submission.submitted_at,
     correctCount: submission.correct_count,
     totalCount: submission.total_count,
-    late: Boolean(submission.submitted_at && new Date(submission.submitted_at) > new Date(assignment.due_at)),
+    late: Boolean(submission.submitted_at && assignment.due_at && new Date(submission.submitted_at) > new Date(assignment.due_at)),
     questions,
     answers,
     review

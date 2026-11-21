@@ -151,7 +151,7 @@ export function summarizeStudent(data: {
       missing++;
       continue;
     }
-    if (s.submitted_at && Date.parse(s.submitted_at) > Date.parse(a.due_at)) late++;
+    if (s.submitted_at && a.due_at && Date.parse(s.submitted_at) > Date.parse(a.due_at)) late++;
     else onTime++;
     if (s.total_count)
       percentages.push((100 * (s.correct_count ?? 0)) / s.total_count);

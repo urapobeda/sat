@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { groupRequest } from "@/lib/groupApi";
 import type { StudyGroup, GroupMember, GroupTeacher } from "@/lib/groups";
+import { GroupLessons } from "@/components/lessons/LessonViews";
 
 export function GroupDetail({ groupId, admin }: { groupId: string; admin: boolean }) {
   const [group, setGroup] = useState<StudyGroup | null>(null);
@@ -67,6 +68,7 @@ export function GroupDetail({ groupId, admin }: { groupId: string; admin: boolea
         <div className="flex flex-wrap items-center gap-3"><span className="min-w-0 select-all break-all text-sm text-slate-600">{invitation}</span><button className="hub-text-link cursor-pointer text-sm" type="button" onClick={() => void copy(invitation)}>Copy link</button></div>
         <p className="text-xs text-slate-500">After changing the code, old invitations stop working. Current members stay in the group.</p>
       </div>
+      <GroupLessons groupId={group.id} />
       <div className="hub-card p-5"><h2 className="text-lg font-semibold">Students · {members.length}</h2>
         {!members.length ? <p className="mt-3 text-sm text-slate-600">No members yet. Send your students the invitation link.</p> : <ul className="mt-3 divide-y divide-slate-200">{members.map((member) => <li key={member.student_id} className="flex flex-wrap items-center gap-3 py-3">
           <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-blue-100 text-blue-700">{member.avatar_url?.startsWith("https://") ? (
