@@ -62,15 +62,15 @@ export function DesmosPanel({ questionId, states, onClose }: {
       ref={dialog}
     >
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-4 py-2">
-        <h2 className="font-semibold" id={titleId}>Калькулятор</h2>
+        <h2 className="font-semibold" id={titleId}>Calculator</h2>
         <button className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50" type="button" onClick={onClose}>
-          <X aria-hidden="true" size={18} /> Закрыть
+          <X aria-hidden="true" size={18} /> Close
         </button>
       </header>
-      {status === "loading" ? <p className="flex items-center gap-2 p-4 text-sm text-slate-600" role="status"><Loader2 className="animate-spin" size={18} /> Загружаем Desmos…</p> : null}
+      {status === "loading" ? <p className="flex items-center gap-2 p-4 text-sm text-slate-600" role="status"><Loader2 className="animate-spin" size={18} /> Loading Desmos…</p> : null}
       {status === "error" ? <div className="p-4 text-sm" role="alert">
-        <p>Не удалось загрузить калькулятор. Проверьте соединение.</p>
-        <button className="hub-primary mt-3 min-h-11 cursor-pointer" type="button" onClick={() => { setStatus("loading"); setRetry((value) => value + 1); }}>Повторить</button>
+        <p>Could not load the calculator. Check your connection.</p>
+        <button className="hub-primary mt-3 min-h-11 cursor-pointer" type="button" onClick={() => { setStatus("loading"); setRetry((value) => value + 1); }}>Retry</button>
       </div> : null}
       <div className="min-h-0 flex-1" ref={container} />
     </dialog>

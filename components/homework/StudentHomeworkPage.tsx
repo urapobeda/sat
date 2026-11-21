@@ -7,12 +7,12 @@ import { isPastDue, type AssignmentKind, type StudentAssignment } from "@/lib/ho
 import { formatAlmaty } from "@/lib/timezone";
 import { StudentShell } from "@/components/dashboard/StudentShell";
 
-const KIND_LABEL: Record<AssignmentKind, string> = { past_paper: "Пробный вариант", question_set: "Набор вопросов" };
+const KIND_LABEL: Record<AssignmentKind, string> = { past_paper: "Practice paper", question_set: "Question set" };
 type Tab = "todo" | "done" | "overdue";
 const TABS: { id: Tab; label: string }[] = [
-  { id: "todo", label: "К выполнению" },
-  { id: "done", label: "Сданы" },
-  { id: "overdue", label: "Просрочены" }
+  { id: "todo", label: "To do" },
+  { id: "done", label: "Submitted" },
+  { id: "overdue", label: "Overdue" }
 ];
 
 export function StudentHomeworkPage() {
@@ -45,11 +45,11 @@ export function StudentHomeworkPage() {
           signal: controller.signal
         });
         const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "Не удалось загрузить задания.");
+        if (!response.ok) throw new Error(payload.error || "Could not load homework.");
         if (!controller.signal.aborted) setAssignments(payload.assignments);
       } catch (failure) {
         if (!controller.signal.aborted && !(failure instanceof DOMException)) {
-          setError(failure instanceof Error ? failure.message : "Не удалось загрузить задания.");
+          setError(failure instanceof Error ? failure.message : "Could not load homework.");
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -70,9 +70,9 @@ export function StudentHomeworkPage() {
     <StudentShell active="homework">
       <div className="mx-auto w-full max-w-7xl space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-950">Домашние задания</h1>
+          <h1 className="text-3xl font-bold text-slate-950">Homework</h1>
           <p className="mt-2 text-base text-slate-600">
-            К выполнению: {grouped.todo.length} · просрочено: {grouped.overdue.length} · сдано: {grouped.done.length}
+            {grouped.todo.length} to do · {grouped.overdue.length} overdue · {grouped.done.length} submitted
           </p>
         </div>
 
@@ -94,23 +94,23 @@ export function StudentHomeworkPage() {
 
         {signedOut ? (
           <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600 shadow-sm">
-            <p>Войдите, чтобы увидеть задания от учителя.</p>
+            <p>Sign in to see homework from your teacher.</p>
             <Link className="hub-primary mt-4 inline-flex" href="/auth">
-              Войти
+              Sign in
             </Link>
           </div>
         ) : error ? (
           <p className="text-sm text-rose-600" role="alert">
             {error}{" "}
             <button className="cursor-pointer underline" onClick={() => setRetry((value) => value + 1)} type="button">
-              Повторить
+              Retry
             </button>
           </p>
         ) : loading ? (
-          <p role="status">Загружаем…</p>
+          <p role="status">Loading…</p>
         ) : visible.length === 0 ? (
           <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600 shadow-sm">
-            Здесь пока нет заданий.
+            No assignments here yet.
           </div>
         ) : (
           <div className="grid gap-3">
@@ -129,9 +129,9 @@ function HomeworkRow({ assignment }: { assignment: StudentAssignment }) {
   const overdue = !submitted && isPastDue(assignment.due_at);
   const total = assignment.total_questions ?? assignment.total_count ?? null;
   const progress = submitted
-    ? { done: assignment.correct_count ?? 0, label: "правильно", total: assignment.total_count ?? 0 }
+    ? { done: assignment.correct_count ?? 0, label: "correct", total: assignment.total_count ?? 0 }
     : total
-      ? { done: assignment.answered_count ?? 0, label: "ответов", total }
+      ? { done: assignment.answered_count ?? 0, label: "answered", total }
       : null;
 
   const href =
@@ -141,12 +141,12 @@ function HomeworkRow({ assignment }: { assignment: StudentAssignment }) {
         ? `/past-papers/${assignment.paper_slug}`
         : "/past-papers";
   const actionLabel = submitted
-    ? "Посмотреть результат"
+    ? "View result"
     : assignment.kind === "question_set"
       ? assignment.status === "in_progress"
-        ? "Продолжить"
-        : "Начать"
-      : "Открыть вариант";
+        ? "Continue"
+        : "Start"
+      : "Open paper";
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
@@ -158,10 +158,10 @@ function HomeworkRow({ assignment }: { assignment: StudentAssignment }) {
         <p className="mt-1 text-sm">
           {overdue ? (
             <span className="inline-flex rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">
-              Срок: {formatAlmaty(assignment.due_at)}
+              Due: {formatAlmaty(assignment.due_at)}
             </span>
           ) : (
-            <span className="text-slate-600">Срок: {formatAlmaty(assignment.due_at)}</span>
+            <span className="text-slate-600">Due: {formatAlmaty(assignment.due_at)}</span>
           )}
         </p>
         {progress ? (
@@ -175,7 +175,7 @@ function HomeworkRow({ assignment }: { assignment: StudentAssignment }) {
           </div>
         ) : null}
       </div>
-      {assignment.feedback_submission_id ? <Link className="hub-text-link text-sm" href={`/homework/${assignment.id}?submission=${assignment.feedback_submission_id}`}>Есть комментарий учителя</Link> : null}
+      {assignment.feedback_submission_id ? <Link className="hub-text-link text-sm" href={`/homework/${assignment.id}?submission=${assignment.feedback_submission_id}`}>Teacher left a comment</Link> : null}
       <Link
         className="inline-flex min-h-11 w-full shrink-0 cursor-pointer sm:w-auto items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white! shadow-sm transition hover:bg-blue-700"
         href={href}

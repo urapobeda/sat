@@ -22,10 +22,10 @@ try {
   const first = loadDesmos(), concurrent = loadDesmos();
   assert.equal(first, concurrent);
   assert.equal(scripts.length, 1);
-  assert.match(scripts[0].src, /v1\.12\/calculator\.js\?apiKey=dcb31709b452b1cf9dc26972add0fda6&lang=ru/);
+  assert.match(scripts[0].src, /v1\.12\/calculator\.js\?apiKey=dcb31709b452b1cf9dc26972add0fda6&lang=en/);
   assert.equal(warnings.length, 1);
   scripts[0].onerror();
-  await assert.rejects(first, /Не удалось/);
+  await assert.rejects(first, /Could not load the calculator/);
   assert.equal(scripts[0].removed, true);
   process.env.NEXT_PUBLIC_DESMOS_API_KEY = "own key&test";
   const retry = loadDesmos();
@@ -49,7 +49,7 @@ try {
   let current, callback, destroyed = 0, unobserved = 0, resized = 0;
   const fake = { GraphingCalculator(element, options) {
     assert.equal(element.id, "calculator");
-    assert.equal(options.language, "ru");
+    assert.equal(options.language, "en");
     return {
       setState(value) { current = value; }, getState() { return current; },
       observeEvent(event, fn) { assert.equal(event, "change"); callback = fn; },

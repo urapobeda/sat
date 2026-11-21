@@ -3,7 +3,6 @@ import type { QuestionChoice } from "@/types/sat";
 
 type AnswerOptionProps = {
   choice: QuestionChoice;
-  locale?: "en" | "ru";
   examStyle?: boolean;
   correctLabel?: string | null;
   isDisabled?: boolean;
@@ -17,7 +16,6 @@ type AnswerOptionProps = {
 
 export function AnswerOption({
   choice,
-  locale = "en",
   correctLabel,
   examStyle = false,
   isDisabled = false,
@@ -99,7 +97,7 @@ export function AnswerOption({
 
       {onToggleEliminate ? (
         <button
-          aria-label={locale === "ru" ? `${isEliminated ? "Вернуть" : "Исключить"} вариант ${choice.label}` : isEliminated ? `Restore choice ${choice.label}` : `Cross out choice ${choice.label}`}
+          aria-label={isEliminated ? `Restore choice ${choice.label}` : `Cross out choice ${choice.label}`}
           data-choice-eliminate
           aria-pressed={isEliminated}
           className={[
@@ -108,7 +106,7 @@ export function AnswerOption({
           ].join(" ")}
           disabled={isDisabled}
           onClick={() => onToggleEliminate(choice.label)}
-          title={locale === "ru" ? (isEliminated ? "Вернуть" : "Исключить") : isEliminated ? "Restore" : "Cross out"}
+          title={isEliminated ? "Restore" : "Cross out"}
           type="button"
         >
           {choice.label}

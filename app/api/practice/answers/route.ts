@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     if (student) {
       const pending = await getSupabaseAdminClient().rpc("question_in_pending_homework", {p_user:student,p_question:parsed.data.questionId});
       if (pending.error) return NextResponse.json({error:"Unable to check homework restrictions."},{status:503});
-      if (pending.data) return NextResponse.json({blocked:true,message:"Этот вопрос в вашей домашке — ответ откроется после сдачи"});
+      if (pending.data) return NextResponse.json({blocked:true,message:"This question is part of your homework. The answer will be available after you submit it."});
     }
     const [owner, feedback] = await Promise.all([
       sessionId && student ? getPracticeSessionOwner(student, sessionId).catch((error: unknown) => {

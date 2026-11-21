@@ -14,7 +14,6 @@ import type { Question, QuestionFeedback } from "@/types/sat";
 type QuestionCardProps = {
   currentIndex: number;
   mode?: "practice" | "test";
-  locale?: "en" | "ru";
   onSelect: (answer: string) => void;
   question: Question;
   feedback?: QuestionFeedback | null;
@@ -32,7 +31,6 @@ const eliminatedByQuestion = new Map<string, string[]>();
 export function QuestionCard({
   currentIndex,
   mode = "practice",
-  locale = "en",
   onSelect,
   question,
   feedback,
@@ -49,19 +47,19 @@ export function QuestionCard({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-slate-600">
-            {locale === "ru" ? `Вопрос ${currentIndex + 1} из ${totalQuestions}` : `Question ${currentIndex + 1} of ${totalQuestions}`}
+            Question {currentIndex + 1} of {totalQuestions}
           </p>
           <ProgressBar className="mt-3" value={progress} />
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {timerSeconds !== undefined ? <Timer label="Question" seconds={timerSeconds} /> : null}
-          <QuestionHighlightControls {...highlight} locale={locale} />
+          <QuestionHighlightControls {...highlight} />
           <button
             className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             type="button"
           >
             <Flag size={16} />
-            {locale === "ru" ? "Сообщить" : "Report"}
+            Report
           </button>
         </div>
       </div>
@@ -70,7 +68,6 @@ export function QuestionCard({
       </div>
       <QuestionStem className="mt-6 text-[17px] leading-8" highlight={highlight} number={currentIndex + 1} question={question} />
       <QuestionAnswers
-        locale={locale}
         feedback={showFeedback ? feedback : null}
         key={question.id}
         mode={mode}
@@ -121,7 +118,6 @@ export function QuestionStem({ className, highlight, number, question, text = qu
 }
 
 export function QuestionAnswers({
-  locale = "en",
   choiceDraft,
   examStyle = false,
   feedback,
@@ -133,7 +129,6 @@ export function QuestionAnswers({
 }: Pick<QuestionCardProps, "feedback" | "onSelect" | "question" | "selectedAnswer" | "showFeedback"> & {
   choiceDraft?: { value: string | null; onChange: (value: string | null) => void };
   examStyle?: boolean;
-  locale?: "en" | "ru";
   mode: NonNullable<QuestionCardProps["mode"]>;
 }) {
   const hasAnswered = selectedAnswer !== null;
@@ -161,7 +156,6 @@ export function QuestionAnswers({
   if (question.choices.length === 0) {
     return (
       <FreeResponseInput
-        locale={locale}
         hasAnswered={hasAnswered}
         initialAnswer={selectedAnswer ?? ""}
         key={selectedAnswer ?? "draft"}
@@ -176,7 +170,6 @@ export function QuestionAnswers({
     <div className={examStyle ? "mt-4 grid gap-3" : "mt-7 grid gap-3"}>
       {question.choices.map((choice) => (
         <AnswerOption
-          locale={locale}
           choice={choice}
           correctLabel={feedback?.correctLabel}
           examStyle={examStyle}
@@ -219,7 +212,6 @@ export function QuestionExplanation({ feedback, highlight, questionId, showExpla
 }
 
 function FreeResponseInput({
-  locale = "en",
   hasAnswered,
   initialAnswer,
   mode,
@@ -231,7 +223,6 @@ function FreeResponseInput({
   mode: "practice" | "test";
   onSelect: (answer: string) => void;
   questionId: string;
-  locale?: "en" | "ru";
 }) {
   const [draftAnswer, setDraftAnswer] = useState(initialAnswer);
   const isLocked = mode === "practice" && hasAnswered;
@@ -251,29 +242,22 @@ function FreeResponseInput({
     <div className="mt-7 max-w-md">
       <div className="relative flex items-center gap-2">
         <label className="text-sm font-semibold text-slate-700" htmlFor={`free-response-${questionId}`}>
-          {locale === "ru" ? "Ваш ответ" : "Your answer"}
+          Your answer
         </label>
         <details className="group">
           <summary className="flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
             <Info aria-hidden="true" size={16} />
-            <span className="sr-only">{locale === "ru" ? "Как ввести ответ" : "How to enter your answer"}</span>
+            <span className="sr-only">How to enter your answer</span>
           </summary>
           <div className="absolute left-0 z-20 mt-2 w-full max-w-80 rounded-xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-lg">
-            <p className="font-semibold text-slate-900">{locale === "ru" ? "Как ввести ответ" : "How to enter your answer"}</p>
+            <p className="font-semibold text-slate-900">How to enter your answer</p>
             <ul className="mt-2 list-disc space-y-1 pl-5">
-              {locale === "ru" ? <>
-                <li>Если правильных ответов несколько, введите один.</li>
-                <li>До 5 символов для положительного числа и 6 для отрицательного, включая минус.</li>
-                <li>Длинную дробь запишите десятичным числом и округлите или усеките до четвёртого знака.</li>
-                <li>Вместо смешанного числа 3½ введите 7/2 или 3.5.</li>
-                <li>Не вводите %, $, запятые и другие символы.</li>
-              </> : <>
-              <li>If you find more than one correct answer, enter only one.</li>
-              <li>Up to 5 characters for a positive answer, 6 for a negative one (the minus sign counts).</li>
-              <li>A fraction that doesn&apos;t fit: enter its decimal. A long decimal: cut or round it at the 4th digit.</li>
-              <li>A mixed number like 3½: enter 7/2 or 3.5.</li>
-              <li>No symbols such as %, $ or commas.</li>
-              </>}
+              <li>In a question with several valid solutions, submit just one.</li>
+              <li>The entry limit is 5 characters for positive answers, or 6 for negative answers, counting the minus sign.</li>
+              <li>When a fraction is too long for the answer field, use its decimal value instead.</li>
+              <li>When a decimal is too long, shorten it to the fourth digit by rounding or truncation.</li>
+              <li>Convert mixed numbers before entering them: for example, use 7/2 or 3.5 for 3½.</li>
+              <li>Omit percent signs, commas, and dollar signs.</li>
             </ul>
           </div>
         </details>
@@ -293,7 +277,7 @@ function FreeResponseInput({
               submitFreeResponse();
             }
           }}
-          placeholder={locale === "ru" ? "Ответ" : "Answer"}
+          placeholder="Answer"
           value={draftAnswer}
         />
         <button
@@ -302,14 +286,14 @@ function FreeResponseInput({
           onClick={submitFreeResponse}
           type="button"
         >
-          {locale === "ru" ? (mode === "practice" ? "Проверить" : "Сохранить") : (mode === "practice" ? "Check" : "Save")}
+          {mode === "practice" ? "Check" : "Save"}
           <Send size={16} />
         </button>
       </div>
 
       {preview ? (
         <p className="mt-3 flex items-center gap-3 text-sm text-slate-600">
-          {locale === "ru" ? "Предпросмотр:" : "Answer preview:"}
+          Answer preview:
           <MathText className="text-xl text-slate-950" inline text={preview} />
         </p>
       ) : null}

@@ -25,12 +25,12 @@ export function loadDesmos(): Promise<DesmosAPI> {
   const key = process.env.NEXT_PUBLIC_DESMOS_API_KEY?.trim() || DEMO_KEY;
   if (key === DEMO_KEY && !warned) {
     warned = true;
-    console.warn("Desmos: используется демо-ключ. Для продакшена получите NEXT_PUBLIC_DESMOS_API_KEY на https://www.desmos.com/my-api");
+    console.warn("Desmos: using the demo API key. For production, get your own NEXT_PUBLIC_DESMOS_API_KEY at https://www.desmos.com/my-api");
   }
   loading = new Promise<DesmosAPI>((resolve, reject) => {
     const script = document.createElement("script");
     script.async = true;
-    script.src = `https://www.desmos.com/api/v1.12/calculator.js?apiKey=${encodeURIComponent(key)}&lang=ru`;
+    script.src = `https://www.desmos.com/api/v1.12/calculator.js?apiKey=${encodeURIComponent(key)}&lang=en`;
     const timer = window.setTimeout(() => fail(), 20_000);
     function cleanup() {
       window.clearTimeout(timer);
@@ -41,7 +41,7 @@ export function loadDesmos(): Promise<DesmosAPI> {
       cleanup();
       script.remove();
       loading = undefined;
-      reject(new Error("Не удалось загрузить калькулятор. Проверьте соединение и повторите."));
+      reject(new Error("Could not load the calculator. Check your connection and try again."));
     }
     script.onload = () => {
       if (!window.Desmos) { fail(); return; }
@@ -66,7 +66,7 @@ export function createDesmosStateStore() {
 export type DesmosStateStore = ReturnType<typeof createDesmosStateStore>;
 
 export function mountDesmos(api: DesmosAPI, element: HTMLElement, states: DesmosStateStore, questionId: string) {
-  const calculator = api.GraphingCalculator(element, { language: "ru" });
+  const calculator = api.GraphingCalculator(element, { language: "en" });
   let destroyed = false;
   try {
     const state = states.get(questionId);

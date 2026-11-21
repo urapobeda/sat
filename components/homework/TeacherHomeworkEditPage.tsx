@@ -172,7 +172,7 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
         try { const copy = await groupRequest<{id:string}>(`/api/teacher/homework/${assignmentId}`,"PATCH",{action:"duplicate"}); router.push(`/teacher/homework/${copy.id}`); }
         catch(failure) { setError(failure instanceof Error ? failure.message : "Could not duplicate assignment"); }
         finally { setSaving(false); }
-      }}>Дублировать задание</button>
+      }}>Duplicate assignment</button>
       <AssignmentReport key={retry} assignmentId={assignmentId} />
       <button className="hub-text-link cursor-pointer text-sm font-semibold" type="button" aria-expanded={editing} onClick={() => setEditing(!editing)}>{editing ? "Hide settings" : "Assignment settings and questions"}</button>
       {editing ? <>
@@ -282,7 +282,7 @@ export function TeacherHomeworkEditPage({ assignmentId }: { assignmentId: string
       {detail.assignment.kind === "question_set" ? (
         <div className="hub-card space-y-4 p-5">
           <h2 className="text-lg font-semibold">Assignment questions</h2>
-          {hasSubmissions ? <p className="text-sm text-slate-600">Ученики уже начали — создайте копию задания</p> : <QuestionPicker onChange={setQuestionIds} selectedIds={questionIds} />}
+          {hasSubmissions ? <p className="text-sm text-slate-600">Students have already started. Create a copy of this assignment to change its questions.</p> : <QuestionPicker onChange={setQuestionIds} selectedIds={questionIds} />}
           <button className="hub-primary cursor-pointer disabled:opacity-50" disabled={saving || hasSubmissions || questionIds.length === 0} onClick={saveQuestions} type="button">
             Save questions
           </button>

@@ -64,6 +64,7 @@ async function check({ correct, guest = false, missingColumn = false, owned = tr
 try {
   const embargo = await check({correct:true,blocked:true});
   assert.equal(embargo.body.blocked,true);assert.equal(embargo.writes.length,0);
+  assert.equal(embargo.body.message,"This question is part of your homework. The answer will be available after you submit it.");
   for(const field of ['correctAnswer','explanation','isCorrect'])assert.equal(field in embargo.body,false);
   assert.equal((await check({correct:true,restrictionError:true})).response.status,503);
   const correct = await check({ correct: true, verifyOverlap: true });
