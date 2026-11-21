@@ -377,9 +377,10 @@ a {
 
 .desmos-panel[open] { display: flex; }
 .homework-runner .math-text { min-width: 0; overflow-wrap: anywhere; }
-.homework-runner .math-text .katex { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
+.homework-runner .math-text p { max-width: 100%; overflow-x: auto; }
 .homework-runner [data-choice-eliminate] { width: 44px; height: 44px; }
 .homework-runner details > summary,
-.homework-runner button { min-height: 44px; }
+.homework-runner button:not(.desmos-panel button) { min-height: 44px; }
+.homework-runner [data-highlight-tools] button { min-width: 44px; }
 .homework-runner dialog { max-width: 100%; }
 .dark .homework-navigation, .dark .desmos-panel { background: var(--hub-card); color: var(--foreground); }

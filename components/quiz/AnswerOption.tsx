@@ -108,7 +108,7 @@ export function AnswerOption({
           ].join(" ")}
           disabled={isDisabled}
           onClick={() => onToggleEliminate(choice.label)}
-          title={isEliminated ? "Restore" : "Cross out"}
+          title={locale === "ru" ? (isEliminated ? "Вернуть" : "Исключить") : isEliminated ? "Restore" : "Cross out"}
           type="button"
         >
           {choice.label}

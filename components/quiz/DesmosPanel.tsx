@@ -19,6 +19,7 @@ export function DesmosPanel({ questionId, states, onClose }: {
     const node = dialog.current!;
     const desktop = window.matchMedia("(min-width: 1024px)");
     const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement;
     function show() {
       node.close();
       if (desktop.matches) node.show();
@@ -31,6 +32,7 @@ export function DesmosPanel({ questionId, states, onClose }: {
       desktop.removeEventListener("change", show);
       document.body.style.overflow = previousOverflow;
       node.close();
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
     };
   }, []);
 
@@ -61,7 +63,7 @@ export function DesmosPanel({ questionId, states, onClose }: {
     >
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-4 py-2">
         <h2 className="font-semibold" id={titleId}>Калькулятор</h2>
-        <button className="hub-nav-link flex min-h-11 cursor-pointer items-center gap-2 px-3" type="button" onClick={onClose}>
+        <button className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50" type="button" onClick={onClose}>
           <X aria-hidden="true" size={18} /> Закрыть
         </button>
       </header>

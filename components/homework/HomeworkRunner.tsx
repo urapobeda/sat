@@ -229,7 +229,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
                 {saveError ? <p className="mt-1 text-sm text-rose-600">Не удалось сохранить ответ. Проверьте соединение.</p> : null}
               </div>
               <div className="flex flex-wrap gap-3">
-                {remainingSeconds !== null ? <Timer label="Осталось" seconds={remainingSeconds} /> : null}
+                {snapshot.status === "in_progress" && remainingSeconds !== null ? <Timer label="Осталось" seconds={remainingSeconds} /> : null}
                 <span className="inline-flex min-h-9 items-center rounded-full bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200">
                   {answeredCount} / {snapshot.questions.length} ответов
                 </span>
@@ -254,7 +254,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
           <section className={`mt-6 grid min-w-0 gap-6 ${calculatorOpen && currentQuestion.section === "math" ? "lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]" : "lg:grid-cols-[minmax(0,1fr)_240px]"}`}>
             <div className="min-w-0 space-y-5">
               {currentQuestion.section === "math" ? (
-                <button aria-expanded={calculatorOpen} className="hub-nav-link inline-flex min-h-11 cursor-pointer items-center gap-2 px-4" type="button" onClick={() => setCalculatorOpen((open) => !open)}>
+                <button aria-expanded={calculatorOpen} className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50" type="button" onClick={() => setCalculatorOpen((open) => !open)}>
                   <Calculator aria-hidden="true" size={18} /> Калькулятор
                 </button>
               ) : null}
