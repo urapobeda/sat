@@ -27,6 +27,7 @@ const tutorResponseSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  if (process.env.NEXT_PUBLIC_AI_TUTOR_ENABLED !== "true") return jsonError("AI Tutor is disabled.",404);
   try {
     const userId = await getAuthenticatedUserId(request);
     if (!userId) return jsonError("Sign in to use AI Tutor.", 401);

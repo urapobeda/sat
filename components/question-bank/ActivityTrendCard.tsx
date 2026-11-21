@@ -83,7 +83,7 @@ export function ActivityTrendCard({
             })}
           </div>
 
-          <div className="mt-2 flex gap-3 text-[11px] font-semibold text-slate-400 sm:gap-5">
+          <div className="mt-2 flex gap-3 text-[11px] font-semibold text-slate-500 sm:gap-5">
             {recentWeeks.map((week) => (
               <span className="flex-1 text-center" key={week.weekStart}>
                 {formatWeekLabel(week.weekStart)}

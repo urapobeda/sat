@@ -72,7 +72,7 @@ export function TestsPage() {
         }
 
         if (!user) {
-          setNotice("Guest mode: sign in to save full test sessions in Supabase.");
+          setNotice("Guest mode: sign in to save your test history.");
           setHistory([]);
           return;
         }
@@ -87,7 +87,7 @@ export function TestsPage() {
           setNotice(
             requestError instanceof Error
               ? requestError.message
-              : "Unable to load Supabase test history."
+              : "Unable to load your test history."
           );
         }
       } finally {
@@ -215,7 +215,7 @@ function getStatsFromHistory(history: TestSession[]) {
     {
       title: "Best Score",
       value: `${bestScore} / 1600`,
-      description: "Saved in Supabase",
+      description: "Saved to your account",
       icon: Trophy,
       tone: "bg-violet-50 text-violet-600"
     },

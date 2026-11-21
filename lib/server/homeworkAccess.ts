@@ -18,9 +18,9 @@ export function homeworkError(error: unknown) {
   return NextResponse.json(
     {
       error:
-        status === 403 ? "Нет доступа к этому заданию." :
-        status === 400 ? "Проверьте параметры задания и выбранные вопросы." :
-        "Не удалось загрузить или изменить задание. Проверьте миграцию домашних заданий и повторите."
+        status === 403 ? "You do not have access to this assignment." :
+        status === 400 ? "Check the assignment settings and selected questions." :
+        "Could not load or update the assignment. Please try again."
     },
     { status }
   );

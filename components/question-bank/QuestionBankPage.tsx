@@ -371,10 +371,6 @@ function QuestionBankError({
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-rose-700">
         {message}
       </p>
-      <p className="mx-auto mt-3 max-w-xl text-xs font-bold leading-5 text-rose-600">
-        If this mentions permissions or missing columns, run
-        supabase/repair-question-bank-access.sql in Supabase SQL Editor.
-      </p>
       <button
         className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white shadow-lg shadow-rose-600/20 transition hover:bg-rose-700"
         onClick={onRetry}

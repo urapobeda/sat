@@ -38,7 +38,7 @@ async function testAttemptsRoute() {
       return loadHomeworkAttempt(uid, result.data);
     }
     export async function loadHomeworkAttempt(uid, sid) { c.calls.push(['load', uid, sid]); return { submissionId: sid, status: 'in_progress', questions: [], answers: {} }; }
-    export async function saveHomeworkAnswer(args) { c.calls.push(['answer', args]); return undefined; }
+    export async function saveHomeworkAnswer(args) { c.calls.push(['answer', args]); if(c.expired) throw new Error('HOMEWORK_EXPIRED'); return undefined; }
     export async function submitHomeworkAttempt(args) { c.calls.push(['submit', args]); return { submissionId: args.submissionId, status: 'submitted', correctCount: 1, totalCount: 2, review: null }; }
   `;
   const mockUrl = url(mock);
@@ -76,6 +76,8 @@ async function testAttemptsRoute() {
   assert.deepEqual(submitCall[1], { submissionId, userId });
   const submittedBody = await submitted.json();
   assert.equal(submittedBody.correctCount, 1, "score must come from the server mock, not the client-sent value");
+  context.expired=true;
+  assert.equal((await route.POST(request({action:'answer',submissionId,questionId,answer:'A'}))).status,409);
 
   delete globalThis.__satHomeworkTest;
   console.log("homework attempts route: auth, invalid action, start/answer/submit wiring and no client-trusted grading fields passed");
@@ -83,7 +85,7 @@ async function testAttemptsRoute() {
 
 // --- /api/teacher/homework: staff-only CRUD, mirroring the groups API conventions. ---
 async function testTeacherRoutes() {
-  const context = { role: "teacher", owned: true, rosterHasSubmission: false, calls: [], z: zod };
+  const context = { role: "teacher", owned: true, rosterHasSubmission: false, historicalSubmission:false, calls: [], z: zod };
   globalThis.__satHomeworkTest = context;
   const mock = `
     const c = globalThis.__satHomeworkTest;
@@ -97,6 +99,7 @@ async function testTeacherRoutes() {
           c.calls.push(['rpc', name, args]);
           if (name === 'list_teacher_assignments') return { data: [], error: null };
           if (name === 'set_assignment_questions') return { data: true, error: null };
+          if (name === 'duplicate_assignment') return {data:'${assignmentId}',error:null};
           if (name === 'get_assignment_roster') return { data: c.owned ? (c.rosterHasSubmission ? [{ status: 'submitted' }] : [{ status: null }]) : [], error: c.owned ? null : { code: '42501' } };
           return { data: [], error: null };
         },
@@ -111,7 +114,7 @@ async function testTeacherRoutes() {
             order() { return this; },
             async single() { return { data: { id: '${assignmentId}' }, error: null }; },
             async maybeSingle() { return { data: c.owned ? { id: '${assignmentId}' } : null, error: null }; },
-            then(resolve) { resolve({ data: c.owned ? { id: '${assignmentId}', title: 'HW', kind: 'question_set' } : null, error: null }); }
+            then(resolve) { resolve({ data: c.owned ? { id: '${assignmentId}', title: 'HW', kind: 'question_set' } : null, error: null, count: table==='assignment_submissions' && (c.rosterHasSubmission||c.historicalSubmission)?1:0 }); }
           };
         }
       };
@@ -144,6 +147,13 @@ async function testTeacherRoutes() {
   context.role = "teacher";
   assert.equal((await list.POST(request({ ...validCreateBody, kind: "past_paper" }))).status, 400, "past_paper requires paperId");
   assert.equal((await list.POST(request(validCreateBody))).status, 201);
+  assert.equal((await list.POST(request({...validCreateBody,kind:'past_paper',paperId:questionId}))).status,400,'past-paper creation is temporarily disabled even with a valid paperId');
+  const duplicated=await detail.PATCH(request({action:'duplicate'}),params);
+  assert.equal(duplicated.status,201);assert.deepEqual(context.calls.at(-1),['rpc','duplicate_assignment',{p_assignment:assignmentId}]);
+  context.historicalSubmission=true;
+  assert.equal((await (await detail.GET(request(),params)).json()).hasSubmissions,true,'former group members must still lock the editor');
+  assert.equal((await detail.DELETE(request(),params)).status,409);
+  context.historicalSubmission=false;
 
   assert.equal((await detail.PATCH(request({ action: "set_questions", questionIds: [questionId] }), params)).status, 200);
   assert.deepEqual(context.calls.at(-1), ["rpc", "set_assignment_questions", { p_assignment_id: assignmentId, p_question_ids: [questionId] }]);

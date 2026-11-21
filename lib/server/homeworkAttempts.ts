@@ -15,7 +15,7 @@ export type HomeworkAttemptSnapshot = {
   title: string;
   instructions: string;
   timeLimitMinutes: number | null;
-  dueAt: string;
+  dueAt: string | null;
   showAnswers: ShowAnswersRule;
   status: SubmissionStatus;
   startedAt: string;
@@ -34,6 +34,8 @@ export type HomeworkAttemptSnapshot = {
 
 export async function loadHomeworkAttempt(userId: string, submissionId: string): Promise<HomeworkAttemptSnapshot> {
   const client = getSupabaseAdminClient();
+  const expired = await client.rpc("expire_assignment_attempt", {p_user:userId,p_submission:submissionId});
+  if (expired.error) throw new Error("Attempt unavailable");
   const { data: submission, error } = await client
     .from("assignment_submissions")
     .select("*")
@@ -96,7 +98,9 @@ export async function loadHomeworkAttempt(userId: string, submissionId: string):
   );
 
   const submitted = submission.status === "submitted";
-  const reveal = canRevealAnswers(assignment.show_answers, assignment.due_at, submitted);
+  const release = await client.rpc("assignment_answers_released", {p_assignment:assignment.id,p_student:userId});
+  if (release.error) throw new Error("Could not check answer visibility");
+  const reveal = canRevealAnswers(assignment.show_answers, assignment.due_at, submitted) && release.data === true;
   const review = reveal
     ? await getReviewQuestions(Object.fromEntries(ids.map((id) => [id, answers[id] ?? null])))
     : null;
@@ -125,7 +129,7 @@ export async function loadHomeworkAttempt(userId: string, submissionId: string):
     submittedAt: submission.submitted_at,
     correctCount: submission.correct_count,
     totalCount: submission.total_count,
-    late: Boolean(submission.submitted_at && new Date(submission.submitted_at) > new Date(assignment.due_at)),
+    late: Boolean(submission.submitted_at && assignment.due_at && new Date(submission.submitted_at) > new Date(assignment.due_at)),
     questions,
     answers,
     review
@@ -151,6 +155,9 @@ export async function saveHomeworkAnswer({
     p_answer: answer, p_correct: feedback?.isCorrect ?? null, p_seconds: timeSpentSeconds
   });
   if (error) throw new Error("Unable to save answer");
+  const state = await getSupabaseAdminClient().from("assignment_submissions").select("status").eq("id",submissionId).eq("student_id",userId).single();
+  if (state.error) throw new Error("Unable to confirm saved answer");
+  if (state.data.status === "submitted") throw new Error("HOMEWORK_EXPIRED");
 }
 
 export async function submitHomeworkAttempt({ submissionId, userId }: { submissionId: string; userId: string }) {

@@ -14,9 +14,12 @@ export function UpcomingHomeworkCard() {
     const controller = new AbortController();
     async function load() {
       try {
+        const headers = await getSupabaseAuthHeaders();
+        // Guests have no homework; skip the request instead of logging a 403.
+        if (!headers.Authorization) return;
         const response = await fetch("/api/homework", {
           cache: "no-store",
-          headers: await getSupabaseAuthHeaders(),
+          headers,
           signal: controller.signal
         });
         const payload = await response.json();
@@ -31,7 +34,7 @@ export function UpcomingHomeworkCard() {
 
   const upcoming = (assignments ?? [])
     .filter((item) => item.status !== "submitted")
-    .sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime())
+    .sort((a, b) => (a.due_at ? Date.parse(a.due_at) : Infinity) - (b.due_at ? Date.parse(b.due_at) : Infinity))
     .slice(0, 3);
 
   return (
@@ -39,9 +42,9 @@ export function UpcomingHomeworkCard() {
       <span className="hub-icon">
         <ClipboardList aria-hidden="true" size={18} />
       </span>
-      <h2 className="mt-3 font-semibold text-slate-950">Сегодня</h2>
+      <h2 className="mt-3 font-semibold text-slate-950">Upcoming homework</h2>
       {upcoming.length === 0 ? (
-        <p className="mt-1 flex-1 text-sm leading-6 text-slate-600">Нет ближайших домашних заданий.</p>
+        <p className="mt-1 flex-1 text-sm leading-6 text-slate-600">No upcoming homework.</p>
       ) : (
         <ul className="mt-2 w-full flex-1 space-y-2">
           {upcoming.map((item) => (
@@ -55,7 +58,7 @@ export function UpcomingHomeworkCard() {
         </ul>
       )}
       <Link className="mt-3 text-sm font-semibold hub-text-link hover:underline" href="/homework">
-        Все домашние задания
+        All homework
       </Link>
     </section>
   );

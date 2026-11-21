@@ -1,4 +1,7 @@
 import { PaperRunner } from "@/components/past-papers/PaperRunner";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Past Paper" };
 
 export default async function PaperStartRoute({ params, searchParams }: {
   params: Promise<{ slug: string }>;

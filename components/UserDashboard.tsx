@@ -111,7 +111,7 @@ export function UserDashboard() {
             Welcome back, {profile?.full_name || profile?.email || "Student"}
           </h2>
           <p className="mt-1 text-sm leading-6 text-slate-600">
-            Your latest Supabase progress, practice, and test activity.
+            Your latest progress, practice, and test activity.
           </p>
         </div>
         <div className="rounded-2xl bg-blue-50 px-5 py-4">

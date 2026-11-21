@@ -101,7 +101,7 @@ export function AuthPage({ initialMode = "signin" }: { initialMode?: AuthMode })
     setMessage(null);
     setError(null);
     if (!isSupabaseConfigured()) {
-      setError("Supabase is not configured.");
+      setError("Sign-in is not available right now. Please try again later.");
       return;
     }
     const name = fullName.trim();

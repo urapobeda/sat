@@ -21,8 +21,14 @@ export async function POST(request: NextRequest) {
     }
 
     const sessionId = parsed.data.sessionId;
+    const student = await getAuthenticatedUserId(request);
+    if (student) {
+      const pending = await getSupabaseAdminClient().rpc("question_in_pending_homework", {p_user:student,p_question:parsed.data.questionId});
+      if (pending.error) return NextResponse.json({error:"Unable to check homework restrictions."},{status:503});
+      if (pending.data) return NextResponse.json({blocked:true,message:"This question is part of your homework. The answer will be available after you submit it."});
+    }
     const [owner, feedback] = await Promise.all([
-      sessionId ? getPracticeSessionOwner(request, sessionId).catch((error: unknown) => {
+      sessionId && student ? getPracticeSessionOwner(student, sessionId).catch((error: unknown) => {
         logPersistenceError(error);
         return null;
       }) : null,
@@ -65,9 +71,7 @@ function logPersistenceError(error: unknown) {
   console.error("Practice answer persistence failed:", error instanceof Error ? error.message : "Request failed");
 }
 
-async function getPracticeSessionOwner(request: NextRequest, sessionId: string) {
-  const userId = await getAuthenticatedUserId(request);
-  if (!userId) return null;
+async function getPracticeSessionOwner(userId: string, sessionId: string) {
   const supabase = getSupabaseAdminClient();
   const { data: session, error } = await supabase
     .from("practice_sessions")

@@ -98,6 +98,7 @@ export function AnswerOption({
       {onToggleEliminate ? (
         <button
           aria-label={isEliminated ? `Restore choice ${choice.label}` : `Cross out choice ${choice.label}`}
+          data-choice-eliminate
           aria-pressed={isEliminated}
           className={[
             "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors",

@@ -10,6 +10,8 @@ export async function GET(request: NextRequest) {
   const db = getSupabaseUserClient(request.headers.get("authorization")!.slice(7));
 
   try {
+    const refreshed = await db.rpc("refresh_my_assignment_deadlines");
+    if (refreshed.error) throw refreshed.error;
     const { data, error } = await db.rpc("list_student_assignments");
     if (error) throw error;
     const assignments = (data ?? []) as StudentAssignment[];
@@ -20,7 +22,7 @@ export async function GET(request: NextRequest) {
     await enrichPastPaperAssignments(db, actor.id, assignments);
     return NextResponse.json({ assignments }, { headers: { "Cache-Control": "no-store" } });
   } catch {
-    return NextResponse.json({ error: "Не удалось загрузить домашние задания." }, { status: 503 });
+    return NextResponse.json({ error: "Could not load homework." }, { status: 503 });
   }
 }
 

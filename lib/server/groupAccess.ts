@@ -11,5 +11,5 @@ export async function getGroupStaff(request: NextRequest) {
 export function groupError(error: unknown) {
   const code = typeof error === "object" && error !== null && "code" in error ? error.code : null;
   const status = code === "42501" ? 403 : code === "P0002" ? 404 : ["22023", "23514", "23503"].includes(String(code)) || error instanceof SyntaxError ? 400 : 503;
-  return NextResponse.json({ error: status === 403 ? "Нет доступа к этой группе." : status === 400 ? "Проверьте название группы и выбранного учителя." : "Не удалось загрузить или изменить группу. Проверьте миграцию групп и повторите." }, { status });
+  return NextResponse.json({ error: status === 403 ? "You do not have access to this group." : status === 400 ? "Check the group name and the selected teacher." : "Could not load or update the group. Please try again." }, { status });
 }

@@ -45,6 +45,9 @@ async function run(overrides = {}, body = { action: "hint", contextType: "practi
   return { ...c, response, payload: await response.json() };
 }
 try {
+  delete process.env.NEXT_PUBLIC_AI_TUTOR_ENABLED;
+  const disabled = await run();assert.equal(disabled.response.status,404);assert.equal(disabled.aiCalls,0);
+  process.env.NEXT_PUBLIC_AI_TUTOR_ENABLED = "true";
   const guest = await run({ user: null });
   assert.equal(guest.response.status, 401);
   assert.equal(guest.aiCalls, 0);

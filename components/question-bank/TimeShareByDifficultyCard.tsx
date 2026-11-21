@@ -57,14 +57,14 @@ export function TimeShareByDifficultyCard({
                 key={row.label}
               >
                 <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <Clock3 className="text-slate-400" size={14} />
+                  <Clock3 className="text-slate-500" size={14} />
                   {row.label}
                 </span>
                 <span className="flex items-baseline gap-2">
                   <span className="text-sm font-bold text-slate-900">
                     {row.avgSeconds === null ? "—" : formatSeconds(row.avgSeconds)}
                   </span>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-500">
                     {row.attempts} correct
                   </span>
                 </span>

@@ -39,13 +39,15 @@ export function StudentAccountProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
     let active = true;
 
-    void getProfile(userId).then((data) => {
+    const refresh = () => { void getProfile(userId).then((data) => {
       if (active) setProfile(data);
     }).catch(() => {
       // The session still provides the signup name and email.
-    });
+    }); };
+    refresh();
+    window.addEventListener("sat-profile-updated",refresh);
 
-    return () => { active = false; };
+    return () => { active = false; window.removeEventListener("sat-profile-updated",refresh); };
   }, [userId]);
 
   const metadataName = user?.user_metadata?.full_name;
@@ -70,7 +72,7 @@ export function StudentGreeting({ greeting }: { greeting: string }) {
   return <>{greeting}{name ? `, ${name}` : ""}!</>;
 }
 
-const roleLabels: Record<UserRole, string> = { student: "Ученик", teacher: "Учитель", admin: "Администратор" };
+const roleLabels: Record<UserRole, string> = { student: "Student", teacher: "Teacher", admin: "Admin" };
 
 export function StudentAccount({ compact = false }: { compact?: boolean }) {
   const { isLoading, name, role } = useContext(StudentAccountContext);
@@ -93,35 +95,36 @@ export function StudentAccount({ compact = false }: { compact?: boolean }) {
       popover.current?.hidePopover();
       if (staff) window.location.assign("/");
     } catch {
-      setError("Не удалось выйти. Попробуйте ещё раз.");
+      setError("Could not sign out. Please try again.");
     } finally { setIsSigningOut(false); }
   }
 
   return (
     <div className="min-w-0">
       <button
-        aria-label={name ? `Меню аккаунта: ${name}` : "Меню аккаунта"}
+        aria-label={name ? `Account menu: ${name}` : "Account menu"}
         aria-expanded={open} aria-controls={menuId} aria-haspopup="dialog"
         className={`flex w-full min-w-0 cursor-pointer items-center gap-2.5 rounded-xl p-1.5 text-left text-white transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-blue-400 ${compact ? "justify-center" : ""}`}
-        disabled={isLoading} popoverTarget={menuId} type="button" title={compact ? name ?? "Аккаунт" : undefined}
+        disabled={isLoading} popoverTarget={menuId} type="button" title={compact ? name ?? "Account" : undefined}
         onClick={(event) => {
           const rect = event.currentTarget.getBoundingClientRect();
           setPosition({ left: Math.max(8, Math.min(rect.left, window.innerWidth - 264)), bottom: Math.max(8, Math.min(window.innerHeight - rect.top + 8, window.innerHeight - 280)) });
         }}
       >
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-blue-600 text-white"><BearIcon size={20} /></span>
-        {!compact ? <><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{isLoading ? "Загрузка…" : name ?? "Войти"}</span><span className="block text-xs text-slate-400">{name ? roleLabels[role] : "Сохраняйте прогресс"}</span></span><ChevronUp aria-hidden="true" className={`shrink-0 text-slate-400 transition ${open ? "rotate-180" : ""}`} size={15} /></> : null}
+        {!compact ? <><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{isLoading ? "Loading…" : name ?? "Sign in"}</span><span className="block text-xs text-slate-500">{name ? roleLabels[role] : "Save your progress"}</span></span><ChevronUp aria-hidden="true" className={`shrink-0 text-slate-500 transition ${open ? "rotate-180" : ""}`} size={15} /></> : null}
       </button>
       <div
-        ref={popover} popover="auto" id={menuId} role="dialog" aria-label="Действия аккаунта"
+        ref={popover} popover="auto" id={menuId} role="dialog" aria-label="Account actions"
         onToggle={(event) => setOpen(event.currentTarget.matches(":popover-open"))}
         className="fixed m-0 w-64 max-w-[calc(100vw-1rem)] rounded-xl border border-white/15 bg-[#15233b] p-1.5 text-slate-100 shadow-xl shadow-black/25"
         style={{ inset: "auto", left: position.left, bottom: position.bottom }}
       >
-        {name ? <RoleSwitch role={role} staff={staff} /> : <Link href="/auth" className="block rounded-lg px-3 py-2.5 text-sm hover:bg-white/10">Войти</Link>}
+        {name ? <RoleSwitch role={role} staff={staff} /> : <Link href="/auth" className="block rounded-lg px-3 py-2.5 text-sm hover:bg-white/10">Sign in</Link>}
+        {name ? <Link href="/profile" className="block rounded-lg px-3 py-2.5 text-sm hover:bg-white/10">My profile</Link> : null}
         {name && role === "student" ? <GroupJoinMenuItem /> : null}
         <ThemeToggle menuItem />
-        {name ? <button className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm text-slate-200 hover:bg-white/10 disabled:opacity-50" disabled={isSigningOut} onClick={() => void signOut()} type="button"><LogOut aria-hidden="true" size={17} />{isSigningOut ? "Выход…" : "Выйти"}</button> : null}
+        {name ? <button className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm text-slate-200 hover:bg-white/10 disabled:opacity-50" disabled={isSigningOut} onClick={() => void signOut()} type="button"><LogOut aria-hidden="true" size={17} />{isSigningOut ? "Signing out…" : "Sign out"}</button> : null}
         {error ? <p className="px-3 py-2 text-xs text-rose-300" role="alert">{error}</p> : null}
       </div>
     </div>

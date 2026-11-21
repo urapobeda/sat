@@ -214,7 +214,9 @@ export function StudyPlanPage() {
     return (
       <Layout active="study-plan">
         <EmptyState
+          action={{ href: "/auth", label: "Sign in" }}
           description="Sign in to create your personalized SAT Study Plan."
+          headingLevel="h1"
           icon={<LockKeyhole size={26} />}
           title="Personalized plan locked"
         />
@@ -433,7 +435,7 @@ function TaskRow({ completed, label }: { completed: boolean; label: string }) {
       <span
         className={[
           "flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold",
-          completed ? "bg-emerald-500 text-white" : "bg-white text-slate-400 ring-1 ring-slate-200"
+          completed ? "bg-emerald-500 text-white" : "bg-white text-slate-500 ring-1 ring-slate-200"
         ].join(" ")}
       >
         {completed ? <CheckCircle2 size={16} /> : null}

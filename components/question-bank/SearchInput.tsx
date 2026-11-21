@@ -9,7 +9,7 @@ export function SearchInput({ onChange, value }: SearchInputProps) {
   return (
     <label className="relative block">
       <Search
-        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
         size={19}
       />
       <input

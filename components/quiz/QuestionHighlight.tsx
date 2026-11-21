@@ -53,7 +53,7 @@ export function QuestionHighlightControls({
         <span className={compact ? "sr-only sm:not-sr-only" : undefined}>Highlight</span>
       </button>
       {highlightEnabled ? (
-        <div aria-label="Highlight tools" className={`flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 ${compact ? "absolute right-0 top-full z-20 mt-1 shadow-md" : ""}`} role="group">
+        <div data-highlight-tools aria-label="Highlight tools" className={`flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 ${compact ? "absolute right-0 top-full z-20 mt-1 shadow-md" : ""}`} role="group">
           {HIGHLIGHT_COLORS.map((color) => (
             <button
               aria-label={`Highlight ${color.label.toLowerCase()}`}

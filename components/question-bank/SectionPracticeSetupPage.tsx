@@ -188,7 +188,7 @@ export function SectionPracticeSetupPage({ section, initialCatalog = null }: { s
       <section className="mx-auto w-full max-w-5xl space-y-5">
         <div>
           <Link
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-blue-600"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 transition hover:text-blue-600"
             href="/question-bank"
           >
             <ArrowLeft size={15} />

@@ -22,7 +22,7 @@ export function AITutorInput({ disabled, onSend }: AITutorInputProps) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-2">
       <textarea
-        className="min-h-20 w-full resize-none rounded-2xl bg-white px-4 py-3 text-sm font-bold leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 focus:ring-blue-100"
+        className="min-h-20 w-full resize-none rounded-2xl bg-white px-4 py-3 text-sm font-bold leading-6 text-slate-900 outline-none transition placeholder:text-slate-500 focus:ring-4 focus:ring-blue-100"
         disabled={disabled}
         maxLength={1200}
         onChange={(event) => setMessage(event.target.value)}
