@@ -41,7 +41,11 @@ try {
     await db.query("insert into profiles(id,full_name,role) values($1,$2,$3)", [id, `Fixture ${index}`, index < 2 ? "teacher" : index === 2 ? "admin" : "student"]);
   }
   for (const id of questions) await db.query("insert into questions(id) values($1)", [id]);
-  for (const name of ["add_groups", "add_assignments", "add_assignment_feedback", "harden_homework", "add_lessons", "add_lessons"]) await db.exec(await migration(name));
+  for (const name of ["add_groups", "add_assignments", "add_assignment_feedback"]) await db.exec(await migration(name));
+  await assert.rejects(db.exec(await migration("add_lessons")), /Apply the existing assignment feedback and harden_homework/);
+  await db.exec("rollback");
+  assert.equal(await scalar("select to_regclass('public.lessons')"), null, "missing prerequisites fail before changing the schema");
+  for (const name of ["harden_homework", "add_lessons", "add_lessons"]) await db.exec(await migration(name));
   await asUser(teacherA); const groupA = await scalar("select create_group('Group A')");
   await asUser(teacherB); const groupB = await scalar("select create_group('Group B')");
   await asService();
@@ -52,6 +56,8 @@ try {
   await asUser(teacherA);
   const lessonA = await save(groupA, "Later lesson", 2);
   const firstA = await save(groupA, "First lesson", 1);
+  await db.query("update lessons set starts_at='2026-12-10T10:00:00Z' where id=$1", [lessonA]);
+  assert.deepEqual((await db.query("select id from list_my_lessons(null,true)")).rows.map(row => row.id), [lessonA], "schedule excludes undated lessons");
   assert.deepEqual((await db.query("select id from list_my_lessons() order by position")).rows.map(row => row.id), [firstA, lessonA]);
   const assignment = (await db.query("select * from assign_lesson_part($1,'homework',null,'Extra instructions',$2)", [lessonA, "00000000-0000-4000-8000-000000000010"])).rows[0];
   assert.equal(assignment.student_count, 1);
@@ -89,6 +95,9 @@ try {
   assert.equal((await db.query("select * from list_my_lesson_assignments()")).rows[0].status, "submitted");
   await asUser(teacherA);
   await db.query("update assignments set max_attempts=2 where id=$1", [assignment.id]);
+  const copy = await scalar("select duplicate_assignment($1)", [assignment.id]);
+  const copied = (await db.query("select lesson_id,lesson_part,published,lesson_request_id,due_at from assignments where id=$1", [copy])).rows[0];
+  assert.deepEqual(copied, { lesson_id: lessonA, lesson_part: "homework", published: false, lesson_request_id: null, due_at: null });
   await assert.rejects(db.query("update assignments set lesson_id=$1 where id=$2", [firstA, assignment.id]), /Students have started/);
   await assert.rejects(db.query("update assignments set lesson_id=$1 where id=$2", [lessonB, assignment.id]), /lesson must belong/);
   await asService();
@@ -97,6 +106,7 @@ try {
   assert.equal(await scalar("select has_table_privilege('service_role','lessons','select')"), true);
   await asUser(admin); assert.equal((await db.query("select * from list_my_lessons()")).rows.length, 3);
   await db.exec("reset role"); await db.exec(await migration("add_lessons"));
+  await db.exec(await readFile(new URL("../supabase/verify-lessons.sql", import.meta.url), "utf8"));
   assert.equal(await scalar("select count(*)::int from assignment_answers"), 1, "repeat migration keeps existing student answers");
   await db.exec("set role anon"); await assert.rejects(db.query("select * from lessons"), /permission denied/);
   console.log("Lesson SQL tests passed (repeat migration, RLS isolation, staff-only writes, atomic assignment, retries, snapshots, no-deadline retakes and preserved results)");

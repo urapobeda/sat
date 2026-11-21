@@ -8,11 +8,11 @@ import type { QuestionDifficulty, QuestionSummary, SatSection } from "@/types/sa
 const DIFFICULTIES: QuestionDifficulty[] = ["easy", "medium", "hard"];
 const DIFFICULTY_LABEL: Record<QuestionDifficulty, string> = { easy: "Easy", hard: "Hard", medium: "Medium" };
 
-export function QuestionPicker({ onChange, selectedIds }: { onChange: (ids: string[]) => void; selectedIds: string[] }) {
+export function QuestionPicker({ onChange, selectedIds, initialSection = "math" }: { onChange: (ids: string[]) => void; selectedIds: string[]; initialSection?: SatSection }) {
   const [catalog, setCatalog] = useState<QuestionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [section, setSection] = useState<SatSection>("math");
+  const [section, setSection] = useState<SatSection>(initialSection);
   const [category, setCategory] = useState("all");
   const [subtopics, setSubtopics] = useState<Set<string>>(new Set());
   const [difficulties, setDifficulties] = useState<Set<QuestionDifficulty>>(new Set(DIFFICULTIES));

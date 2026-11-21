@@ -1,10 +1,19 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StudentShell } from "@/components/dashboard/StudentShell";
 import { useLessons } from "@/components/lessons/useLessons";
 import { formatLessonDate, lessonHomeworkStatus, LESSON_SECTIONS, LESSON_PARTS, quickLessonDueDate } from "@/lib/lessons";
 import { formatAlmaty } from "@/lib/timezone";
+
+function useLessonTime() {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return now;
+}
 
 function LoadState({ state }: { state: ReturnType<typeof useLessons> }) {
   if (state.loading) return <p role="status">Loading lessons…</p>;
@@ -23,8 +32,13 @@ export function GroupLessons({ groupId }: { groupId: string }) {
     </li>)}</ol> : <p className="text-sm text-slate-600">No lessons yet. Create the first lesson for this group.</p> : null}
   </section>;
 }
-function LessonListing({ schedule = false, staff = false }: { schedule?: boolean; staff?: boolean }) {
-  const state = useLessons(undefined, schedule);
+export function LessonListing({ state, schedule = false, staff = false }: { state: ReturnType<typeof useLessons>; schedule?: boolean; staff?: boolean }) {
+  const now = useLessonTime();
+  useEffect(() => {
+    if (state.loading) return;
+    const id = window.location.hash.slice(1);
+    if (id.startsWith("lesson-")) document.getElementById(id)?.scrollIntoView({ block: "start" });
+  }, [state.loading, state.lessons]);
   const [groupId, setGroupId] = useState("");
   const groups = [...new Map(state.lessons.map(lesson => [lesson.group_id, lesson.group_name])).entries()];
   const visible = state.lessons.filter(lesson => !groupId || lesson.group_id === groupId);
@@ -32,23 +46,31 @@ function LessonListing({ schedule = false, staff = false }: { schedule?: boolean
     <header><h1 className="text-3xl font-bold">{schedule ? "Schedule" : "Course plan"}</h1><p className="mt-2 text-slate-600">{schedule ? "Your scheduled group lessons. All times are shown in Asia/Almaty." : "Your group lessons, classwork, and homework in course order."}</p></header>
     <LoadState state={state} />
     {!state.loading && !state.error && !state.signedOut ? <>
+      {state.homeworkError ? <p role="alert" className="text-sm text-slate-600">Lessons are available, but homework status could not be loaded. <button className="cursor-pointer underline" type="button" onClick={state.reload}>Retry</button></p> : null}
       {groups.length > 1 ? <label className="flex max-w-sm flex-col gap-1 text-sm">Group<select className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3" value={groupId} onChange={event => setGroupId(event.target.value)}><option value="">All groups</option>{groups.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label> : null}
       {!visible.length ? <div className="hub-card p-6 text-slate-600">{schedule ? "No lessons have been scheduled yet." : "No course lessons are available yet. Your teacher will add them here."}</div> : <div className="space-y-4">{visible.map(lesson => <article className="hub-card min-w-0 space-y-3 p-5" key={lesson.id} id={`lesson-${lesson.id}`}>
         <div><p className="text-sm text-slate-600 [overflow-wrap:anywhere]">{lesson.group_name} · {lesson.teacher_name}</p><h2 className="mt-1 text-xl font-semibold [overflow-wrap:anywhere]">{staff ? <Link className="hub-text-link" href={`/teacher/lessons/${lesson.id}`}>{lesson.position}. {lesson.title}</Link> : `${lesson.position}. ${lesson.title}`}</h2></div>
         <p className="text-sm text-slate-600">{LESSON_SECTIONS[lesson.section]}{lesson.topic ? ` · ${lesson.topic}` : ""} · {formatLessonDate(lesson.starts_at)}</p>
         {lesson.notes ? <p className="whitespace-pre-wrap text-sm text-slate-600 [overflow-wrap:anywhere]">{lesson.notes}</p> : null}
-        {!staff ? <div className="space-y-2 border-t border-slate-200 pt-3">{state.assignments.filter(item => item.lesson_id === lesson.id).length ? state.assignments.filter(item => item.lesson_id === lesson.id).map(item => <div className="flex min-w-0 flex-col justify-between gap-2 rounded-xl border border-slate-200 p-3 sm:flex-row sm:items-center" key={item.id}>
-          <div className="min-w-0 text-sm"><p className="font-medium [overflow-wrap:anywhere]">{item.title}</p><p className="mt-1 text-slate-600">{LESSON_PARTS[item.lesson_part]} · {lessonHomeworkStatus(item)} · {formatAlmaty(item.due_at)}</p></div>
+        {!staff && !state.homeworkError ? <div className="space-y-2 border-t border-slate-200 pt-3">{state.assignments.filter(item => item.lesson_id === lesson.id).length ? state.assignments.filter(item => item.lesson_id === lesson.id).map(item => <div className="flex min-w-0 flex-col justify-between gap-2 rounded-xl border border-slate-200 p-3 sm:flex-row sm:items-center" key={item.id}>
+          <div className="min-w-0 text-sm"><p className="font-medium [overflow-wrap:anywhere]">{item.title}</p><p className="mt-1 text-slate-600">{LESSON_PARTS[item.lesson_part]} · {lessonHomeworkStatus(item, now)} · {formatAlmaty(item.due_at)}</p></div>
           <Link className="hub-primary min-h-11 shrink-0 justify-center" href={`/homework/${item.id}`}>{item.status === "submitted" ? "View result" : item.status === "in_progress" ? "Continue" : "Start"}</Link>
         </div>) : <p className="text-sm text-slate-500">No homework assigned yet.</p>}</div> : null}
       </article>)}</div>}
     </> : null}
   </section>;
 }
-export function CoursePlanPage() { return <StudentShell active="course"><LessonListing /></StudentShell>; }
+export function CoursePlanPage() {
+  const state = useLessons();
+  return <StudentShell active="course"><LessonListing state={state} /></StudentShell>;
+}
 export function LessonSchedule({ staff = false }: { staff?: boolean }) {
   const state = useLessons(undefined, true);
-  const today = quickLessonDueDate(0);
+  return <LessonCalendar state={state} staff={staff} />;
+}
+export function LessonCalendar({ state, staff = false }: { state: ReturnType<typeof useLessons>; staff?: boolean }) {
+  const now = useLessonTime();
+  const today = quickLessonDueDate(0, now);
   const [month, setMonth] = useState(() => today.slice(0, 7));
   const [group, setGroup] = useState("");
   const first = new Date(`${month}-01T00:00:00Z`);
@@ -68,8 +90,8 @@ export function LessonSchedule({ staff = false }: { staff?: boolean }) {
       {!rows.length ? <div className="hub-card p-5 text-sm text-slate-600">No lessons have been scheduled yet.</div> : null}
       {groups.length > 1 ? <label className="flex max-w-sm flex-col gap-1 text-sm">Group<select className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3" value={group} onChange={event => setGroup(event.target.value)}><option value="">All groups</option>{groups.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label> : null}
       <div className="grid gap-3 sm:grid-cols-3">{[
-        ["Upcoming", rows.filter(lesson => Date.parse(lesson.starts_at!) >= Date.now()).length],
-        ["Past", rows.filter(lesson => Date.parse(lesson.starts_at!) < Date.now()).length],
+        ["Upcoming", rows.filter(lesson => Date.parse(lesson.starts_at!) >= now).length],
+        ["Past", rows.filter(lesson => Date.parse(lesson.starts_at!) < now).length],
         ["Groups", new Set(rows.map(lesson => lesson.group_id)).size]
       ].map(([label, value]) => <div className="hub-card p-4" key={label}><p className="text-sm text-slate-500">{label}</p><p className="mt-1 text-xl font-semibold">{value}</p></div>)}</div>
       <div className="hub-card min-w-0 p-3 sm:p-6">

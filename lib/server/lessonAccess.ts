@@ -22,7 +22,13 @@ export function lessonSaveArgs(body: z.infer<typeof lessonSaveSchema>, id: strin
 export function lessonError(error: unknown) {
   const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
   const status = code === "42501" ? 403 : ["22023", "23514", "23503", "23505"].includes(code) ? 400 : 503;
-  return NextResponse.json({ error: status === 403 ? "You do not have access to this lesson." : status === 400 ? "Check the lesson settings. Choose an active group with students and a part containing 1 to 100 questions when assigning homework." : "Could not load or save lessons. Please try again." }, { status });
+  const message = typeof error === "object" && error !== null && "message" in error ? String(error.message) : "";
+  const validation: Record<string, string> = {
+    "The combined instructions exceed 5000 characters": "The text blocks and comment together must be no longer than 5,000 characters.",
+    "Choose a part with 1 to 100 questions": "Add between 1 and 100 questions to the selected part before assigning it.",
+    "Choose an active group with students": "Choose an active group with at least one student."
+  };
+  return NextResponse.json({ error: status === 403 ? "You do not have access to this lesson." : status === 400 ? (Object.hasOwn(validation, message) ? validation[message] : "Check the lesson settings and selected questions.") : "Could not load or save lessons. Please try again." }, { status });
 }
 export async function allLessonRows<T>(read: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
   const rows: T[] = [];

@@ -2,6 +2,14 @@
 -- Additive and repeatable. No student results are deleted or rewritten.
 begin;
 
+do $$ begin
+  if to_regclass('public.assignment_retake_grants') is null
+    or to_regprocedure('public.expire_assignment_attempt(uuid,uuid)') is null
+    or to_regprocedure('public.assignment_answers_released(uuid,uuid)') is null then
+    raise exception 'Apply the existing assignment feedback and harden_homework migrations before add_lessons';
+  end if;
+end $$;
+
 create table if not exists public.lessons (
   id uuid primary key default gen_random_uuid(),
   group_id uuid not null references public.groups(id),

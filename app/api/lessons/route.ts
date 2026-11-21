@@ -12,14 +12,17 @@ export async function GET(request: NextRequest) {
   const scheduled = request.nextUrl.searchParams.get("scheduled") === "1";
   const db = getSupabaseUserClient(request.headers.get("authorization")!.slice(7));
   try {
+    let homeworkError = false;
     if (actor.role === "student") {
       const refresh = await db.rpc("refresh_my_assignment_deadlines");
-      if (refresh.error) throw refresh.error;
+      homeworkError = Boolean(refresh.error);
     }
     const [lessons, assignments] = await Promise.all([
       allLessonRows((from, to) => db.rpc("list_my_lessons", { p_group_id: groupId ?? undefined, p_scheduled: scheduled }).range(from, to)),
-      actor.role === "student" ? allLessonRows((from, to) => db.rpc("list_my_lesson_assignments").range(from, to)) : Promise.resolve([])
+      actor.role === "student" && !homeworkError
+        ? allLessonRows((from, to) => db.rpc("list_my_lesson_assignments").range(from, to)).catch(() => { homeworkError = true; return []; })
+        : Promise.resolve([])
     ]);
-    return NextResponse.json({ lessons, assignments }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ lessons, assignments, homeworkError }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return lessonError(error); }
 }

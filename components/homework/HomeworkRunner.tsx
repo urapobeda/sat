@@ -390,7 +390,9 @@ function ResultView({ answers, snapshot, onRetake }: { answers: Record<string, s
         <div className="hub-card p-5 text-sm text-slate-600">
           {snapshot.showAnswers === "never"
             ? "Your teacher has hidden the answer review for this assignment."
-            : `The answer review opens after your attempts run out or the due date passes (${formatAlmaty(snapshot.dueAt)}).`}
+            : snapshot.showAnswers === "after_due"
+              ? snapshot.dueAt ? `The answer review opens after the due date (${formatAlmaty(snapshot.dueAt)}).` : "The answer review is unavailable until your teacher sets a due date and it passes."
+              : snapshot.dueAt ? `The answer review opens after your attempts run out or the due date passes (${formatAlmaty(snapshot.dueAt)}).` : "The answer review opens after you use all available attempts."}
         </div>
       )}
     </section>

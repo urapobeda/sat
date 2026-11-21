@@ -14,7 +14,7 @@ export type LessonHomework = {
   status: "in_progress" | "submitted" | null; submitted_at: string | null;
   correct_count: number | null; total_count: number | null;
 };
-export type CourseData = { lessons: LessonRow[]; assignments: LessonHomework[] };
+export type CourseData = { lessons: LessonRow[]; assignments: LessonHomework[]; homeworkError?: boolean };
 export const LESSON_SECTIONS: Record<LessonSection, string> = { math: "Math", reading_writing: "Reading & Writing", general: "General" };
 export const LESSON_PARTS: Record<LessonPart, string> = { classwork: "Classwork", homework: "Homework" };
 

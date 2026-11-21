@@ -98,7 +98,7 @@ export function LessonEditor({ lessonId, initialGroupId }: { lessonId?: string; 
         <section className="hub-card min-w-0 space-y-4 p-5">
           <div className="flex flex-wrap gap-2" role="group" aria-label="Lesson part">{(["classwork", "homework"] as const).map(id => <button className="min-h-11 cursor-pointer rounded-xl border border-slate-200 px-4 text-sm aria-pressed:border-blue-600 aria-pressed:text-blue-600" aria-pressed={part === id} key={id} type="button" onClick={() => setPart(id)}>{LESSON_PARTS[id]} · {draft[id].questions.length} questions</button>)}</div>
           <fieldset disabled={busy || assigning} className="min-w-0 space-y-4 disabled:opacity-60">
-            <QuestionPicker key={part} selectedIds={content.questions} onChange={questions => setContent({ ...content, questions })} />
+            <QuestionPicker key={`${part}:${draft.section}`} initialSection={draft.section === "reading_writing" ? "reading-writing" : "math"} selectedIds={content.questions} onChange={questions => setContent({ ...content, questions })} />
             <h2 className="hub-section-title">Text blocks</h2>
             {content.blocks.map((block, index) => <div className="space-y-3 rounded-xl border border-slate-200 p-3" key={index}>
               <label className="flex flex-col gap-1 text-sm">Block title<input className={input} maxLength={200} value={block.title} onChange={event => setContent({ ...content, blocks: content.blocks.map((item, i) => i === index ? { ...item, title: event.target.value } : item) })} /></label>

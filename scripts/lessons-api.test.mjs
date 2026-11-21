@@ -9,7 +9,7 @@ const dataUrl = text => "data:text/javascript;base64," + Buffer.from(text).toStr
 const mock = dataUrl(`const s=globalThis.__lessonTest;
 export const z=s.z;export const NextResponse={json:(v,i)=>Response.json(v,i)};
 const db={rpc(name,args){s.calls.push({name,args});return {
-  range:async(from,to)=>({data:from===0?s.rows:[],error:s.error}),
+  range:async(from,to)=>({data:from===0?s.rows:[],error:s.failOnly===name?{code:'42501'}:s.error}),
   then(resolve,reject){return Promise.resolve({data:s.rows,error:s.error}).then(resolve,reject);}
 };}};
 export const getGroupStaff=async()=>s.role&&s.role!=='student'?{actor:{id:'${id}',role:s.role},db}:null;
@@ -58,6 +58,11 @@ try {
   assert.equal((await list.GET(request({}, `?groupId=${id}&scheduled=1`))).status, 200);
   assert.deepEqual(state.calls.findLast(call => call.name === "list_my_lessons").args, { p_group_id: id, p_scheduled: true });
   assert.ok(state.calls.some(call => call.name === "refresh_my_assignment_deadlines"));
+  state.failOnly = "list_my_lesson_assignments";
+  const partial = await list.GET(request());
+  assert.equal(partial.status, 200);
+  assert.equal((await partial.json()).homeworkError, true);
+  state.failOnly = undefined;
   assert.equal((await list.GET(request({}, "?groupId=invalid"))).status, 400);
   state.role = null; assert.equal((await list.GET(request())).status, 403);
   const helpers = await import(helper);
