@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, type ReactNode, type SyntheticEvent } from "react";
 
 /**
  * Lets a student select text and mark it with a color, like the highlighter in Bluebook.
@@ -84,7 +84,9 @@ export function Highlightable({ children, className, enabled = false, tool = "ye
     };
   }, [storageKey, sync]);
 
-  function handlePointerUp() {
+  function handlePointerUp(event: SyntheticEvent) {
+    // Native inputs/buttons keep their touch and keyboard behavior even inside rich text.
+    if (event.target instanceof Element && event.target.closest("button, input, textarea, select, a, summary, [role=button]")) return;
     if (!enabled || !supportsHighlights()) return;
     // let the browser finish updating the selection
     window.setTimeout(() => {

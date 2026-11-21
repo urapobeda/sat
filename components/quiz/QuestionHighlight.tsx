@@ -33,12 +33,13 @@ export function useQuestionHighlight() {
 
 export function QuestionHighlightControls({
   compact = false,
+  locale = "en",
   highlightEnabled,
   highlightSupported,
   highlightTool,
   setHighlightTool,
   toggleHighlight
-}: ReturnType<typeof useQuestionHighlight> & { compact?: boolean }) {
+}: ReturnType<typeof useQuestionHighlight> & { compact?: boolean; locale?: "en" | "ru" }) {
   return (
     <div className={compact ? "relative" : "contents"}>
       <button
@@ -50,7 +51,7 @@ export function QuestionHighlightControls({
         type="button"
       >
         <Highlighter aria-hidden="true" size={16} />
-        <span className={compact ? "sr-only sm:not-sr-only" : undefined}>Highlight</span>
+        <span className={compact ? "sr-only sm:not-sr-only" : undefined}>{locale === "ru" ? "Выделение" : "Highlight"}</span>
       </button>
       {highlightEnabled ? (
         <div aria-label="Highlight tools" className={`flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 ${compact ? "absolute right-0 top-full z-20 mt-1 shadow-md" : ""}`} role="group">
