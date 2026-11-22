@@ -5,14 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { HomeworkClock } from "@/lib/homeworkClock";
 import type { AssignmentFeedback } from "@/lib/assignmentReport";
-import { AssignmentFeedbackList } from "@/components/homework/AssignmentFeedbackList";
+import { HomeworkReview } from "@/components/homework/HomeworkReview";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { confirmLeavingStudy, StudentShell } from "@/components/dashboard/StudentShell";
 import { EmptyState } from "@/components/EmptyState";
 import { ProgressBar } from "@/components/quiz/ProgressBar";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
 import { VocabularyProvider } from "@/components/vocabulary/VocabularyProvider";
-import { ReviewAnswers } from "@/components/quiz/ReviewAnswers";
 import { Timer } from "@/components/quiz/Timer";
 import { DesmosPanel } from "@/components/quiz/DesmosPanel";
 import { createDesmosStateStore } from "@/lib/desmos";
@@ -384,12 +383,8 @@ function ResultView({ answers, snapshot, onRetake }: { answers: Record<string, s
         <ProgressBar className="mx-auto mt-5 max-w-md" value={percent} />
         {snapshot.submittedAt ? <p className="mt-4 text-sm text-slate-500">Submitted: {formatAlmaty(snapshot.submittedAt)}</p> : null}
       </article>
-      {snapshot.canRetake ? <button className="hub-primary cursor-pointer" type="button" onClick={onRetake}>Start a retake</button> : null}
-      <AssignmentFeedbackList feedback={snapshot.feedback ?? []} questionIds={snapshot.questions.map((q) => q.id)} />
       {snapshot.feedbackError ? <p className="text-sm text-slate-600">Comments are temporarily unavailable. Refresh the page to try again.</p> : null}
-      {snapshot.review ? (
-        <ReviewAnswers answers={answers} questions={snapshot.review} />
-      ) : (
+      {!snapshot.review || snapshot.showAnswers === "never" ? (
         <div className="hub-card p-5 text-sm text-slate-600">
           {snapshot.showAnswers === "never"
             ? "Your teacher has hidden the answer review for this assignment."
@@ -397,7 +392,13 @@ function ResultView({ answers, snapshot, onRetake }: { answers: Record<string, s
               ? snapshot.dueAt ? `The answer review opens after the due date (${formatAlmaty(snapshot.dueAt)}).` : "The answer review is unavailable until your teacher sets a due date and it passes."
               : snapshot.dueAt ? `The answer review opens after your attempts run out or the due date passes (${formatAlmaty(snapshot.dueAt)}).` : "The answer review opens after you use all available attempts."}
         </div>
-      )}
+      ) : null}
+      <HomeworkReview
+        key={snapshot.submissionId} questions={snapshot.questions} reviews={snapshot.review} answers={answers}
+        feedback={snapshot.feedback ?? []} answerTimes={snapshot.answerTimes ?? {}}
+        showAnswers={Boolean(snapshot.review) && (snapshot.showAnswers === "after_submit" || snapshot.showAnswers === "after_due")}
+        canRetake={snapshot.canRetake} onRetake={onRetake}
+      />
     </section>
   );
 }
