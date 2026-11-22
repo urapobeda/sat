@@ -4,6 +4,7 @@ import { Flag, Info, Send } from "lucide-react";
 import { useState } from "react";
 import { AnswerOption } from "@/components/quiz/AnswerOption";
 import { Highlightable } from "@/components/quiz/Highlightable";
+import { VocabularySelection } from "@/components/vocabulary/VocabularySelection";
 import { MathText } from "@/components/quiz/MathText";
 import { ProgressBar } from "@/components/quiz/ProgressBar";
 import { QuestionHighlightControls, useQuestionHighlight } from "@/components/quiz/QuestionHighlight";
@@ -93,6 +94,7 @@ export function QuestionStem({ className, highlight, number, question, text = qu
   const placesOwnFigures = /\[\[img:\d+\]\]/.test(text);
 
   return (
+    <VocabularySelection enabled={question.section === "reading-writing" && !highlight.highlightEnabled} scopeKey={`stem-${question.id}`}>
     <Highlightable
       className={`text-slate-950 ${className ?? ""}`}
       enabled={highlight.highlightEnabled}
@@ -114,6 +116,7 @@ export function QuestionStem({ className, highlight, number, question, text = qu
       ) : null}
       <MathText imageAlt={`Question ${number} figure`} images={question.imageUrls} text={text} />
     </Highlightable>
+    </VocabularySelection>
   );
 }
 

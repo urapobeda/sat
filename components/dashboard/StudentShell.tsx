@@ -17,6 +17,7 @@ const groups = [
   { title: "Learning", items: [
     { id: "study-plan", label: "Study Plan", href: "/study-plan", icon: Target },
     { id: "course", label: "Course plan", href: "/course", icon: BookOpen },
+    { id: "vocabulary", label: "Vocabulary", href: "/vocabulary", icon: BookOpen },
     { id: "homework", label: "Homework", href: "/homework", icon: ClipboardList },
     { id: "schedule", label: "Schedule", href: "/schedule", icon: CalendarDays },
     { id: "recordings", label: "Lesson Recordings", href: "/recordings", icon: Video },

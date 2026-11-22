@@ -9,7 +9,7 @@ import type { UserRole } from "@/lib/roles";
 export const teacherLinks = [
   ["/teacher", "Overview"], ["/teacher/groups", "Groups"],
   ["/teacher/homework", "Homework"], ["/teacher/students", "Students"],
-  ["/teacher/schedule", "Schedule"], ["/teacher/materials", "Materials"]
+  ["/teacher/schedule", "Schedule"], ["/teacher/vocabulary", "Vocabulary"], ["/teacher/materials", "Materials"]
 ] as const;
 
 export function TeacherShell({ children, role }: { children: ReactNode; role: UserRole }) {

@@ -10,6 +10,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
 import { StudentShell } from "@/components/dashboard/StudentShell";
+import { VocabularyProvider } from "@/components/vocabulary/VocabularyProvider";
+import { VocabularySelection } from "@/components/vocabulary/VocabularySelection";
 import { ReportQuestion } from "@/components/question-bank/practice/ReportQuestion";
 import { QuestionNavigator } from "@/components/question-bank/practice/QuestionNavigator";
 import { Highlightable } from "@/components/quiz/Highlightable";
@@ -129,6 +131,7 @@ export function PracticeExam({
 
   return (
     <StudentShell active="question-bank" exam>
+      <VocabularyProvider enabled={questions.some(item => item.section === "reading-writing")}>
     <main aria-label="Practice Mode" className="flex h-full min-h-0 flex-col bg-white text-slate-950">
       <h1 className="sr-only">{question ? `${question.section === "math" ? "Math" : "Reading & Writing"} practice` : "Practice"}</h1>
       <header className="relative z-20 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-1 border-b border-slate-200 px-2 py-1.5 sm:gap-4 sm:px-5">
@@ -258,6 +261,7 @@ export function PracticeExam({
                     </p>
                   ) : null}
                   {prompt ? (
+                    <VocabularySelection enabled={question.section === "reading-writing" && !highlight.highlightEnabled} scopeKey={`prompt-${question.id}`}>
                     <Highlightable
                       className="mt-3 break-words font-sans text-[18px] leading-[1.5]"
                       enabled={highlight.highlightEnabled}
@@ -267,6 +271,7 @@ export function PracticeExam({
                     >
                       <MathText images={question.imageUrls} text={prompt} />
                     </Highlightable>
+                    </VocabularySelection>
                   ) : null}
                   <QuestionAnswers
                     choiceDraft={{
@@ -339,6 +344,7 @@ export function PracticeExam({
         </>
       ) : null)}
     </main>
+      </VocabularyProvider>
     </StudentShell>
   );
 }

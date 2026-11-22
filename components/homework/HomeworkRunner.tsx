@@ -11,6 +11,7 @@ import { confirmLeavingStudy, StudentShell } from "@/components/dashboard/Studen
 import { EmptyState } from "@/components/EmptyState";
 import { ProgressBar } from "@/components/quiz/ProgressBar";
 import { QuestionCard } from "@/components/quiz/QuestionCard";
+import { VocabularyProvider } from "@/components/vocabulary/VocabularyProvider";
 import { ReviewAnswers } from "@/components/quiz/ReviewAnswers";
 import { Timer } from "@/components/quiz/Timer";
 import { DesmosPanel } from "@/components/quiz/DesmosPanel";
@@ -205,6 +206,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
 
   return (
     <StudentShell active="homework" exam guardExit={active}>
+      <VocabularyProvider enabled={snapshot?.questions.some(item => item.section === "reading-writing") ?? false}>
       <main className={`homework-runner mx-auto w-full min-w-0 max-w-6xl px-4 pt-4 sm:px-6 lg:px-8 ${active ? "pb-[calc(10rem+env(safe-area-inset-bottom))] lg:pb-6" : "pb-6"}`}>
         <section className="hub-card p-4 sm:p-5">
           <Link
@@ -359,6 +361,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
           </div>
         </dialog>
       </main>
+      </VocabularyProvider>
     </StudentShell>
   );
 }

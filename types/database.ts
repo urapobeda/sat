@@ -1,5 +1,6 @@
 import type { AssignmentFeedback, ReportRow } from "@/lib/assignmentReport";
 import type { Lesson, LessonItem, LessonRow, LessonHomework } from "@/lib/lessons";
+import type { VocabularyRecord, VocabularyWord } from "@/lib/vocabulary";
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 import type { StudyGroup, GroupMember, GroupTeacher } from "@/lib/groups";
 import type { UserRole } from "@/lib/roles";
@@ -236,6 +237,7 @@ export type Assignment = {
 export type Database = {
   public: {
     Tables: {
+      vocabulary_words: { Row: VocabularyRecord; Insert: Pick<VocabularyRecord, "word" | "definition_en" | "translation_ru" | "created_by"> & Partial<Pick<VocabularyRecord, "group_id" | "lesson_id" | "part_of_speech" | "example">>; Update: Partial<Pick<VocabularyRecord, "word" | "definition_en" | "translation_ru" | "group_id" | "lesson_id" | "part_of_speech" | "example">>; Relationships: [] };
       lessons: { Row: Lesson; Insert: Omit<Lesson, "id" | "created_at">; Update: Partial<Pick<Lesson, "title" | "section" | "topic" | "starts_at" | "position" | "notes">>; Relationships: [] };
       lesson_items: { Row: LessonItem; Insert: Omit<LessonItem, "id">; Update: Partial<Omit<LessonItem, "id">>; Relationships: [] };
       assignment_feedback: {
@@ -456,6 +458,8 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      list_vocabulary_words: { Args: Record<string, never>; Returns: VocabularyWord[] };
+      add_vocabulary_batch: { Args: { p_group_id: string | null; p_lesson_id: string | null; p_rows: Json }; Returns: { inserted: number; skipped: number }[] };
       save_lesson: { Args: { p_id: string | null; p_group_id: string; p_title: string; p_section: string; p_topic: string; p_starts_at: string | null; p_position: number; p_notes: string; p_items: Json }; Returns: string };
       list_my_lessons: { Args: { p_group_id?: string; p_scheduled?: boolean }; Returns: LessonRow[] };
       list_my_lesson_assignments: { Args: Record<string, never>; Returns: LessonHomework[] };
