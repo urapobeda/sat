@@ -8,5 +8,5 @@ export const GROUP_CODE_PATTERN = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/;
 export function normalizeGroupCode(code: string) { return code.trim().toUpperCase(); }
 export function getAuthReturnPath(search: string) {
   const next = new URLSearchParams(search).get("next");
-  return next && /^\/join\/[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/.test(next) ? next : "/question-bank";
+  return next && /^\/(?:join|live)\/[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/.test(next) ? next : "/question-bank";
 }

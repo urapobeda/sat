@@ -10,6 +10,7 @@ export const z = globalThis.__satTutorTest.z;
 export const AI_TUTOR_DAILY_LIMIT = 30;
 export const NextResponse = { json: (data, init) => Response.json(data, init) };
 export async function getAuthenticatedUserId() { return globalThis.__satTutorTest.current.user; }
+export async function isLiveQuestionRestricted() { return globalThis.__satTutorTest.current.liveBlocked ?? false; }
 export async function getQuestionPublicContext() { return { choices: [], question: 'Test', section: 'math', topic: 'algebra', difficulty: 'easy' }; }
 export async function getQuestionSolution() { throw new Error('Unsubmitted answer must stay hidden'); }
 export function getOpenAIModel() { return 'mock'; }
@@ -35,7 +36,7 @@ export function getSupabaseAdminClient() {
 `;
 const mockUrl = "data:text/javascript;base64," + Buffer.from(mock).toString("base64");
 let source = await readFile(new URL("../app/api/ai-tutor/route.ts", import.meta.url), "utf8");
-source = source.replace(/from "(next\/server|zod|@\/lib\/aiTutor|@\/lib\/server\/questionSolutions|@\/lib\/server\/auth|@\/lib\/supabase\/admin|@\/lib\/openai)"/g, `from "${mockUrl}"`);
+source = source.replace(/from "(next\/server|zod|@\/lib\/aiTutor|@\/lib\/server\/questionSolutions|@\/lib\/server\/auth|@\/lib\/supabase\/admin|@\/lib\/openai|@\/lib\/server\/liveRestrictions)"/g, `from "${mockUrl}"`);
 const compiled = require("typescript").transpileModule(source, { compilerOptions: { module: 99, target: 9 } }).outputText;
 const { POST } = await import("data:text/javascript;base64," + Buffer.from(compiled).toString("base64"));
 const user = "00000000-0000-4000-8000-000000000001";
@@ -48,6 +49,7 @@ try {
   delete process.env.NEXT_PUBLIC_AI_TUTOR_ENABLED;
   const disabled = await run();assert.equal(disabled.response.status,404);assert.equal(disabled.aiCalls,0);
   process.env.NEXT_PUBLIC_AI_TUTOR_ENABLED = "true";
+  const live = await run({ liveBlocked: true }); assert.equal(live.response.status, 403); assert.equal(live.aiCalls, 0); assert.equal(live.reservations.length, 0);
   const guest = await run({ user: null });
   assert.equal(guest.response.status, 401);
   assert.equal(guest.aiCalls, 0);

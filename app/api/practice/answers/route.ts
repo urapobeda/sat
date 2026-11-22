@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedUserId } from "@/lib/server/auth";
 import { gradeQuestionAnswer } from "@/lib/server/questionSolutions";
+import { isLiveQuestionRestricted } from "@/lib/server/liveRestrictions";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { countedAnswerSeconds } from "@/lib/practiceTiming";
 
@@ -23,6 +24,7 @@ export async function POST(request: NextRequest) {
     const sessionId = parsed.data.sessionId;
     const student = await getAuthenticatedUserId(request);
     if (student) {
+      if (await isLiveQuestionRestricted(student, parsed.data.questionId)) return NextResponse.json({ blocked: true, message: "This question is in your live lesson. Submit your answer there." });
       const pending = await getSupabaseAdminClient().rpc("question_in_pending_homework", {p_user:student,p_question:parsed.data.questionId});
       if (pending.error) return NextResponse.json({error:"Unable to check homework restrictions."},{status:503});
       if (pending.data) return NextResponse.json({blocked:true,message:"This question is part of your homework. The answer will be available after you submit it."});

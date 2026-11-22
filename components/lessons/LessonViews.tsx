@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { StudentShell } from "@/components/dashboard/StudentShell";
 import { useLessons } from "@/components/lessons/useLessons";
+import { LiveCourseBanner } from "@/components/live/LiveLessonLinks";
 import { formatLessonDate, lessonHomeworkStatus, LESSON_SECTIONS, LESSON_PARTS, quickLessonDueDate } from "@/lib/lessons";
 import { formatAlmaty } from "@/lib/timezone";
 
@@ -43,6 +44,7 @@ export function LessonListing({ state, schedule = false, staff = false }: { stat
   const groups = [...new Map(state.lessons.map(lesson => [lesson.group_id, lesson.group_name])).entries()];
   const visible = state.lessons.filter(lesson => !groupId || lesson.group_id === groupId);
   return <section className="space-y-5">
+    {!staff && !schedule ? <LiveCourseBanner lessons={state.lessons} /> : null}
     <header><h1 className="text-3xl font-bold">{schedule ? "Schedule" : "Course plan"}</h1><p className="mt-2 text-slate-600">{schedule ? "Your scheduled group lessons. All times are shown in Asia/Almaty." : "Your group lessons, classwork, and homework in course order."}</p></header>
     <LoadState state={state} />
     {!state.loading && !state.error && !state.signedOut ? <>

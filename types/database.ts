@@ -1,6 +1,7 @@
 import type { AssignmentFeedback, ReportRow } from "@/lib/assignmentReport";
 import type { Lesson, LessonItem, LessonRow, LessonHomework } from "@/lib/lessons";
 import type { VocabularyRecord, VocabularyWord } from "@/lib/vocabulary";
+import type { LiveSession, LiveAnswer, LiveRoster } from "@/lib/liveLessons";
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 import type { StudyGroup, GroupMember, GroupTeacher } from "@/lib/groups";
 import type { UserRole } from "@/lib/roles";
@@ -237,6 +238,9 @@ export type Assignment = {
 export type Database = {
   public: {
     Tables: {
+      live_sessions: { Row: LiveSession; Insert: never; Update: never; Relationships: [] };
+      live_answers: { Row: LiveAnswer; Insert: never; Update: never; Relationships: [] };
+      live_session_roster: { Row: LiveRoster; Insert: never; Update: never; Relationships: [] };
       vocabulary_words: { Row: VocabularyRecord; Insert: Pick<VocabularyRecord, "word" | "definition_en" | "translation_ru" | "created_by"> & Partial<Pick<VocabularyRecord, "group_id" | "lesson_id" | "part_of_speech" | "example">>; Update: Partial<Pick<VocabularyRecord, "word" | "definition_en" | "translation_ru" | "group_id" | "lesson_id" | "part_of_speech" | "example">>; Relationships: [] };
       lessons: { Row: Lesson; Insert: Omit<Lesson, "id" | "created_at">; Update: Partial<Pick<Lesson, "title" | "section" | "topic" | "starts_at" | "position" | "notes">>; Relationships: [] };
       lesson_items: { Row: LessonItem; Insert: Omit<LessonItem, "id">; Update: Partial<Omit<LessonItem, "id">>; Relationships: [] };
@@ -458,6 +462,12 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      start_live_lesson: { Args: { p_lesson: string }; Returns: string };
+      control_live_lesson: { Args: { p_code: string; p_action: string; p_position: number }; Returns: undefined };
+      submit_verified_live_answer: { Args: { p_student: string; p_session: string; p_question: string; p_choice: string; p_correct: boolean }; Returns: undefined };
+      get_live_snapshot: { Args: { p_code: string }; Returns: Json };
+      list_my_live_sessions: { Args: { p_lesson?: string; p_active?: boolean }; Returns: LiveSession[] };
+      question_in_active_live: { Args: { p_student: string; p_question: string }; Returns: boolean };
       list_vocabulary_words: { Args: Record<string, never>; Returns: VocabularyWord[] };
       add_vocabulary_batch: { Args: { p_group_id: string | null; p_lesson_id: string | null; p_rows: Json }; Returns: { inserted: number; skipped: number }[] };
       save_lesson: { Args: { p_id: string | null; p_group_id: string; p_title: string; p_section: string; p_topic: string; p_starts_at: string | null; p_position: number; p_notes: string; p_items: Json }; Returns: string };

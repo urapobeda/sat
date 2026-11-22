@@ -12,6 +12,7 @@ const mockSource = `
 export const z = globalThis.__satTimingRouteTest.z;
 export const NextResponse = { json: (data, init) => Response.json(data, init) };
 export async function getAuthenticatedUserId() { return globalThis.__satTimingRouteTest.current.user; }
+export async function isLiveQuestionRestricted() { return globalThis.__satTimingRouteTest.current.liveBlocked ?? false; }
 export async function gradeQuestionAnswer() {
   const current = globalThis.__satTimingRouteTest.current;
   if (current.waitForOwnership) await current.waitForOwnership;
@@ -21,7 +22,7 @@ export function getSupabaseAdminClient() { return globalThis.__satTimingRouteTes
 `;
 const mockUrl = "data:text/javascript;base64," + Buffer.from(mockSource).toString("base64");
 let source = await readFile(new URL("../app/api/practice/answers/route.ts", import.meta.url), "utf8");
-source = source.replace(/from "(next\/server|zod|@\/lib\/server\/auth|@\/lib\/server\/questionSolutions|@\/lib\/supabase\/admin)"/g, `from "${mockUrl}"`);
+source = source.replace(/from "(next\/server|zod|@\/lib\/server\/auth|@\/lib\/server\/questionSolutions|@\/lib\/supabase\/admin|@\/lib\/server\/liveRestrictions)"/g, `from "${mockUrl}"`);
 source = source.replace("@/lib/practiceTiming", new URL("../lib/practiceTiming.ts", import.meta.url).href);
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
 const { POST } = await import("data:text/javascript;base64," + Buffer.from(compiled).toString("base64"));
@@ -29,7 +30,7 @@ const user = "00000000-0000-4000-8000-000000000001";
 const question = "00000000-0000-4000-8000-000000000002";
 const session = "00000000-0000-4000-8000-000000000003";
 
-async function check({ correct, guest = false, missingColumn = false, owned = true, invalid = false, verifyOverlap = false, blocked = false, restrictionError = false }) {
+async function check({ correct, guest = false, missingColumn = false, owned = true, invalid = false, verifyOverlap = false, blocked = false, restrictionError = false, liveBlocked = false }) {
   const writes = [];
   const filters = [];
   let ownershipStarted;
@@ -38,6 +39,7 @@ async function check({ correct, guest = false, missingColumn = false, owned = tr
     ownershipStarted = () => { clearTimeout(timeout); resolve(); };
   }) : undefined;
   context.current = {
+    liveBlocked,
     user: guest ? null : user,
     waitForOwnership,
     feedback: { isCorrect: correct, correctAnswer: "B", correctLabel: "B", explanation: "Verified on the server." },
@@ -62,6 +64,8 @@ async function check({ correct, guest = false, missingColumn = false, owned = tr
 }
 
 try {
+  const live = await check({ correct: true, liveBlocked: true });
+  assert.equal(live.body.blocked, true); assert.equal(live.body.correctAnswer, undefined); assert.equal(live.writes.length, 0);
   const embargo = await check({correct:true,blocked:true});
   assert.equal(embargo.body.blocked,true);assert.equal(embargo.writes.length,0);
   assert.equal(embargo.body.message,"This question is part of your homework. The answer will be available after you submit it.");

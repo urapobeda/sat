@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { QuestionPicker } from "@/components/homework/QuestionPicker";
 import { AssignLessonForm } from "@/components/lessons/AssignLessonForm";
+import { LiveLessonResults } from "@/components/live/LiveLessonLinks";
 import { groupRequest } from "@/lib/groupApi";
 import type { StudyGroup } from "@/lib/groups";
 import { LESSON_PARTS, LESSON_SECTIONS, type Lesson, type LessonItem, type LessonPart, type LessonSection, type CourseData } from "@/lib/lessons";
@@ -110,6 +111,7 @@ export function LessonEditor({ lessonId, initialGroupId }: { lessonId?: string; 
         </section>
         <div className="flex flex-wrap items-center gap-3"><button className="hub-primary min-h-11 cursor-pointer disabled:opacity-50" type="submit" disabled={busy || assigning || (!dirty && Boolean(lessonId))}>{busy ? "Saving…" : "Save lesson"}</button>{lessonId ? <button className="min-h-11 cursor-pointer rounded-xl border border-slate-200 px-4 text-sm disabled:opacity-50" type="button" disabled={dirty || busy || assigning || group.archived} onClick={() => setAssigning(true)}>Assign homework</button> : null}{lessonId && dirty ? <span className="text-sm text-slate-500">Save your changes before assigning homework.</span> : null}</div>
       </form>
+      {lessonId ? <LiveLessonResults lessonId={lessonId} /> : null}
     </> : null}
   </section>;
 }
