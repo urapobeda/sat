@@ -23,9 +23,10 @@ function VocabularySelectionSurface({ children, enabled, scopeKey }: { children:
     let timer: ReturnType<typeof setTimeout>;
     function inspect() {
       const selected = window.getSelection();
-      if (!selected || selected.isCollapsed || !selected.rangeCount) return;
+      if (!selected || selected.isCollapsed || !selected.rangeCount) { setSelection(null); return; }
       const range = selected.getRangeAt(0);
-      if (!root.current?.contains(range.startContainer) || !root.current.contains(range.endContainer)) return;
+      if (card.current?.contains(range.startContainer)) return;
+      if (!root.current?.contains(range.startContainer) || !root.current.contains(range.endContainer)) { setSelection(null); return; }
       const element = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
       if (element?.closest(interactive)) return;
       const word = selectedVocabularyWord(selected.toString());
@@ -56,8 +57,10 @@ function VocabularySelectionSurface({ children, enabled, scopeKey }: { children:
   const matches = visible && vocabulary ? lookupVocabulary(vocabulary.index, visible.word) : [];
   useLayoutEffect(() => {
     if (!visible || !card.current) return;
+    const viewportWidth = document.documentElement.clientWidth;
+    card.current.style.maxWidth = `${Math.max(0, viewportWidth - 24)}px`;
     const rect = card.current.getBoundingClientRect();
-    const position = vocabularyPosition(visible, rect.width, rect.height, window.innerWidth, window.innerHeight);
+    const position = vocabularyPosition(visible, rect.width, rect.height, viewportWidth, window.innerHeight);
     card.current.style.left = `${position.left}px`; card.current.style.top = `${position.top}px`;
   }, [visible, vocabulary?.status, vocabulary?.index]);
   return <><div ref={root}>{children}</div>{visible && vocabulary ? createPortal(
