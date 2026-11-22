@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { AssignmentFeedbackList } from "@/components/homework/AssignmentFeedbackList";
+import { HardQuestionButton } from "@/components/hard-questions/HardQuestionButton";
 import { MathText } from "@/components/quiz/MathText";
 import { QuestionStem } from "@/components/quiz/QuestionCard";
 import { QuestionHighlightControls, useQuestionHighlight } from "@/components/quiz/QuestionHighlight";
@@ -53,6 +54,7 @@ export function HomeworkReview({ questions, reviews, answers, feedback, answerTi
     {!current ? <div className="hub-card space-y-3 p-5"><p>{onlyMistakes ? items.some(item => item.status === "unavailable") ? "No reviewed mistakes found. Some question results are unavailable." : "No mistakes to review." : "No questions are available for this submission."}</p>{onlyMistakes ? <button className={navButton} type="button" onClick={() => setOnlyMistakes(false)}>Show all questions</button> : null}</div> : <>
       <article ref={questionPanel} className="hub-card min-w-0 scroll-mt-4 space-y-5 p-4 sm:p-6" aria-label={`Review question ${current.number}`}>
         <header className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-semibold">Question {current.number} of {questions.length}</h3>{answerTimes[current.question.id] !== null && answerTimes[current.question.id] !== undefined ? <p className="mt-1 text-xs text-slate-500">Time on question: {duration(answerTimes[current.question.id])}</p> : null}</div><QuestionHighlightControls {...highlight} /></header>
+        <HardQuestionButton questionId={current.question.id} />
         <QuestionStem question={current.question} number={current.number} highlight={highlight} className="break-words text-[17px] leading-8" />
         <div className={`grid min-w-0 items-start gap-5 ${currentFeedback.length ? "lg:grid-cols-[minmax(0,1fr)_minmax(240px,320px)]" : ""}`}>
           <HomeworkAnswerDetails item={current} />

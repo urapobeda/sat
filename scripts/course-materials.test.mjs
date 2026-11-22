@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
+import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import ts from 'typescript';
+const require=createRequire(import.meta.url),root=fileURLToPath(new URL('../',import.meta.url)),cache=new Map();
+function load(relative){
+  const filename=path.join(root,relative);if(cache.has(filename))return cache.get(filename).exports;
+  const compiledModule={exports:{}};cache.set(filename,compiledModule);
+  const code=ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
+  new Function('require','module','exports',code)(name=>name.startsWith('@/')?load(name.slice(2)+'.ts'):require(name),compiledModule,compiledModule.exports);
+  return compiledModule.exports;
+}
+const {safeMaterialUrl,safeMarkdownUrl}=load('lib/courseMaterials.ts');
+for(const url of ['javascript:alert(1)','data:image/svg+xml,bad','https://user:pass@example.com','https://good.test@evil.test','https://exam ple.com','file:///secret'])assert.equal(safeMaterialUrl(url),'');
+assert.equal(safeMaterialUrl(' https://example.com/resource '),'https://example.com/resource');
+assert.equal(safeMarkdownUrl('/course/texts'),'/course/texts');assert.equal(safeMarkdownUrl('#heading'),'#heading');
+assert.equal(safeMarkdownUrl('//evil.test'),'');assert.equal(safeMarkdownUrl('/\\evil.test'),'');
+const {hardPracticeHref,parseHardQuestionIds,hardQuestionMatches}=load('lib/hardQuestions.ts');
+const id='00000000-0000-4000-8000-000000000001';
+assert.equal(parseHardQuestionIds(`${id},${id}`).size,1);assert.equal(parseHardQuestionIds(null),null);
+assert.throws(()=>parseHardQuestionIds('invalid'));assert.throws(()=>parseHardQuestionIds(Array.from({length:101},(_,i)=>`00000000-0000-4000-8000-${String(i).padStart(12,'0')}`).join(',')));
+assert.ok(hardPracticeHref([id]).includes(id));assert.ok(hardPracticeHref(undefined,'math','linear').includes('hardQuery=linear'));
+assert.equal(hardQuestionMatches({section:'math',topic:'Algebra',preview:'Linear equation'},'math','LINEAR'),true);
+assert.equal(hardQuestionMatches({section:'math',topic:'Algebra',preview:''},'reading-writing',''),false);
+const {createPageRequest}=load('lib/pageRequest.ts');let calls=0;
+const loader=createPageRequest(async()=>++calls);assert.deepEqual(await Promise.all([loader.load(),loader.load()]),[1,1]);loader.reset();assert.equal(await loader.load(),2);
+const {MaterialMarkdown}=load('components/materials/MaterialMarkdown.tsx');
+const html=renderToStaticMarkup(React.createElement(MaterialMarkdown,{body:'# Reading\n\n**Important** $x^2 + 1$\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n[Unsafe](javascript:alert%281%29)\n\n[Safe](https://example.com)\n\n<script>alert(1)</script>\n\n$$\\frac{1}{2}$$'}));
+assert.ok(html.includes('<h1>Reading</h1>'));assert.ok(html.includes('<strong>Important</strong>'));assert.ok(html.includes('class="katex"'));assert.ok(html.includes('<table'));
+assert.ok(!html.includes('<script'));assert.ok(!html.includes('javascript:'));assert.ok(html.includes('rel="noopener noreferrer"'));
+const malicious=renderToStaticMarkup(React.createElement(MaterialMarkdown,{body:'$\\href{javascript:alert(1)}{unsafe}$\n\n<img src=x onerror=alert(1)>\n\n![bad](data:image/svg+xml,bad)'}));
+assert.ok(!malicious.includes('href="javascript:'));assert.ok(!malicious.includes('<img'));assert.ok(!malicious.includes('onerror='));
+console.log('Course material tests passed: actual Markdown/KaTeX rendering, HTML/link safety, Hard selection/filtering and single-request page cache.');

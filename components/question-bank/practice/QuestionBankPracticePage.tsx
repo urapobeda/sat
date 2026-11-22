@@ -21,6 +21,8 @@ import {
 } from "@/lib/supabase/queries";
 import { getSupabaseAuthHeaders } from "@/lib/supabase/authHeaders";
 import { QuestionStopwatch } from "@/lib/practiceTiming";
+import { groupRequest } from "@/lib/groupApi";
+import { hardQuestionMatches,parseHardQuestionIds,type HardQuestion } from "@/lib/hardQuestions";
 import type { User } from "@supabase/supabase-js";
 import type {
   Question,
@@ -37,6 +39,9 @@ export function QuestionBankPracticePage() {
   const difficultyParam = searchParams.get("difficulties") ?? searchParams.get("difficulty");
   const difficulties = useMemo(() => parseQuestionDifficulties(difficultyParam), [difficultyParam]);
   const reviewMissed = searchParams.get("review") === "missed";
+  const hardCollection = searchParams.get("collection") === "hard";
+  const hardIds = searchParams.get("ids");
+  const hardSearch = (searchParams.get("hardQuery")??'').slice(0,200);
   const completion = parseQuestionCompletion(searchParams.get("completion"));
   const topic = searchParams.get("topic");
   const topicsParam = searchParams.get("topics");
@@ -143,7 +148,13 @@ export function QuestionBankPracticePage() {
       const progressRequest = completion === "all" && !reviewMissed
         ? Promise.resolve(null)
         : userRequest.then((user) => user ? getQuestionProgressLookup(user.id) : null);
-      const catalogRequest = Promise.all([getQuestionCatalog(), progressRequest]).then(([questions, progress]) => {
+      const source = hardCollection ? userRequest.then(async user=>{
+        if(!user)throw new Error('Sign in to practice your Hard questions.');
+        const selected=parseHardQuestionIds(hardIds);
+        const {items}=await groupRequest<{items:HardQuestion[]}>('/api/hard-questions');
+        return items.filter(item=>(!selected||selected.has(item.id))&&hardQuestionMatches(item,'all',hardSearch));
+      }) : getQuestionCatalog();
+      const catalogRequest = Promise.all([source, progressRequest]).then(([questions, progress]) => {
         const eligible = reviewMissed ? questions.filter((question) => progress?.incorrectIds.has(question.id)) : questions;
         const matching = filterQuestionCatalog(eligible, { section, difficulties, topic, topics });
         return filterQuestionsByCompletion(matching, completion, progress?.answeredIds ?? new Set<string>());
@@ -184,7 +195,7 @@ export function QuestionBankPracticePage() {
       isMounted = false;
       persistenceRequest.current = null;
     };
-  }, [completion, createSession, difficulties, reviewMissed, section, topic, topics]);
+  }, [completion, createSession, difficulties, reviewMissed, section, topic, topics,hardCollection,hardIds,hardSearch]);
 
   // Keep the next questions ready while the student works on the current one.
   useEffect(() => {
@@ -393,7 +404,7 @@ export function QuestionBankPracticePage() {
 
   const waitingForQuestion = isLoading || (!error && !isFinished && practiceQuestions.length > 0 && !currentQuestion);
   const activeQuestion = !waitingForQuestion && !error && !isFinished ? currentQuestion : undefined;
-  const backHref = reviewMissed ? "/mistakes" : section === "all" ? "/question-bank" : `/question-bank/${section}`;
+  const backHref = hardCollection ? "/course/hard-questions" : reviewMissed ? "/mistakes" : section === "all" ? "/question-bank" : `/question-bank/${section}`;
 
   return (
     <PracticeExam

@@ -8,5 +8,7 @@ export const GROUP_CODE_PATTERN = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/;
 export function normalizeGroupCode(code: string) { return code.trim().toUpperCase(); }
 export function getAuthReturnPath(search: string) {
   const next = new URLSearchParams(search).get("next");
-  return next && /^\/(?:join|live)\/[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/.test(next) ? next : "/question-bank";
+  const invitation = next && /^\/(?:join|live)\/[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/.test(next);
+  const course = next && (/^\/(?:course(?:\/(?:texts|hard-questions|practice-tests|useful))?|homework|vocabulary|materials)$/.test(next) || /^\/course\/texts\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(next));
+  return next && (invitation || course) ? next : "/question-bank";
 }

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { StudentShell } from "@/components/dashboard/StudentShell";
+import { CourseTabs } from "@/components/course/CourseTabs";
 import { useStudentAccount } from "@/components/dashboard/StudentAccount";
 import { groupRequest } from "@/lib/groupApi";
 import type { StudyGroup } from "@/lib/groups";
@@ -14,7 +15,7 @@ const primary = "min-h-11 cursor-pointer rounded-xl bg-blue-600 px-4 py-2 text-s
 const secondary = "min-h-11 cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-50";
 const emptyDraft = { word: "", partOfSpeech: "", definitionEn: "", translationRu: "", example: "", groupId: "", lessonId: "" };
 export function VocabularyPage({ staff = false }: { staff?: boolean }) {
-  return staff ? <VocabularyContent staff /> : <StudentShell active="vocabulary"><VocabularyContent staff={false} /></StudentShell>;
+  return staff ? <VocabularyContent staff /> : <StudentShell active="vocabulary"><div className="mx-auto max-w-6xl px-4 pt-4 sm:px-7"><CourseTabs active="vocabulary" /></div><VocabularyContent staff={false} /></StudentShell>;
 }
 function VocabularyContent({ staff }: { staff: boolean }) {
   const { userId, isLoading } = useStudentAccount();

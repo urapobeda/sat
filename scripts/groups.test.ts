@@ -10,4 +10,6 @@ for (const path of ["https://evil.example", "//evil.example", "/admin/users", "/
   assert.equal(getAuthReturnPath(`?next=${encodeURIComponent(path)}`), "/question-bank");
 }
 assert.equal(getAuthReturnPath(""), "/question-bank");
+for (const path of ["/course", "/course/texts", "/course/useful", "/course/hard-questions", "/course/practice-tests", "/vocabulary", "/homework", "/materials", "/course/texts/00000000-0000-4000-8000-000000000001"]) assert.equal(getAuthReturnPath(`?next=${encodeURIComponent(path)}`), path);
+for (const path of ["/course/texts/../../admin", "/course/texts/invalid", "/course//evil", "/course?redirect=https://evil.test", "/course/texts#fragment"]) assert.equal(getAuthReturnPath(`?next=${encodeURIComponent(path)}`), "/question-bank");
 console.log("Group invitation tests passed (normalization, safe return URL and ambiguous-character rejection)");

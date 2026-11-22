@@ -20,6 +20,7 @@ function load(relative) {
   const localRequire = specifier => {
     // Vocabulary/account network loading is separate from the submitted-review presentation.
     if (specifier === "@/components/vocabulary/VocabularySelection") return { VocabularySelection: ({ children }) => React.createElement(React.Fragment, null, children) };
+    if (specifier === "@/components/hard-questions/HardQuestionButton") return { HardQuestionButton: () => null };
     if (specifier.startsWith("@/")) return load(specifier.slice(2));
     return require(specifier);
   };

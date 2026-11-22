@@ -6,6 +6,7 @@ import { getSupabaseAuthHeaders } from "@/lib/supabase/authHeaders";
 import { isPastDue, type AssignmentKind, type StudentAssignment } from "@/lib/homework";
 import { formatAlmaty } from "@/lib/timezone";
 import { StudentShell } from "@/components/dashboard/StudentShell";
+import { CourseTabs } from "@/components/course/CourseTabs";
 
 const KIND_LABEL: Record<AssignmentKind, string> = { past_paper: "Practice paper", question_set: "Question set" };
 type Tab = "todo" | "done" | "overdue";
@@ -69,6 +70,7 @@ export function StudentHomeworkPage() {
   return (
     <StudentShell active="homework">
       <div className="mx-auto w-full max-w-7xl space-y-6">
+        <CourseTabs active="homework" />
         <div>
           <h1 className="text-3xl font-bold text-slate-950">Homework</h1>
           <p className="mt-2 text-base text-slate-600">

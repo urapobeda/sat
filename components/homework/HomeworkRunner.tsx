@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { HomeworkClock } from "@/lib/homeworkClock";
 import type { AssignmentFeedback } from "@/lib/assignmentReport";
 import { HomeworkReview } from "@/components/homework/HomeworkReview";
+import { HardQuestionsProvider } from "@/components/hard-questions/HardQuestionsProvider";
+import { HardQuestionButton } from "@/components/hard-questions/HardQuestionButton";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { confirmLeavingStudy, StudentShell } from "@/components/dashboard/StudentShell";
 import { EmptyState } from "@/components/EmptyState";
@@ -205,6 +207,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
 
   return (
     <StudentShell active="homework" exam guardExit={active}>
+      <HardQuestionsProvider>
       <VocabularyProvider enabled={snapshot?.questions.some(item => item.section === "reading-writing") ?? false}>
       <main className={`homework-runner mx-auto w-full min-w-0 max-w-6xl px-4 pt-4 sm:px-6 lg:px-8 ${active ? "pb-[calc(10rem+env(safe-area-inset-bottom))] lg:pb-6" : "pb-6"}`}>
         <section className="hub-card p-4 sm:p-5">
@@ -266,6 +269,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
                 question={currentQuestion}
                 selectedAnswer={answers[currentQuestion.id] ?? null}
                 totalQuestions={snapshot.questions.length}
+                headerActions={<HardQuestionButton questionId={currentQuestion.id} />}
               />
               <nav aria-label="Homework navigation" className="homework-navigation fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white px-4 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:static lg:border-0 lg:bg-transparent lg:p-0">
                 <div aria-label="Questions" className="mb-2 flex gap-2 overflow-x-auto pb-1 lg:hidden">
@@ -361,6 +365,7 @@ export function HomeworkRunner({ assignmentId, initialSubmissionId }: { assignme
         </dialog>
       </main>
       </VocabularyProvider>
+      </HardQuestionsProvider>
     </StudentShell>
   );
 }

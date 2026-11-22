@@ -1,7 +1,7 @@
 "use client";
 
 import { Flag, Info, Send } from "lucide-react";
-import { useState } from "react";
+import { useState,type ReactNode } from "react";
 import { AnswerOption } from "@/components/quiz/AnswerOption";
 import { Highlightable } from "@/components/quiz/Highlightable";
 import { VocabularySelection } from "@/components/vocabulary/VocabularySelection";
@@ -13,6 +13,7 @@ import { TopicBadge } from "@/components/quiz/TopicBadge";
 import type { Question, QuestionFeedback } from "@/types/sat";
 
 type QuestionCardProps = {
+  headerActions?: ReactNode;
   currentIndex: number;
   mode?: "practice" | "test";
   onSelect: (answer: string) => void;
@@ -30,6 +31,7 @@ type HighlightSettings = Pick<ReturnType<typeof useQuestionHighlight>, "highligh
 const eliminatedByQuestion = new Map<string, string[]>();
 
 export function QuestionCard({
+  headerActions,
   currentIndex,
   mode = "practice",
   onSelect,
@@ -55,6 +57,7 @@ export function QuestionCard({
         <div className="flex flex-wrap items-center gap-3">
           {timerSeconds !== undefined ? <Timer label="Question" seconds={timerSeconds} /> : null}
           <QuestionHighlightControls {...highlight} />
+          {headerActions}
           <button
             className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             type="button"

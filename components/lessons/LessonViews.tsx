@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { StudentShell } from "@/components/dashboard/StudentShell";
 import { useLessons } from "@/components/lessons/useLessons";
 import { LiveCourseBanner } from "@/components/live/LiveLessonLinks";
+import { CourseTabs } from "@/components/course/CourseTabs";
 import { formatLessonDate, lessonHomeworkStatus, LESSON_SECTIONS, LESSON_PARTS, quickLessonDueDate } from "@/lib/lessons";
 import { formatAlmaty } from "@/lib/timezone";
 
@@ -64,7 +65,7 @@ export function LessonListing({ state, schedule = false, staff = false }: { stat
 }
 export function CoursePlanPage() {
   const state = useLessons();
-  return <StudentShell active="course"><LessonListing state={state} /></StudentShell>;
+  return <StudentShell active="course"><div className="min-w-0 space-y-5"><CourseTabs active="plan" /><LessonListing state={state} /></div></StudentShell>;
 }
 export function LessonSchedule({ staff = false }: { staff?: boolean }) {
   const state = useLessons(undefined, true);

@@ -2,6 +2,8 @@ import type { AssignmentFeedback, ReportRow } from "@/lib/assignmentReport";
 import type { Lesson, LessonItem, LessonRow, LessonHomework } from "@/lib/lessons";
 import type { VocabularyRecord, VocabularyWord } from "@/lib/vocabulary";
 import type { LiveSession, LiveAnswer, LiveRoster } from "@/lib/liveLessons";
+import type { CourseMaterial, MaterialSummary } from "@/lib/courseMaterials";
+import type { HardQuestion } from "@/lib/hardQuestions";
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 import type { StudyGroup, GroupMember, GroupTeacher } from "@/lib/groups";
 import type { UserRole } from "@/lib/roles";
@@ -238,6 +240,8 @@ export type Assignment = {
 export type Database = {
   public: {
     Tables: {
+      course_materials: { Row: CourseMaterial; Insert: Omit<CourseMaterial,"id"|"created_at"|"updated_at">; Update: Partial<Omit<CourseMaterial,"id"|"created_by"|"created_at"|"updated_at">>; Relationships: [] };
+      student_question_flags: { Row: { student_id:string; question_id:string; created_at:string }; Insert:{student_id:string;question_id:string}; Update:never; Relationships:[] };
       live_sessions: { Row: LiveSession; Insert: never; Update: never; Relationships: [] };
       live_answers: { Row: LiveAnswer; Insert: never; Update: never; Relationships: [] };
       live_session_roster: { Row: LiveRoster; Insert: never; Update: never; Relationships: [] };
@@ -462,6 +466,8 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      list_course_materials: { Args: Record<string, never>; Returns: MaterialSummary[] };
+      list_my_hard_questions: { Args: {p_question?:string}; Returns: Omit<HardQuestion,"id">[] };
       start_live_lesson: { Args: { p_lesson: string }; Returns: string };
       control_live_lesson: { Args: { p_code: string; p_action: string; p_position: number }; Returns: undefined };
       submit_verified_live_answer: { Args: { p_student: string; p_session: string; p_question: string; p_choice: string; p_correct: boolean }; Returns: undefined };

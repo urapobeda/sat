@@ -10,6 +10,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AITutorPanel } from "@/components/ai-tutor/AITutorPanel";
 import { StudentShell } from "@/components/dashboard/StudentShell";
+import { HardQuestionsProvider } from "@/components/hard-questions/HardQuestionsProvider";
+import { HardQuestionButton } from "@/components/hard-questions/HardQuestionButton";
 import { VocabularyProvider } from "@/components/vocabulary/VocabularyProvider";
 import { VocabularySelection } from "@/components/vocabulary/VocabularySelection";
 import { ReportQuestion } from "@/components/question-bank/practice/ReportQuestion";
@@ -131,6 +133,7 @@ export function PracticeExam({
 
   return (
     <StudentShell active="question-bank" exam>
+      <HardQuestionsProvider>
       <VocabularyProvider enabled={questions.some(item => item.section === "reading-writing")}>
     <main aria-label="Practice Mode" className="flex h-full min-h-0 flex-col bg-white text-slate-950">
       <h1 className="sr-only">{question ? `${question.section === "math" ? "Math" : "Reading & Writing"} practice` : "Practice"}</h1>
@@ -234,7 +237,7 @@ export function PracticeExam({
                 ref={questionPanel}
               >
                 <div className={`max-w-[40rem] px-4 pb-8 pt-4 sm:px-5 mx-auto ${hasPassage ? "lg:ml-0" : ""}`}>
-                  <div className="flex min-h-10 items-center rounded-lg bg-slate-100">
+                  <div className="flex min-h-10 flex-wrap items-center gap-y-1 rounded-lg bg-slate-100">
                     <span aria-label={`Question ${currentIndex + 1}`} className="flex min-h-10 min-w-10 items-center justify-center rounded-lg bg-neutral-900 px-2 text-lg font-semibold text-white">
                       {currentIndex + 1}
                     </span>
@@ -248,6 +251,7 @@ export function PracticeExam({
                       <Bookmark aria-hidden="true" className={isMarked ? "fill-amber-400 text-amber-700" : "text-slate-500"} size={16} />
                       Mark for Review
                     </button>
+                    <HardQuestionButton questionId={question.id} />
                     <ReportQuestion isSignedIn={Boolean(userId)} key={question.id} questionId={question.id} />
                   </div>
                   {marksError ? (
@@ -345,6 +349,7 @@ export function PracticeExam({
       ) : null)}
     </main>
       </VocabularyProvider>
+      </HardQuestionsProvider>
     </StudentShell>
   );
 }
