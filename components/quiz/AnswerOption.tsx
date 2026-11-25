@@ -32,6 +32,8 @@ export function AnswerOption({
     ? "border-emerald-500 bg-emerald-50 text-emerald-950 ring-1 ring-emerald-500"
     : isIncorrect
       ? "border-rose-400 bg-rose-50 text-rose-950 ring-1 ring-rose-400"
+      : isEliminated
+        ? "border-slate-300 bg-slate-100 text-slate-500"
       : isSelected
         ? onCheck
           ? "border-sky-500 bg-white text-slate-950 ring-1 ring-sky-500"
@@ -43,17 +45,18 @@ export function AnswerOption({
     ? "border-emerald-600 bg-emerald-600 text-white"
     : isIncorrect
       ? "border-rose-600 bg-rose-600 text-white"
+      : isEliminated
+        ? "border-slate-400 bg-slate-200 text-slate-500"
       : isSelected
         ? onCheck ? "border-sky-500 bg-sky-500 text-white" : "border-blue-600 bg-blue-600 text-white"
         : "border-slate-500 bg-white text-slate-800";
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3" data-eliminated={isEliminated || undefined}>
       <div className={[
         "flex min-w-0 flex-1 items-center rounded-xl border",
         onCheck ? "max-[400px]:flex-wrap" : "",
-        optionClass,
-        isEliminated && !isDisabled ? "opacity-45" : ""
+        optionClass
       ].join(" ")}>
         <button
           aria-pressed={isSelected}
@@ -75,13 +78,15 @@ export function AnswerOption({
           >
             {choice.label}
           </span>
-          <span className={["min-w-0 flex-1 leading-7", isEliminated ? "line-through decoration-slate-500" : ""].join(" ")}>
+          <span className={["relative min-w-0 flex-1 leading-7", isEliminated ? "line-through decoration-slate-500 decoration-2" : ""].join(" ")}>
             {choice.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- graph answer choice from Supabase Storage
-              <img alt={`Choice ${choice.label}`} className="block h-auto max-h-64 w-auto max-w-full" src={choice.imageUrl} />
+              <img alt={`Choice ${choice.label}`} className={`block h-auto max-h-64 w-auto max-w-full ${isEliminated ? "grayscale opacity-50" : ""}`} src={choice.imageUrl} />
             ) : null}
             {choice.text ? <MathText text={choice.text} /> : null}
+            {isEliminated && choice.imageUrl ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-1/2 border-t-2 border-slate-400" /> : null}
           </span>
+          {isEliminated ? <span className="sr-only">Crossed out</span> : null}
         </button>
         {onCheck ? (
           <button
@@ -101,7 +106,7 @@ export function AnswerOption({
           data-choice-eliminate
           aria-pressed={isEliminated}
           className={[
-            "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors",
+            "relative flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border text-xs font-semibold transition-colors disabled:cursor-default",
             isEliminated ? "border-slate-800 bg-slate-800 text-white" : examStyle ? "border-slate-500 text-slate-900 hover:bg-slate-100" : "border-slate-400 text-slate-600 hover:border-slate-700"
           ].join(" ")}
           disabled={isDisabled}

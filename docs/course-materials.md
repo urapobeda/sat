@@ -73,6 +73,17 @@ wrong-attempt persistence/deduplication and test/homework/live release gates.
 These are local checks, not evidence that production SQL has been installed. Browser CRUD
 against real teacher/student accounts remains a deployment check.
 
+Browser checks used a temporary local fixture with the real Markdown, KaTeX, highlighter,
+vocabulary selection and course navigation components. At 360 px, tabs scroll horizontally
+and the page has no horizontal overflow; vocabulary opens for a selected word, and does
+not open in highlighter mode. At 1280 px, formulas, the table and text render without
+horizontal page overflow. The temporary fixture was removed after verification.
+
+Final local checks: `npm run lint`, `npm run test:unit`, `npx tsc --noEmit` and `npm run build` passed.
+The build reports four existing CSS optimizer warnings about `::highlight`; the actual
+browser highlight rendering was verified. A first build encountered a stale development
+type reference to the removed QA page; regenerating the development cache resolved it.
+
 ## Changed files
 
 - New route pages: `app/teacher/materials/page.tsx`, `app/course/texts/page.tsx`,

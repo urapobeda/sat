@@ -292,7 +292,7 @@ export function QuestionBankPracticePage() {
 
       const payload = await response.json();
       if (payload.blocked) { unlockAnswer(); setPersistenceMessage(payload.message); return; }
-      const verifiedFeedback = payload as PracticeFeedback;
+      const verifiedFeedback: PracticeFeedback = payload.isCorrect ? payload : {...payload, selectedAnswer:choice};
       if (persistenceRequest.current !== persistence) return;
       setFeedback((currentFeedback) => ({
         ...currentFeedback,

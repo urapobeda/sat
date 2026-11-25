@@ -5,6 +5,7 @@ import { gradeQuestionAnswer } from "@/lib/server/questionSolutions";
 import { isLiveQuestionRestricted } from "@/lib/server/liveRestrictions";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { countedAnswerSeconds } from "@/lib/practiceTiming";
+import { incorrectChoiceExplanation } from "@/lib/incorrectChoiceExplanation";
 
 const answerSchema = z.object({
   questionId: z.string().uuid(),
@@ -57,7 +58,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (!feedback.isCorrect) {
-      return NextResponse.json({ isCorrect: false, answerSaved: persistence.answerSaved, timingRecorded: false });
+      const hint = incorrectChoiceExplanation(feedback.explanation, parsed.data.selectedAnswer, feedback.correctLabel);
+      return NextResponse.json({ isCorrect: false, answerSaved: persistence.answerSaved, timingRecorded: false, ...(hint ? {incorrectExplanation: hint} : {}) });
     }
 
     return NextResponse.json({ ...feedback, ...persistence });

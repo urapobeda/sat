@@ -16,6 +16,7 @@ import { VocabularyProvider } from "@/components/vocabulary/VocabularyProvider";
 import { VocabularySelection } from "@/components/vocabulary/VocabularySelection";
 import { ReportQuestion } from "@/components/question-bank/practice/ReportQuestion";
 import { QuestionNavigator } from "@/components/question-bank/practice/QuestionNavigator";
+import { IncorrectAnswerTip } from "@/components/question-bank/practice/IncorrectAnswerTip";
 import { Highlightable } from "@/components/quiz/Highlightable";
 import { MathText } from "@/components/quiz/MathText";
 import { QuestionAnswers, QuestionExplanation, QuestionStem } from "@/components/quiz/QuestionCard";
@@ -62,6 +63,7 @@ export function PracticeExam({
   const [showSessionTime, setShowSessionTime] = useState(false);
   const [tutorOpen, setTutorOpen] = useState(false);
   const [choiceDrafts, setChoiceDrafts] = useState<Record<string, string | null>>({});
+  const [dismissedTips, setDismissedTips] = useState<Record<string, PracticeFeedback>>({});
   const [markedIds, setMarkedIds] = useState<Set<string>>(() => new Set());
   const [marksStatus, setMarksStatus] = useState<"loading" | "ready" | "saving">("loading");
   const [marksReload, setMarksReload] = useState(0);
@@ -277,6 +279,7 @@ export function PracticeExam({
                     </Highlightable>
                     </VocabularySelection>
                   ) : null}
+                  <div className="relative mt-4">
                   <QuestionAnswers
                     choiceDraft={{
                       value: choiceDrafts[question.id] ?? null,
@@ -294,6 +297,15 @@ export function PracticeExam({
                     selectedAnswer={selectedAnswer}
                     showFeedback={feedback?.isCorrect === true}
                   />
+                  {feedback?.isCorrect === false && !isChecking && !isSavingResult && dismissedTips[question.id] !== feedback ? <IncorrectAnswerTip
+                    key={`${question.id}-${feedback.selectedAnswer ?? ''}`}
+                    choice={feedback.selectedAnswer}
+                    explanation={feedback.incorrectExplanation}
+                    onDismiss={() => setDismissedTips(previous => ({...previous,[question.id]:feedback}))}
+                    onNext={() => {setDismissedTips(previous => ({...previous,[question.id]:feedback})); onNext();}}
+                    nextLabel={currentIndex === questions.length-1 ? 'Show Results' : 'Next'}
+                  /> : null}
+                  </div>
                   {feedback?.isCorrect ? (
                     <div ref={explanation}>
                       <QuestionExplanation feedback={feedback} highlight={highlight} key={question.id} questionId={question.id} showExplanation={showExplanation} />
