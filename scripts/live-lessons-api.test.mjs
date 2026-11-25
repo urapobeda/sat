@@ -1,0 +1,64 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import ts from "typescript";
+import { z } from "zod";
+const id="00000000-0000-4000-8000-000000000001", q="00000000-0000-4000-9000-000000000001", code="ABCDEFGH";
+const state={role:"student",calls:[],error:null,gradeCalls:0,revealed:false,closed:false,rows:[],saveError:null,z};
+globalThis.__liveTest=state;
+const dataUrl=source=>`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
+const mock=dataUrl(`const s=globalThis.__liveTest;
+export const z=s.z; export const NextResponse={json:(v,i)=>Response.json(v,i)};
+const db={rpc(name,args){s.calls.push({name,args});let data;
+if(name==='get_live_snapshot') data={session:{id:'${id}',question_ids:['${q}'],current_position:1,revealed_positions:s.revealed?[1]:[],status:s.closed?'finished':'active'},staff:s.role!=='student',own_answer:null};
+else if(name==='start_live_lesson') data='${code}';else data=null;
+return {range:async(from,to)=>({data:s.rows.slice(from,to+1),error:s.error}),then(resolve,reject){return Promise.resolve({data,error:name==='submit_verified_live_answer'?s.saveError:s.error}).then(resolve,reject);}};
+},from(){return {select(){return this;},eq(){return this;},async single(){return {error:s.error,data:{id:'${q}',section:'math',topic:'Algebra',difficulty:'easy',question:'Test question',choices:[{label:'A',text:'One'},{label:'B',text:'Two'}],image_urls:[],is_bluebook:false,question_type:'multiple-choice'}};}};}};
+export const getApiRoleActor=async()=>s.role?{id:'${id}',role:s.role}:null;
+export const getGroupStaff=async()=>s.role&&s.role!=='student'?{actor:{id:'${id}',role:s.role},db}:null;
+export const getSupabaseUserClient=()=>db; export const getSupabaseAdminClient=()=>db;
+export const toQuestionChoices=rows=>rows.map(row=>({...row,imageUrl:null}));
+export async function gradeQuestionAnswer(){s.gradeCalls++;return {isCorrect:true,correctAnswer:'SECRET',correctLabel:'A',explanation:'SECRET EXPLANATION'};}`);
+async function load(filename,imports={}) {
+  let source=(await readFile(new URL(filename,import.meta.url),"utf8")).replace('import "server-only";',"");
+  source=source.replace(/from "([^"]+)"/g,(_,name)=>`from "${imports[name]??mock}"`);
+  return dataUrl(ts.transpileModule(source,{compilerOptions:{module:99,target:9}}).outputText);
+}
+const pure=await load("../lib/liveLessons.ts");
+const access=await load("../lib/server/liveAccess.ts",{"@/lib/liveLessons":pure});
+const imports={"@/lib/server/liveAccess":access,"@/lib/server/lessonAccess":await load("../lib/server/lessonAccess.ts")};
+const student=await import(await load("../app/api/live/[code]/route.ts",imports));
+const controls=await import(await load("../app/api/teacher/live/[code]/route.ts",imports));
+const start=await import(await load("../app/api/teacher/lessons/[lessonId]/live/route.ts",imports));
+const list=await import(await load("../app/api/live/route.ts",imports));
+const request=(body={})=>({json:async()=>body,headers:new Headers({authorization:"Bearer fixture"})});
+const context={params:Promise.resolve({code})},lessonContext={params:Promise.resolve({lessonId:id})};
+try {
+  state.role=null; assert.equal((await student.GET(request(),context)).status,401);
+  for(const role of [null,"student"]) {state.role=role;assert.equal((await controls.POST(request({action:"next",position:1}),context)).status,403);assert.equal((await start.POST(request(),lessonContext)).status,403);}
+  assert.equal(state.calls.length,0);
+  state.role="student";
+  const before=await student.GET(request(),context);assert.equal(before.status,200);assert.equal(JSON.stringify(await before.json()).includes("SECRET"),false);assert.equal(state.gradeCalls,0);
+  const body={sessionId:id,questionId:q,choice:"A",isCorrect:false,studentId:"forged"};
+  assert.deepEqual(await (await student.POST(request(body),context)).json(),{saved:true});
+  const saved=state.calls.findLast(call=>call.name==="submit_verified_live_answer");assert.equal(saved.args.p_student,id);assert.equal(saved.args.p_correct,true);assert.equal(state.gradeCalls,1);
+  const calls=state.calls.length;assert.equal((await student.POST(request({...body,choice:"C"}),context)).status,400);assert.equal(state.calls.length,calls+1);
+  state.saveError={code:"40001"};assert.equal((await student.POST(request(body),context)).status,409);state.saveError=null;
+  state.revealed=true;const after=await student.GET(request(),context);assert.equal(JSON.stringify(await after.json()).includes("SECRET"),false);
+  assert.equal((await student.POST(request(body),context)).status,409);
+  state.role="teacher";
+  const teacher=await student.GET(request(),context);assert.equal((await teacher.json()).correct_answer,"SECRET");
+  assert.equal((await student.POST(request(body),context)).status,403);
+  assert.equal((await controls.POST(request({action:"next",position:1}),context)).status,200);
+  assert.deepEqual(state.calls.at(-1).args,{p_code:code,p_action:"next",p_position:1});
+  assert.equal((await controls.POST(request({action:"next",position:0}),context)).status,400);
+  assert.equal((await start.POST(request(),lessonContext)).status,201);
+  state.error={code:"42501"};assert.equal((await student.GET(request(),context)).status,403);
+  state.error=null;state.rows=Array.from({length:1001},(_,i)=>({id:String(i)}));
+  const sessions=await list.GET(request());assert.equal((await sessions.json()).sessions.length,1001);assert.equal(sessions.headers.get("cache-control"),"private, no-store");
+  const logic=await import(pure);
+  assert.equal(logic.liveAnsweredLabel(0,2),"0 of 2 answered");assert.equal(logic.liveAnsweredLabel(2,2),"Everyone answered");
+  assert.equal(logic.liveAnsweredLabel(0,0),"0 of 0 answered");
+  const rows=logic.liveGroupRows({session:{question_ids:[q,"second"]},roster:[{student_id:id,full_name:"Student"}],answers:[{student_id:id,question_id:q,choice:"B",is_correct:false}]});
+  assert.equal(rows[0].correct,0);assert.equal(rows[0].cells[1],null);
+  console.log("Live API tests passed: role checks, no student answer keys, server-only verdict/identity, closed/racing questions, validated controls, pagination and group statistics.");
+} finally {delete globalThis.__liveTest;}

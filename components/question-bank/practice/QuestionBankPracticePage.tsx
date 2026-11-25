@@ -1,5 +1,7 @@
 "use client";
 
+import { AI_TUTOR_ENABLED } from "@/lib/features";
+
 import { Loader2, Search, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -19,6 +21,8 @@ import {
 } from "@/lib/supabase/queries";
 import { getSupabaseAuthHeaders } from "@/lib/supabase/authHeaders";
 import { QuestionStopwatch } from "@/lib/practiceTiming";
+import { groupRequest } from "@/lib/groupApi";
+import { hardQuestionMatches,parseHardQuestionIds,type HardQuestion } from "@/lib/hardQuestions";
 import type { User } from "@supabase/supabase-js";
 import type {
   Question,
@@ -35,6 +39,9 @@ export function QuestionBankPracticePage() {
   const difficultyParam = searchParams.get("difficulties") ?? searchParams.get("difficulty");
   const difficulties = useMemo(() => parseQuestionDifficulties(difficultyParam), [difficultyParam]);
   const reviewMissed = searchParams.get("review") === "missed";
+  const hardCollection = searchParams.get("collection") === "hard";
+  const hardIds = searchParams.get("ids");
+  const hardSearch = (searchParams.get("hardQuery")??'').slice(0,200);
   const completion = parseQuestionCompletion(searchParams.get("completion"));
   const topic = searchParams.get("topic");
   const topicsParam = searchParams.get("topics");
@@ -141,7 +148,13 @@ export function QuestionBankPracticePage() {
       const progressRequest = completion === "all" && !reviewMissed
         ? Promise.resolve(null)
         : userRequest.then((user) => user ? getQuestionProgressLookup(user.id) : null);
-      const catalogRequest = Promise.all([getQuestionCatalog(), progressRequest]).then(([questions, progress]) => {
+      const source = hardCollection ? userRequest.then(async user=>{
+        if(!user)throw new Error('Sign in to practice your Hard questions.');
+        const selected=parseHardQuestionIds(hardIds);
+        const {items}=await groupRequest<{items:HardQuestion[]}>('/api/hard-questions');
+        return items.filter(item=>(!selected||selected.has(item.id))&&hardQuestionMatches(item,'all',hardSearch));
+      }) : getQuestionCatalog();
+      const catalogRequest = Promise.all([source, progressRequest]).then(([questions, progress]) => {
         const eligible = reviewMissed ? questions.filter((question) => progress?.incorrectIds.has(question.id)) : questions;
         const matching = filterQuestionCatalog(eligible, { section, difficulties, topic, topics });
         return filterQuestionsByCompletion(matching, completion, progress?.answeredIds ?? new Set<string>());
@@ -182,7 +195,7 @@ export function QuestionBankPracticePage() {
       isMounted = false;
       persistenceRequest.current = null;
     };
-  }, [completion, createSession, difficulties, reviewMissed, section, topic, topics]);
+  }, [completion, createSession, difficulties, reviewMissed, section, topic, topics,hardCollection,hardIds,hardSearch]);
 
   // Keep the next questions ready while the student works on the current one.
   useEffect(() => {
@@ -277,7 +290,9 @@ export function QuestionBankPracticePage() {
         throw new Error("Unable to verify answer.");
       }
 
-      const verifiedFeedback = (await response.json()) as PracticeFeedback;
+      const payload = await response.json();
+      if (payload.blocked) { unlockAnswer(); setPersistenceMessage(payload.message); return; }
+      const verifiedFeedback: PracticeFeedback = payload.isCorrect ? payload : {...payload, selectedAnswer:choice};
       if (persistenceRequest.current !== persistence) return;
       setFeedback((currentFeedback) => ({
         ...currentFeedback,
@@ -352,7 +367,7 @@ export function QuestionBankPracticePage() {
         }
       }
     } catch {
-      if (persistenceRequest.current === persistence) setPersistenceMessage("Results are shown here, but Supabase did not save them.");
+      if (persistenceRequest.current === persistence) setPersistenceMessage("Results are shown here, but they could not be saved.");
     } finally {
       if (persistenceRequest.current === persistence) {
         setIsSavingResult(false);
@@ -389,7 +404,7 @@ export function QuestionBankPracticePage() {
 
   const waitingForQuestion = isLoading || (!error && !isFinished && practiceQuestions.length > 0 && !currentQuestion);
   const activeQuestion = !waitingForQuestion && !error && !isFinished ? currentQuestion : undefined;
-  const backHref = reviewMissed ? "/mistakes" : section === "all" ? "/question-bank" : `/question-bank/${section}`;
+  const backHref = hardCollection ? "/course/hard-questions" : reviewMissed ? "/mistakes" : section === "all" ? "/question-bank" : `/question-bank/${section}`;
 
   return (
     <PracticeExam
@@ -435,6 +450,7 @@ export function QuestionBankPracticePage() {
         />
       ) : practiceQuestions.length === 0 ? (
         <EmptyState
+          action={{ href: "/question-bank", label: "Back to Question Bank" }}
           description="No questions match these filters. Go back and choose another section or topic."
           icon={<Search size={26} />}
           title="No questions found"
@@ -452,7 +468,7 @@ export function QuestionBankPracticePage() {
               total={practiceQuestions.length}
               weakTopics={weakTopics}
             />
-            <article className="rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-violet-50/60 p-5 shadow-sm sm:p-6">
+            {AI_TUTOR_ENABLED ? (<article className="rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/80 to-violet-50/60 p-5 shadow-sm sm:p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
@@ -481,9 +497,9 @@ export function QuestionBankPracticePage() {
                   Review with AI
                 </button>
               </div>
-            </article>
+            </article>) : null}
           </div>
-          {reviewQuestion ? (
+          {AI_TUTOR_ENABLED && reviewQuestion ? (
             <AITutorPanel
               hasSubmittedOverride
               isOpen={Boolean(reviewQuestion)}

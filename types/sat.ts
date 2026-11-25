@@ -38,7 +38,7 @@ export type QuestionFeedback = {
 
 export type PracticeFeedback =
   | (QuestionFeedback & { isCorrect: true })
-  | { isCorrect: false; answerSaved: boolean; timingRecorded: false };
+  | { isCorrect: false; answerSaved: boolean; timingRecorded: false; incorrectExplanation?: string; selectedAnswer?: string };
 
 export type ReviewQuestion = Question & {
   correctAnswer: string;

@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedUserId } from "@/lib/server/auth";
 import { gradeQuestionAnswer } from "@/lib/server/questionSolutions";
+import { isLiveQuestionRestricted } from "@/lib/server/liveRestrictions";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { countedAnswerSeconds } from "@/lib/practiceTiming";
+import { incorrectChoiceExplanation } from "@/lib/incorrectChoiceExplanation";
 
 const answerSchema = z.object({
   questionId: z.string().uuid(),
@@ -21,8 +23,15 @@ export async function POST(request: NextRequest) {
     }
 
     const sessionId = parsed.data.sessionId;
+    const student = await getAuthenticatedUserId(request);
+    if (student) {
+      if (await isLiveQuestionRestricted(student, parsed.data.questionId)) return NextResponse.json({ blocked: true, message: "This question is in your live lesson. Submit your answer there." });
+      const pending = await getSupabaseAdminClient().rpc("question_in_pending_homework", {p_user:student,p_question:parsed.data.questionId});
+      if (pending.error) return NextResponse.json({error:"Unable to check homework restrictions."},{status:503});
+      if (pending.data) return NextResponse.json({blocked:true,message:"This question is part of your homework. The answer will be available after you submit it."});
+    }
     const [owner, feedback] = await Promise.all([
-      sessionId ? getPracticeSessionOwner(request, sessionId).catch((error: unknown) => {
+      sessionId && student ? getPracticeSessionOwner(student, sessionId).catch((error: unknown) => {
         logPersistenceError(error);
         return null;
       }) : null,
@@ -49,7 +58,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (!feedback.isCorrect) {
-      return NextResponse.json({ isCorrect: false, answerSaved: persistence.answerSaved, timingRecorded: false });
+      const hint = incorrectChoiceExplanation(feedback.explanation, parsed.data.selectedAnswer, feedback.correctLabel);
+      return NextResponse.json({ isCorrect: false, answerSaved: persistence.answerSaved, timingRecorded: false, ...(hint ? {incorrectExplanation: hint} : {}) });
     }
 
     return NextResponse.json({ ...feedback, ...persistence });
@@ -65,9 +75,7 @@ function logPersistenceError(error: unknown) {
   console.error("Practice answer persistence failed:", error instanceof Error ? error.message : "Request failed");
 }
 
-async function getPracticeSessionOwner(request: NextRequest, sessionId: string) {
-  const userId = await getAuthenticatedUserId(request);
-  if (!userId) return null;
+async function getPracticeSessionOwner(userId: string, sessionId: string) {
   const supabase = getSupabaseAdminClient();
   const { data: session, error } = await supabase
     .from("practice_sessions")

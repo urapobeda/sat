@@ -101,7 +101,7 @@ export function AuthPage({ initialMode = "signin" }: { initialMode?: AuthMode })
     setMessage(null);
     setError(null);
     if (!isSupabaseConfigured()) {
-      setError("Supabase is not configured.");
+      setError("Sign-in is not available right now. Please try again later.");
       return;
     }
     const name = fullName.trim();
@@ -151,7 +151,7 @@ export function AuthPage({ initialMode = "signin" }: { initialMode?: AuthMode })
     const url = new URL("/auth", window.location.origin);
     url.searchParams.set("mode", mode);
     const next = getAuthReturnPath(window.location.search);
-    if (next.startsWith("/join/")) url.searchParams.set("next", next);
+    if (next !== "/question-bank") url.searchParams.set("next", next);
     return url.toString();
   }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { AI_TUTOR_ENABLED } from "@/lib/features";
+
 import {
   ArrowLeft,
   ArrowRight,
@@ -122,7 +124,7 @@ export function TestStartPage() {
           setError(
             requestError instanceof Error
               ? requestError.message
-              : "Unable to load test questions from Supabase."
+              : "Unable to load test questions. Please try again."
           );
         }
       } finally {
@@ -286,7 +288,7 @@ export function TestStartPage() {
         <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-3 text-sm font-semibold text-blue-600">
             <Loader2 className="animate-spin" size={20} />
-            Loading full SAT test from Supabase...
+            Loading full SAT test...
           </div>
           <div className="mt-6 space-y-4">
             {[0, 1, 2].map((item) => (
@@ -298,7 +300,7 @@ export function TestStartPage() {
         <ErrorState message={error} onRetry={() => window.location.reload()} />
       ) : testQuestions.length === 0 ? (
         <EmptyState
-          description="No questions are available in Supabase yet. Run the seed SQL file first."
+          description="No questions are available yet. Please check back later."
           icon={<Search size={26} />}
           title="No test questions found"
         />
@@ -340,7 +342,7 @@ export function TestStartPage() {
                 Start New Test
                 <ArrowRight size={18} />
               </Link>
-              <button
+              {AI_TUTOR_ENABLED ? (<button
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:shadow-xl"
                 onClick={() => {
                   const missedQuestion =
@@ -356,7 +358,7 @@ export function TestStartPage() {
               >
                 <Sparkles size={18} />
                 Review with AI
-              </button>
+              </button>) : null}
               <Link
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                 href="/progress"
@@ -371,7 +373,7 @@ export function TestStartPage() {
               questions={completionResult?.reviewQuestions ?? []}
             />
           </div>
-          {reviewQuestion ? (
+          {AI_TUTOR_ENABLED && reviewQuestion ? (
             <AITutorPanel
               hasSubmittedOverride
               isOpen={Boolean(reviewQuestion)}
@@ -400,7 +402,7 @@ export function TestStartPage() {
 
             <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto_1fr] sm:items-center">
               <button
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-5 py-3 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-white px-5 py-3 text-sm font-semibold text-blue-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-500"
                 disabled={currentIndex === 0}
                 onClick={goPrevious}
                 type="button"
@@ -424,7 +426,7 @@ export function TestStartPage() {
               </button>
 
               <button
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-5 py-3 text-sm font-semibold text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-rose-100 bg-white px-5 py-3 text-sm font-semibold text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 disabled={isSavingResult}
                 onClick={() => submitDialog.current?.showModal()}
                 type="button"

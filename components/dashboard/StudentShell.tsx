@@ -16,6 +16,8 @@ const groups = [
   ] },
   { title: "Learning", items: [
     { id: "study-plan", label: "Study Plan", href: "/study-plan", icon: Target },
+    { id: "course", label: "Course plan", href: "/course", icon: BookOpen },
+    { id: "vocabulary", label: "Vocabulary", href: "/vocabulary", icon: BookOpen },
     { id: "homework", label: "Homework", href: "/homework", icon: ClipboardList },
     { id: "schedule", label: "Schedule", href: "/schedule", icon: CalendarDays },
     { id: "recordings", label: "Lesson Recordings", href: "/recordings", icon: Video },
@@ -55,7 +57,7 @@ export function StudentShell({ active, children, exam = false, guardExit = false
       <nav aria-label="Main navigation" className="min-h-0 flex-1 space-y-4 overflow-y-auto px-1.5 py-2">
         {groups.map((group) => (
           <div key={group.title}>
-            <p className={compact ? "sr-only" : "mb-1 px-2.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400"}>{group.title}</p>
+            <p className={compact ? "sr-only" : "mb-1 px-2.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500"}>{group.title}</p>
             <div className="space-y-0.5">
               {group.items.map((item) => (
                 <Link

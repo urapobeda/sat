@@ -18,12 +18,12 @@ const payloadSchema = z.union([startSchema, getSchema, answerSchema, submitSchem
 export async function POST(request: NextRequest) {
   const userId = await getAuthenticatedUserId(request);
   if (!userId) {
-    return NextResponse.json({ error: "Войдите, чтобы выполнить задание." }, { status: 401 });
+    return NextResponse.json({ error: "Sign in to do this assignment." }, { status: 401 });
   }
 
   const parsed = payloadSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Некорректный запрос." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
   try {
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     if (input.action === "start") {
       try {
         return NextResponse.json(await openHomeworkAttempt(userId, input.assignmentId, input.newAttempt ?? false), { headers: { "Cache-Control": "no-store" } });
-      } catch { return NextResponse.json({ error: "Это задание недоступно для выполнения или попытки закончились." }, { status: 409 }); }
+      } catch { return NextResponse.json({ error: "This assignment is not available or you have no attempts left." }, { status: 409 }); }
     }
 
     if (input.action === "get") {
@@ -55,7 +55,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(await submitHomeworkAttempt({ submissionId: input.submissionId, userId }), {
       headers: { "Cache-Control": "no-store" }
     });
-  } catch {
-    return NextResponse.json({ error: "Не удалось сохранить задание. Попробуйте ещё раз." }, { status: 500 });
+  } catch (error) {
+    if (error instanceof Error && error.message === "HOMEWORK_EXPIRED") return NextResponse.json({error:"Time expired. The saved answers were submitted."},{status:409});
+    return NextResponse.json({ error: "Could not save the assignment. Please try again." }, { status: 500 });
   }
 }

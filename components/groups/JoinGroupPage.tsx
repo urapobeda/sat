@@ -26,15 +26,15 @@ function JoinGroupPanel({ code }: { code: string }) {
         const db = getSupabaseBrowserClient();
         const joined = await db.rpc("join_group_by_code", { code });
         if (joined.error) {
-          if (joined.error.code === "22023") throw new Error("Код неверный или группа находится в архиве. Попросите учителя новое приглашение.");
-          if (joined.error.code === "42501") throw new Error("Вступить в группу можно только из аккаунта ученика.");
-          throw new Error("Не удалось вступить в группу. Попробуйте ещё раз.");
+          if (joined.error.code === "22023") throw new Error("The code is invalid or the group is archived. Ask your teacher for a new invitation.");
+          if (joined.error.code === "42501") throw new Error("Only student accounts can join a group.");
+          throw new Error("Could not join the group. Please try again.");
         }
         const group = await db.rpc("list_my_groups", { p_group_id: joined.data });
         // Membership succeeded even if the optional group title cannot be loaded.
-        if (active) setResult({ userId: userId!, name: group.data?.[0]?.name ?? "группу", teacher: group.data?.[0]?.teacher_name ?? "" });
+        if (active) setResult({ userId: userId!, name: group.data?.[0]?.name ?? "the group", teacher: group.data?.[0]?.teacher_name ?? "" });
       } catch (failure) {
-        if (active) setError(failure instanceof Error ? failure.message : "Не удалось вступить в группу.");
+        if (active) setError(failure instanceof Error ? failure.message : "Could not join the group.");
       }
     }
     void join();
@@ -43,8 +43,8 @@ function JoinGroupPanel({ code }: { code: string }) {
   const success = result?.userId === userId ? result : null;
   const invalid = !GROUP_CODE_PATTERN.test(code);
   return <section className="hub-card mx-auto max-w-xl space-y-4 p-6 sm:p-8">
-    <h1 className="text-3xl font-bold">Приглашение в группу</h1>
-    {invalid ? <p role="alert" className="text-sm text-rose-600">Неверный формат кода. Проверьте ссылку-приглашение.</p> : error ? <><p role="alert" className="text-sm text-rose-600">{error}</p><button className="hub-primary cursor-pointer" type="button" onClick={() => setRetry((value) => value + 1)}>Повторить</button></> : success ? <><p role="status">Вы вступили в {success.name}.</p>{success.teacher ? <p className="text-sm text-slate-600">Учитель: {success.teacher}</p> : null}<Link className="hub-primary" href="/dashboard">На главную</Link></> : <p role="status" className="text-sm text-slate-600">{isLoading || !userId ? "Проверяем вход…" : "Вступаем в группу…"}</p>}
-    {error || invalid ? <Link className="hub-text-link block text-sm" href="/dashboard">На главную</Link> : null}
+    <h1 className="text-3xl font-bold">Group invitation</h1>
+    {invalid ? <p role="alert" className="text-sm text-rose-600">Invalid code format. Check the invitation link.</p> : error ? <><p role="alert" className="text-sm text-rose-600">{error}</p><button className="hub-primary cursor-pointer" type="button" onClick={() => setRetry((value) => value + 1)}>Retry</button></> : success ? <><p role="status">You joined {success.name}.</p>{success.teacher ? <p className="text-sm text-slate-600">Teacher: {success.teacher}</p> : null}<Link className="hub-primary" href="/dashboard">Go to dashboard</Link></> : <p role="status" className="text-sm text-slate-600">{isLoading || !userId ? "Checking sign-in…" : "Joining the group…"}</p>}
+    {error || invalid ? <Link className="hub-text-link block text-sm" href="/dashboard">Go to dashboard</Link> : null}
   </section>;
 }

@@ -146,7 +146,7 @@ export function Navbar() {
 
         {visibleMoreItems.length > 0 ? (
           <div className="mt-5 border-t border-slate-200 pt-4">
-            <p className="px-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            <p className="px-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
               More
             </p>
             <div className="mt-2 space-y-1">

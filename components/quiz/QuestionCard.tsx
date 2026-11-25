@@ -1,9 +1,10 @@
 "use client";
 
 import { Flag, Info, Send } from "lucide-react";
-import { useState } from "react";
+import { useState,type ReactNode } from "react";
 import { AnswerOption } from "@/components/quiz/AnswerOption";
 import { Highlightable } from "@/components/quiz/Highlightable";
+import { VocabularySelection } from "@/components/vocabulary/VocabularySelection";
 import { MathText } from "@/components/quiz/MathText";
 import { ProgressBar } from "@/components/quiz/ProgressBar";
 import { QuestionHighlightControls, useQuestionHighlight } from "@/components/quiz/QuestionHighlight";
@@ -12,6 +13,7 @@ import { TopicBadge } from "@/components/quiz/TopicBadge";
 import type { Question, QuestionFeedback } from "@/types/sat";
 
 type QuestionCardProps = {
+  headerActions?: ReactNode;
   currentIndex: number;
   mode?: "practice" | "test";
   onSelect: (answer: string) => void;
@@ -29,6 +31,7 @@ type HighlightSettings = Pick<ReturnType<typeof useQuestionHighlight>, "highligh
 const eliminatedByQuestion = new Map<string, string[]>();
 
 export function QuestionCard({
+  headerActions,
   currentIndex,
   mode = "practice",
   onSelect,
@@ -43,7 +46,7 @@ export function QuestionCard({
   const highlight = useQuestionHighlight();
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+    <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-slate-600">
@@ -54,6 +57,7 @@ export function QuestionCard({
         <div className="flex flex-wrap items-center gap-3">
           {timerSeconds !== undefined ? <Timer label="Question" seconds={timerSeconds} /> : null}
           <QuestionHighlightControls {...highlight} />
+          {headerActions}
           <button
             className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             type="button"
@@ -93,6 +97,7 @@ export function QuestionStem({ className, highlight, number, question, text = qu
   const placesOwnFigures = /\[\[img:\d+\]\]/.test(text);
 
   return (
+    <VocabularySelection enabled={question.section === "reading-writing" && !highlight.highlightEnabled} scopeKey={`stem-${question.id}`}>
     <Highlightable
       className={`text-slate-950 ${className ?? ""}`}
       enabled={highlight.highlightEnabled}
@@ -114,6 +119,7 @@ export function QuestionStem({ className, highlight, number, question, text = qu
       ) : null}
       <MathText imageAlt={`Question ${number} figure`} images={question.imageUrls} text={text} />
     </Highlightable>
+    </VocabularySelection>
   );
 }
 
@@ -240,23 +246,24 @@ function FreeResponseInput({
 
   return (
     <div className="mt-7 max-w-md">
-      <div className="flex items-center gap-2">
+      <div className="relative flex items-center gap-2">
         <label className="text-sm font-semibold text-slate-700" htmlFor={`free-response-${questionId}`}>
           Your answer
         </label>
-        <details className="group relative">
+        <details className="group">
           <summary className="flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
             <Info aria-hidden="true" size={16} />
             <span className="sr-only">How to enter your answer</span>
           </summary>
-          <div className="absolute left-0 z-20 mt-2 w-80 rounded-xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-lg">
+          <div className="absolute left-0 z-20 mt-2 w-full max-w-80 rounded-xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-lg">
             <p className="font-semibold text-slate-900">How to enter your answer</p>
             <ul className="mt-2 list-disc space-y-1 pl-5">
-              <li>If you find more than one correct answer, enter only one.</li>
-              <li>Up to 5 characters for a positive answer, 6 for a negative one (the minus sign counts).</li>
-              <li>A fraction that doesn&apos;t fit: enter its decimal. A long decimal: cut or round it at the 4th digit.</li>
-              <li>A mixed number like 3½: enter 7/2 or 3.5.</li>
-              <li>No symbols such as %, $ or commas.</li>
+              <li>In a question with several valid solutions, submit just one.</li>
+              <li>The entry limit is 5 characters for positive answers, or 6 for negative answers, counting the minus sign.</li>
+              <li>When a fraction is too long for the answer field, use its decimal value instead.</li>
+              <li>When a decimal is too long, shorten it to the fourth digit by rounding or truncation.</li>
+              <li>Convert mixed numbers before entering them: for example, use 7/2 or 3.5 for 3½.</li>
+              <li>Omit percent signs, commas, and dollar signs.</li>
             </ul>
           </div>
         </details>
@@ -265,7 +272,7 @@ function FreeResponseInput({
       <div className="mt-2 flex gap-3">
         <input
           autoComplete="off"
-          className="min-h-12 w-40 rounded-lg border border-slate-400 bg-white px-3 text-lg text-slate-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+          className="min-h-12 w-40 min-w-0 flex-1 rounded-lg border border-slate-400 bg-white px-3 text-lg text-slate-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
           disabled={isLocked}
           id={`free-response-${questionId}`}
           inputMode="decimal"

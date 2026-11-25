@@ -23,7 +23,7 @@ export function AccuracyByTopicCard({
   return (
     <LockedProCard
       legend={
-        <div className="mt-3 flex items-center gap-4 text-xs font-semibold text-slate-400">
+        <div className="mt-3 flex items-center gap-4 text-xs font-semibold text-slate-500">
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-slate-300" /> ≥ 85%
           </span>
@@ -45,7 +45,7 @@ export function AccuracyByTopicCard({
               <p className="truncate text-sm font-semibold text-slate-800">
                 {row.title}
               </p>
-              <p className="text-xs text-slate-400">{row.attempts} attempts</p>
+              <p className="text-xs text-slate-500">{row.attempts} attempts</p>
             </div>
             <div className="flex items-center gap-3">
               <span className="relative h-1.5 w-28 rounded-full bg-slate-100">

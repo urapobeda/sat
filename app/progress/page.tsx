@@ -1,6 +1,9 @@
 import { PageHeading } from "@/components/dashboard/PageHeading";
 import { Layout } from "@/components/Layout";
 import { ProgressDashboard } from "@/components/ProgressDashboard";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Progress" };
 
 export default function ProgressPage() {
   return (

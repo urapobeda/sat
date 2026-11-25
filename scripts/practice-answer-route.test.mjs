@@ -12,6 +12,7 @@ const mockSource = `
 export const z = globalThis.__satTimingRouteTest.z;
 export const NextResponse = { json: (data, init) => Response.json(data, init) };
 export async function getAuthenticatedUserId() { return globalThis.__satTimingRouteTest.current.user; }
+export async function isLiveQuestionRestricted() { return globalThis.__satTimingRouteTest.current.liveBlocked ?? false; }
 export async function gradeQuestionAnswer() {
   const current = globalThis.__satTimingRouteTest.current;
   if (current.waitForOwnership) await current.waitForOwnership;
@@ -21,15 +22,16 @@ export function getSupabaseAdminClient() { return globalThis.__satTimingRouteTes
 `;
 const mockUrl = "data:text/javascript;base64," + Buffer.from(mockSource).toString("base64");
 let source = await readFile(new URL("../app/api/practice/answers/route.ts", import.meta.url), "utf8");
-source = source.replace(/from "(next\/server|zod|@\/lib\/server\/auth|@\/lib\/server\/questionSolutions|@\/lib\/supabase\/admin)"/g, `from "${mockUrl}"`);
+source = source.replace(/from "(next\/server|zod|@\/lib\/server\/auth|@\/lib\/server\/questionSolutions|@\/lib\/supabase\/admin|@\/lib\/server\/liveRestrictions)"/g, `from "${mockUrl}"`);
 source = source.replace("@/lib/practiceTiming", new URL("../lib/practiceTiming.ts", import.meta.url).href);
+source = source.replace("@/lib/incorrectChoiceExplanation", new URL("../lib/incorrectChoiceExplanation.ts", import.meta.url).href);
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
 const { POST } = await import("data:text/javascript;base64," + Buffer.from(compiled).toString("base64"));
 const user = "00000000-0000-4000-8000-000000000001";
 const question = "00000000-0000-4000-8000-000000000002";
 const session = "00000000-0000-4000-8000-000000000003";
 
-async function check({ correct, guest = false, missingColumn = false, owned = true, invalid = false, verifyOverlap = false }) {
+async function check({ correct, guest = false, missingColumn = false, owned = true, invalid = false, verifyOverlap = false, blocked = false, restrictionError = false, liveBlocked = false, explanation = "Verified on the server." }) {
   const writes = [];
   const filters = [];
   let ownershipStarted;
@@ -38,10 +40,12 @@ async function check({ correct, guest = false, missingColumn = false, owned = tr
     ownershipStarted = () => { clearTimeout(timeout); resolve(); };
   }) : undefined;
   context.current = {
+    liveBlocked,
     user: guest ? null : user,
     waitForOwnership,
-    feedback: { isCorrect: correct, correctAnswer: "B", correctLabel: "B", explanation: "Verified on the server." },
+    feedback: { isCorrect: correct, correctAnswer: "A", correctLabel: "A", explanation },
     db: {
+      async rpc() { return { data:blocked,error:restrictionError?{message:"unavailable"}:null }; },
       from(table) {
         if (table === "practice_sessions") return {
           select() { return this; },
@@ -61,6 +65,13 @@ async function check({ correct, guest = false, missingColumn = false, owned = tr
 }
 
 try {
+  const live = await check({ correct: true, liveBlocked: true });
+  assert.equal(live.body.blocked, true); assert.equal(live.body.correctAnswer, undefined); assert.equal(live.writes.length, 0);
+  const embargo = await check({correct:true,blocked:true});
+  assert.equal(embargo.body.blocked,true);assert.equal(embargo.writes.length,0);
+  assert.equal(embargo.body.message,"This question is part of your homework. The answer will be available after you submit it.");
+  for(const field of ['correctAnswer','explanation','isCorrect'])assert.equal(field in embargo.body,false);
+  assert.equal((await check({correct:true,restrictionError:true})).response.status,503);
   const correct = await check({ correct: true, verifyOverlap: true });
   assert.equal(correct.body.timingRecorded, true);
   assert.equal(correct.body.answerSaved, true);
@@ -74,6 +85,11 @@ try {
   assert.equal(wrong.writes[0].correct_answer, null);
   assert.deepEqual(wrong.body, { isCorrect: false, answerSaved: true, timingRecorded: false });
   assert.equal(wrong.writes[0].is_correct, false, "wrong answers still contribute to accuracy history");
+  const withReason = await check({correct:false, explanation:'Choice A is correct. Secret full solution. Choice B is incorrect. It contradicts the passage. Choice C is incorrect. Another reason.'});
+  assert.equal(withReason.body.incorrectExplanation,'It contradicts the passage.');
+  for (const field of ['correctAnswer','correctLabel','explanation']) assert.equal(field in withReason.body,false);
+  const hiddenReason = await check({correct:false,blocked:true,explanation:'Choice B is incorrect. Private homework reason.'});
+  assert.equal('incorrectExplanation' in hiddenReason.body,false);
 
   const guest = await check({ correct: true, guest: true });
   assert.equal(guest.body.isCorrect, true);

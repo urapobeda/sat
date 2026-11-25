@@ -65,4 +65,12 @@ assert.deepEqual(splitReadingQuestion("A prompt with a different format."), {
   passage: "A prompt with a different format.",
   prompt: ""
 });
+const importedMath: QuestionSummary[] = [
+  {id:"nonlinear-import",section:"math",topic:"Nonlinear equations in one variable and systems of equations in two",difficulty:"hard"},
+  {id:"statistics-import",section:"math",topic:"One-variable data: Distributions and measures of center and",difficulty:"medium"}
+];
+for (const label of ["Nonlinear Equations in One Variable", "Systems of Equations in Two Variables", "Nonlinear Equations in One Variable and Systems of Equations in Two Variables"]) {
+  assert.deepEqual(filterQuestionCatalog(importedMath,{section:"math",difficulties:QUESTION_DIFFICULTIES,topics:[label]}).map(q=>q.id),["nonlinear-import"]);
+}
+assert.deepEqual(filterQuestionCatalog(importedMath,{section:"math",difficulties:QUESTION_DIFFICULTIES,topics:["One-Variable Data: Distributions and Measures of Center and Spread"]}).map(q=>q.id),["statistics-import"]);
 console.log("question-bank-filters tests passed");

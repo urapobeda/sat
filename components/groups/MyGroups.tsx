@@ -21,8 +21,8 @@ export function MyGroups() {
   }, [userId, role, retry]);
   if (!userId || role !== "student") return null;
   const groups = snapshot?.userId === userId ? snapshot.groups : [];
-  return <section className="hub-card p-4 sm:p-5" aria-label="Моя группа">
-    <h2 className="text-base font-semibold">{groups.length > 1 ? "Мои группы" : "Моя группа"}</h2>
-    {failed === userId ? <p className="mt-2 text-sm text-slate-600">Не удалось загрузить группы. <button className="hub-text-link cursor-pointer underline" type="button" onClick={() => setRetry((value) => value + 1)}>Повторить</button></p> : snapshot?.userId !== userId ? <p role="status" className="mt-2 text-sm text-slate-600">Загрузка…</p> : groups.length ? <ul className="mt-2 space-y-1 text-sm text-slate-600">{groups.map((group) => <li key={group.id} className="break-words"><span className="font-medium">{group.name}</span> · {group.teacher_name}{group.archived ? " · архивная" : ""}</li>)}</ul> : <p className="mt-2 text-sm text-slate-600">Вы пока не вступили в группу. Введите код учителя в меню аккаунта.</p>}
+  return <section className="hub-card p-4 sm:p-5" aria-label="My group">
+    <h2 className="text-base font-semibold">{groups.length > 1 ? "My groups" : "My group"}</h2>
+    {failed === userId ? <p className="mt-2 text-sm text-slate-600">Could not load groups. <button className="hub-text-link cursor-pointer underline" type="button" onClick={() => setRetry((value) => value + 1)}>Retry</button></p> : snapshot?.userId !== userId ? <p role="status" className="mt-2 text-sm text-slate-600">Loading…</p> : groups.length ? <ul className="mt-2 space-y-1 text-sm text-slate-600">{groups.map((group) => <li key={group.id} className="break-words"><span className="font-medium">{group.name}</span> · {group.teacher_name}{group.archived ? " · archived" : ""}</li>)}</ul> : <p className="mt-2 text-sm text-slate-600">You have not joined a group yet. Enter your teacher’s code in the account menu.</p>}
   </section>;
 }

@@ -27,6 +27,7 @@ const tutorResponseSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  if (process.env.NEXT_PUBLIC_AI_TUTOR_ENABLED !== "true") return jsonError("AI Tutor is disabled.",404);
   try {
     const userId = await getAuthenticatedUserId(request);
     if (!userId) return jsonError("Sign in to use AI Tutor.", 401);
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
       return jsonError("Please send a valid SAT question and tutor request.", 400);
     }
 
+    if (await isLiveQuestionRestricted(userId, parsedRequest.data.questionId)) return jsonError("AI Tutor is unavailable for questions in your active live lesson.", 403);
     const question = await getQuestionPublicContext(parsedRequest.data.questionId);
     const solution = await hasVerifiedAnswer(userId, parsedRequest.data.questionId)
       ? await getQuestionSolution(parsedRequest.data.questionId)
@@ -174,3 +176,4 @@ const TUTOR_INSTRUCTIONS = [
   "For Math, show step-by-step calculations and explain formulas plainly.",
   "For Reading and Writing, rely only on the question text and explain grammar, logic, transitions, vocabulary, or structure rules."
 ].join("\n");
+import { isLiveQuestionRestricted } from "@/lib/server/liveRestrictions";

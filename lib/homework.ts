@@ -14,7 +14,7 @@ export type StudentAssignment = {
   paper_slug: string | null;
   paper_title: string | null;
   time_limit_minutes: number | null;
-  due_at: string;
+  due_at: string | null;
   show_answers: ShowAnswersRule;
   max_attempts: number;
   created_at: string;
@@ -37,7 +37,7 @@ export type TeacherAssignment = {
   paper_id: string | null;
   paper_slug: string | null;
   paper_title: string | null;
-  due_at: string;
+  due_at: string | null;
   show_answers: ShowAnswersRule;
   max_attempts: number;
   published: boolean;
@@ -81,11 +81,11 @@ export type AssignmentAnswer = {
   answered_at: string;
 };
 
-export function isPastDue(dueAtIso: string, referenceDateMs: number = Date.now()) {
-  return referenceDateMs > new Date(dueAtIso).getTime();
+export function isPastDue(dueAtIso: string | null, referenceDateMs: number = Date.now()) {
+  return dueAtIso !== null && referenceDateMs > new Date(dueAtIso).getTime();
 }
 
-export function canRevealAnswers(rule: ShowAnswersRule, dueAtIso: string, submitted: boolean) {
+export function canRevealAnswers(rule: ShowAnswersRule, dueAtIso: string | null, submitted: boolean) {
   if (!submitted) return false;
   if (rule === "never") return false;
   if (rule === "after_submit") return true;
