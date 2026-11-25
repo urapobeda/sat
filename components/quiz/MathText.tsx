@@ -18,6 +18,7 @@ type MathTextProps = {
   imageAlt?: string;
   images?: string[];
   inline?: boolean;
+  focusPhrases?: readonly string[];
   text: string;
 };
 
@@ -28,9 +29,9 @@ type Block =
   | { kind: "rich-table"; table: RichTable }
   | { kind: "image"; index: number };
 
-export function MathText({ className, imageAlt = "Figure", images = [], inline = false, text }: MathTextProps) {
+export function MathText({ className, imageAlt = "Figure", images = [], inline = false, text, focusPhrases }: MathTextProps) {
   if (inline) {
-    return <span className={className}>{renderInline(text)}</span>;
+    return <span className={className}>{renderInline(text, focusPhrases)}</span>;
   }
 
   const blocks = parseBlocks(text ?? "");
@@ -64,7 +65,7 @@ export function MathText({ className, imageAlt = "Figure", images = [], inline =
 
         return (
           <p className="whitespace-pre-line" key={index}>
-            {renderInline(block.text)}
+            {renderInline(block.text, focusPhrases)}
           </p>
         );
       })}
@@ -220,14 +221,14 @@ function splitRow(row: string) {
   return cells;
 }
 
-function renderInline(text: string): ReactNode[] {
+function renderInline(text: string, focusPhrases?: readonly string[]): ReactNode[] {
   const parts: ReactNode[] = [];
   const pattern = /\\\(([\s\S]+?)\\\)|\\\[([\s\S]+?)\\\]|\[\[(png|asset):(\d+):(\d+):([^\s\]]+)\]\]/g;
   let last = 0;
   let match: RegExpExecArray | null;
 
   while ((match = pattern.exec(text ?? "")) !== null) {
-    if (match.index > last) parts.push(...renderEmphasis(text.slice(last, match.index), parts.length));
+    if (match.index > last) parts.push(...renderEmphasis(text.slice(last, match.index), parts.length, focusPhrases));
     if (match[3]) {
       const width = Number(match[4]);
       const height = Number(match[5]);
@@ -248,18 +249,27 @@ function renderInline(text: string): ReactNode[] {
     last = pattern.lastIndex;
   }
 
-  if (last < (text ?? "").length) parts.push(...renderEmphasis(text.slice(last), parts.length));
+  if (last < (text ?? "").length) parts.push(...renderEmphasis(text.slice(last), parts.length, focusPhrases));
   return parts;
 }
 
-function renderEmphasis(text: string, offset: number): ReactNode[] {
+function renderEmphasis(text: string, offset: number, focusPhrases?: readonly string[]): ReactNode[] {
   return text.split(/(\*[^*\n]+\*)/g).map((piece, index) =>
     /^\*[^*\n]+\*$/.test(piece) ? (
-      <em key={`e${offset}-${index}`}>{piece.slice(1, -1)}</em>
+      <em key={`e${offset}-${index}`}>{renderFocusedText(piece.slice(1, -1), focusPhrases)}</em>
     ) : (
-      <Fragment key={`t${offset}-${index}`}>{piece}</Fragment>
+      <Fragment key={`t${offset}-${index}`}>{renderFocusedText(piece, focusPhrases)}</Fragment>
     )
   );
+}
+
+function renderFocusedText(text: string, phrases?: readonly string[]): ReactNode {
+  const safe = phrases?.filter(Boolean).slice(0,2);
+  if (!safe?.length) return text;
+  const pattern = new RegExp(`(${safe.map(phrase => phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+  return text.split(pattern).map((part, index) => safe.some(phrase => phrase.toLowerCase() === part.toLowerCase())
+    ? <mark className="box-decoration-clone rounded-sm bg-sky-100 px-0.5 py-0.5 font-semibold text-sky-700" key={index}>{part}</mark>
+    : <Fragment key={index}>{part}</Fragment>);
 }
 
 const texCache = new Map<string, string>();

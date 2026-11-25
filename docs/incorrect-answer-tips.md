@@ -18,6 +18,12 @@ graph choices additionally become grayscale with a visible strike-through overla
 Restore reverses the styling, and selecting an eliminated option restores it as before.
 The shared AnswerOption applies this appearance wherever answer elimination is available.
 
+The card uses a roomier rounded layout, the SAT Hub bear, soft shadows and 18/21 px
+medium-weight explanation text. Up to two existing contrast phrases or quoted terms receive
+a blue emphasis; no explanation is generated or rewritten. This optional MathText styling
+does not affect formulas, tables or other question text. Desktop and 360 px layouts were
+checked using a temporary local visual fixture; it was removed after QA.
+
 No database migration, new API key or AI request is required.
 
 Verification: route tests cover correct/wrong timing, isolated incorrect rationale and
@@ -35,3 +41,4 @@ Files: `app/api/practice/answers/route.ts`, `lib/incorrectChoiceExplanation.ts`,
 `PracticeExam.tsx`, `IncorrectAnswerTip.tsx`, `components/quiz/AnswerOption.tsx`,
 `scripts/practice-answer-route.test.mjs`, `scripts/incorrect-answer-tip.test.mjs`,
 `package.json`, this document.
+Visual refinement also touches `lib/explanationFocus.ts` and `components/quiz/MathText.tsx`.

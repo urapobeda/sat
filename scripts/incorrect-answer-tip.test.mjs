@@ -35,6 +35,14 @@ const graph=renderToStaticMarkup(React.createElement(AnswerOption,{...props,choi
 assert.ok(graph.includes('grayscale opacity-50'));assert.ok(graph.includes('border-t-2'));
 const restored=renderToStaticMarkup(React.createElement(AnswerOption,props));assert.ok(!restored.includes('bg-slate-100'));assert.ok(!restored.includes('Crossed out'));
 const {IncorrectAnswerTip}=load('components/question-bank/practice/IncorrectAnswerTip');
+const {explanationFocusPhrases:focus}=load('lib/explanationFocus');
+assert.deepEqual(focus('This suggests a takeover, but here it describes mental focus on the characters.'),['mental focus on the characters']);
+assert.deepEqual(focus('The text never discusses "artistic merit".'),['artistic merit']);
+assert.deepEqual(focus('Instead of \\(x+1\\), use the formula.'),[]);
+const {MathText}=load('components/quiz/MathText');
+const formatted=renderToStaticMarkup(React.createElement(MathText,{text:'A *quoted term* with \\(x^2\\).',focusPhrases:['quoted term','x^2']}));
+assert.ok(formatted.includes('<em><mark'));assert.equal((formatted.match(/<mark/g)??[]).length,1);assert.ok(formatted.includes('class="katex"'));
+const original=renderToStaticMarkup(React.createElement(MathText,{text:'A *quoted term* with \\(x^2\\).'}));assert.ok(!original.includes('<mark'));assert.ok(original.includes('<em>quoted term</em>'));
 const tip=renderToStaticMarkup(React.createElement(IncorrectAnswerTip,{choice:'B',explanation:'It ignores the final sentence.',onDismiss:()=>{},onNext:()=>{}}));
 assert.ok(tip.includes('role="dialog"'));assert.ok(tip.includes('Why B is incorrect'));assert.ok(tip.includes('Close explanation'));assert.ok(tip.includes('Try again'));assert.ok(tip.includes('Next'));assert.ok(!tip.includes('Correct answer'));
 const fallback=renderToStaticMarkup(React.createElement(IncorrectAnswerTip,{choice:'A',onDismiss:()=>{},onNext:()=>{},nextLabel:'Show Results'}));assert.ok(fallback.includes('not available yet'));assert.ok(fallback.includes('Show Results'));
