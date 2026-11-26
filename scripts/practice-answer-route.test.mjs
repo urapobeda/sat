@@ -76,8 +76,9 @@ try {
   assert.equal(wrong.writes[0].is_correct, false, "wrong answers still contribute to accuracy history");
 
   const guest = await check({ correct: true, guest: true });
-  assert.equal(guest.body.isCorrect, true);
-  assert.equal(guest.body.timingRecorded, false);
+  assert.equal(guest.response.status, 401, "anonymous callers cannot read the answer key");
+  assert.equal(guest.body.isCorrect, undefined);
+  assert.equal(guest.body.explanation, undefined);
   assert.equal(guest.writes.length, 0);
 
   const legacy = await check({ correct: true, missingColumn: true });

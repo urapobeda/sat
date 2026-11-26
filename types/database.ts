@@ -1,3 +1,4 @@
+import type { GroupLesson, GroupMaterial } from "@/lib/lessons";
 import type { AssignmentFeedback, ReportRow } from "@/lib/assignmentReport";
 import type { StudyGroup, GroupMember, GroupTeacher } from "@/lib/groups";
 import type { UserRole } from "@/lib/roles";
@@ -267,6 +268,20 @@ export type Database = {
       group_members: {
         Row: { group_id: string; student_id: string; joined_at: string };
         Insert: never; Update: never; Relationships: [];
+      };
+      group_lessons: {
+        Row: GroupLesson;
+        Insert: Pick<GroupLesson, "group_id" | "title" | "starts_at"> &
+          Partial<Pick<GroupLesson, "duration_minutes" | "meeting_url" | "recording_url" | "notes">>;
+        Update: Partial<Pick<GroupLesson, "title" | "starts_at" | "duration_minutes" | "meeting_url" | "recording_url" | "notes">>;
+        Relationships: [];
+      };
+      group_materials: {
+        Row: GroupMaterial;
+        Insert: Pick<GroupMaterial, "group_id" | "title" | "url"> &
+          Partial<Pick<GroupMaterial, "lesson_id" | "kind" | "description">>;
+        Update: Partial<Pick<GroupMaterial, "lesson_id" | "title" | "url" | "kind" | "description">>;
+        Relationships: [];
       };
       ai_tutor_usage: {
         Row: { user_id: string; date: string; count: number };

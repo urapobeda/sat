@@ -273,6 +273,11 @@ export function QuestionBankPracticePage() {
         method: "POST"
       });
 
+      if (response.status === 401) {
+        unlockAnswer();
+        setPersistenceMessage("Sign in to check your answers and see explanations.");
+        return;
+      }
       if (!response.ok) {
         throw new Error("Unable to verify answer.");
       }

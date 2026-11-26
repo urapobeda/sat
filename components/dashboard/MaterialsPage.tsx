@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowUpRight, BookOpen, Calculator, ClipboardList, FileText, Search } from "lucide-react";
+import { ArrowUpRight, BookOpen, Calculator, ClipboardList, Search } from "lucide-react";
+import { TeacherMaterials } from "@/components/dashboard/TeacherMaterials";
 import Link from "next/link";
 import { useState } from "react";
 import { PageHeading } from "@/components/dashboard/PageHeading";
@@ -26,7 +27,8 @@ export function MaterialsPage() {
   return (
     <StudentShell active="materials">
       <main className="mx-auto max-w-7xl space-y-5">
-        <PageHeading eyebrow="Learning library" title="Materials" description="Find SAT Hub study resources and tools. Teacher-shared files will appear here when available." />
+        <PageHeading eyebrow="Learning library" title="Materials" description="Materials from your teacher, plus SAT Hub study resources and tools." />
+        <TeacherMaterials />
         <section aria-label="Browse resources" className="space-y-4">
           <div className="hub-card flex flex-wrap items-center gap-3 p-3">
             <label className="relative min-w-0 flex-1 basis-48">
@@ -53,10 +55,6 @@ export function MaterialsPage() {
               ))}
             </div>
           ) : <p className="hub-card p-5 text-sm text-slate-600">No resources match your search.</p>}
-        </section>
-        <section className="hub-card flex items-start gap-3 p-5">
-          <span className="hub-icon"><FileText aria-hidden="true" size={19} /></span>
-          <div><h2 className="font-semibold text-slate-950">Teacher files</h2><p className="mt-1 text-sm text-slate-600">No downloadable files are available.</p></div>
         </section>
       </main>
     </StudentShell>

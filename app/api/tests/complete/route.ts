@@ -29,10 +29,15 @@ export async function POST(request: NextRequest) {
     const questionIds = Object.keys(answers);
     const userId = await getAuthenticatedUserId(request);
     const sessionId = parsed.data.testSessionId;
-    if (sessionId && !userId) {
+    // Grading returns the correct answers and explanations, so it needs a signed-in
+    // student and that student's own unfinished test session.
+    if (!userId) {
       return NextResponse.json({ error: "Sign in required." }, { status: 401 });
     }
-    if (sessionId && userId) {
+    if (!sessionId) {
+      return NextResponse.json({ error: "Test session not found." }, { status: 404 });
+    }
+    {
       const { data: session, error } = await getSupabaseAdminClient()
         .from("test_sessions")
         .select("total,completed_at")
@@ -69,14 +74,14 @@ export async function POST(request: NextRequest) {
     const submittedAnswers = Object.fromEntries(Object.entries(answers).filter(([, answer]) => answer !== null));
     const reviewQuestions = await getReviewQuestions(submittedAnswers);
 
-    if (userId && parsed.data.testSessionId) {
+    {
       const saved = await saveVerifiedTestResult({
         answers,
         estimatedSatScore,
         percentage,
         score,
         solutions,
-        testSessionId: parsed.data.testSessionId,
+        testSessionId: sessionId,
         timeSpentSeconds: parsed.data.timeSpentSeconds,
         userId
       });

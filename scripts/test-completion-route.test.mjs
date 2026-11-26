@@ -67,7 +67,12 @@ try {
   assert.equal((await submit({ rpcResult: { data: false } })).status, 409);
   assert.equal((await submit({ rpcResult: { error: { message: "permission denied" } } })).status, 500);
   const guest = await submit({ user: null, payload: { testSessionId: null } });
-  assert.equal(guest.status, 200);
+  assert.equal(guest.status, 401, "guests cannot grade arbitrary questions");
+  assert.equal(guest.body.reviewQuestions, undefined);
+  assert.equal(state.gradingCalls, 0);
+  const noSession = await submit({ payload: { testSessionId: null } });
+  assert.equal(noSession.status, 404, "signed-in users need their own test session");
+  assert.equal(state.gradingCalls, 0);
   assert.equal(state.rpcCalls.length, 0);
   console.log("test-completion-route tests passed");
 } finally {

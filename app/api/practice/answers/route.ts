@@ -20,9 +20,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid answer payload." }, { status: 400 });
     }
 
+    // Answers and explanations are only for signed-in students; anonymous calls
+    // could otherwise read the whole question bank's answer key.
+    const userId = await getAuthenticatedUserId(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Sign in to check answers." }, { status: 401 });
+    }
+
     const sessionId = parsed.data.sessionId;
     const [owner, feedback] = await Promise.all([
-      sessionId ? getPracticeSessionOwner(request, sessionId).catch((error: unknown) => {
+      sessionId ? getPracticeSessionOwner(userId, sessionId).catch((error: unknown) => {
         logPersistenceError(error);
         return null;
       }) : null,
@@ -65,9 +72,7 @@ function logPersistenceError(error: unknown) {
   console.error("Practice answer persistence failed:", error instanceof Error ? error.message : "Request failed");
 }
 
-async function getPracticeSessionOwner(request: NextRequest, sessionId: string) {
-  const userId = await getAuthenticatedUserId(request);
-  if (!userId) return null;
+async function getPracticeSessionOwner(userId: string, sessionId: string) {
   const supabase = getSupabaseAdminClient();
   const { data: session, error } = await supabase
     .from("practice_sessions")

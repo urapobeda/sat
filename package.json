@@ -16,7 +16,7 @@
     "questions:math-convert": "node scripts/convert-math-questions.mjs",
     "questions:flashsat-prepare": "node scripts/prepare-flashsat-math.mjs",
     "questions:repair-verbal-topics": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/repair-verbal-topics.mjs",
-    "test:groups:sql": "node scripts/groups-sql.test.mjs",
+    "test:groups:sql": "node scripts/groups-sql.test.mjs && node scripts/lessons-sql.test.mjs",
     "test:homework:sql": "node scripts/homework-sql.test.mjs",
     "test:homework-feedback:sql": "node scripts/homework-feedback-sql.test.mjs"
   },

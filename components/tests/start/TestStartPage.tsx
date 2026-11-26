@@ -89,6 +89,9 @@ export function TestStartPage() {
       try {
         const user = await getCurrentUser().catch(() => null);
         if (!isMounted) return;
+        if (!user) {
+          throw new Error("Sign in to take a practice test. Your score and answer review are saved to your account.");
+        }
         const saved = testDraftStore.read(user?.id);
         const draft = saved?.draft;
         const loadedQuestions = draft ? await getQuestionDetails(draft.questions) : await getRandomQuestions(TEST_QUESTION_LIMIT);
@@ -116,7 +119,6 @@ export function TestStartPage() {
           setFlaggedQuestions(draft.flags);
           setCurrentIndex(Math.min(draft.index, loadedQuestions.length - 1));
         }
-        if (!user) setPersistenceMessage("Guest mode: sign in to save this test result.");
       } catch (requestError) {
         if (isMounted) {
           setError(
